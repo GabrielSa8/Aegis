@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Folder, GitBranch, Shield, Search, ExternalLink, FileText, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Folder, GitBranch, Shield, Search, FileText, CheckCircle2 } from 'lucide-react';
 
 export default function VaultView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +11,7 @@ export default function VaultView() {
       title: 'Sistema y Cerebro IA',
       desc: 'Perfil, especificaciones N150, Bitácora de proyectos y protocolo del agente.',
       icon: Shield,
-      color: '#6366f1',
+      color: '#10b981',
       notes: ['Perfil_Gabriel.md', 'Stack_y_Entorno.md', 'Bitacora_Proyectos.md', 'Protocolo_Agente.md']
     },
     {
@@ -20,7 +20,7 @@ export default function VaultView() {
       title: 'Operaciones Mercado Libre',
       desc: 'Procesos de última milla, ambulancias, layout, etiquetado y manuales.',
       icon: Folder,
-      color: '#fbbf24',
+      color: '#d97706',
       notes: ['MOC - Operaciones Mercado Libre.md', 'SOP_Ambulancias.md', 'Layout_Hub.md']
     },
     {
@@ -38,7 +38,7 @@ export default function VaultView() {
       title: 'Personal y Ocio',
       desc: 'Modo Gaming en Intel N150 (GameMode, FSR), D&D 5e (Knol de Piedranegra) y catálogo.',
       icon: Folder,
-      color: '#ec4899',
+      color: '#8b5cf6',
       notes: ['MOC - Personal y Ocio.md', 'Knol_de_Piedranegra.md', 'Gaming_N150.md']
     },
     {
@@ -59,28 +59,28 @@ export default function VaultView() {
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.25rem' }}>
-      {/* Header & Git Status */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
+      {/* Header Bar */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '1.25rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.85rem 1.25rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)'
+        borderRadius: 'var(--radius-lg)'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BookOpen color="#6366f1" size={20} />
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <BookOpen color="#10b981" size={18} />
             Bóveda de Conocimiento (BrainIA)
           </h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
-            Ruta local: <code style={{ color: '#cbd5e1' }}>/home/zabrielsa/Documentos/Obsidian Vault/</code>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            Ruta local: <code style={{ color: 'var(--text-high)' }}>/home/zabrielsa/Documentos/Obsidian Vault/</code>
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', color: '#34d399', fontWeight: 600 }}>
-          <CheckCircle2 size={14} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 10px', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', color: '#34d399', fontWeight: 600 }}>
+          <CheckCircle2 size={13} />
           <span>Sincronizada con GitHub (main)</span>
         </div>
       </div>
@@ -89,13 +89,13 @@ export default function VaultView() {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        background: 'rgba(17, 24, 39, 0.7)',
+        gap: '8px',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '0.6rem 1rem'
+        borderRadius: 'var(--radius-md)',
+        padding: '0.5rem 0.85rem'
       }}>
-        <Search size={16} color="#64748b" />
+        <Search size={15} color="var(--text-muted)" />
         <input
           type="text"
           value={searchTerm}
@@ -106,8 +106,9 @@ export default function VaultView() {
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: '#fff',
-            fontSize: '0.85rem'
+            color: 'var(--text-high)',
+            fontSize: '0.8rem',
+            fontFamily: 'inherit'
           }}
         />
       </div>
@@ -115,9 +116,8 @@ export default function VaultView() {
       {/* 5 Hubs Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '1rem',
-        overflowY: 'auto'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '0.75rem'
       }}>
         {filteredHubs.map((hub) => {
           const Icon = hub.icon;
@@ -125,55 +125,55 @@ export default function VaultView() {
             <div
               key={hub.id}
               style={{
-                background: 'rgba(17, 24, 39, 0.75)',
+                background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-xl)',
-                padding: '1.25rem',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '1rem'
+                gap: '0.75rem'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: hub.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: hub.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     {hub.code}
                   </span>
-                  <div style={{ background: `${hub.color}22`, padding: '6px', borderRadius: '8px' }}>
-                    <Icon size={16} color={hub.color} />
+                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+                    <Icon size={14} color={hub.color} />
                   </div>
                 </div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', margin: '0 0 6px 0' }}>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-high)', margin: '0 0 4px 0' }}>
                   {hub.title}
                 </h3>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
                   {hub.desc}
                 </p>
               </div>
 
               {/* Note Chips */}
               <div>
-                <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                   Notas Clave:
                 </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                   {hub.notes.map((note, nIdx) => (
                     <span
                       key={nIdx}
                       style={{
-                        fontSize: '0.7rem',
-                        padding: '3px 8px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                        borderRadius: '6px',
-                        color: '#cbd5e1',
+                        fontSize: '0.68rem',
+                        padding: '2px 6px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--text-high)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px'
                       }}
                     >
-                      <FileText size={11} color="#64748b" />
+                      <FileText size={10} color="var(--text-muted)" />
                       {note}
                     </span>
                   ))}

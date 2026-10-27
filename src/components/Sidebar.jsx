@@ -7,9 +7,7 @@ import {
   Activity, 
   Gamepad2, 
   ShieldCheck, 
-  Cpu, 
-  Command,
-  ChevronRight
+  Cpu
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
@@ -17,7 +15,7 @@ export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
     { id: 'agent', label: 'Agente Copilot', icon: Bot, badge: 'PTY' },
     { id: 'finances', label: 'Finanzas', icon: PiggyBank },
     { id: 'vault', label: 'Bóveda IA', icon: BookOpen, badge: '5 Hubs' },
-    { id: 'devops', label: 'Radar DevOps', icon: GitBranch, badge: '15 Skills' },
+    { id: 'devops', label: 'Radar DevOps', icon: GitBranch, badge: '20 Skills' },
     { id: 'tasks', label: 'Agenda & Tareas', icon: CheckSquare },
     { id: 'sentinel', label: 'Centinela N150', icon: Activity },
     { id: 'leisure', label: 'Ocio & D&D', icon: Gamepad2 }
@@ -25,49 +23,49 @@ export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
 
   return (
     <aside style={{
-      width: '260px',
-      background: 'rgba(11, 15, 25, 0.95)',
+      width: '240px',
+      background: 'var(--bg-card)',
       borderRight: '1px solid var(--border-color)',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
-      padding: '1.25rem 1rem',
+      padding: '1rem',
       userSelect: 'none',
       flexShrink: 0
     }}>
-      {/* Top: Logo & Title */}
+      {/* Brand Header */}
       <div>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          padding: '0.5rem 0.75rem',
-          marginBottom: '1.5rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
+          padding: '0.4rem 0.5rem',
+          marginBottom: '1.25rem',
+          borderBottom: '1px solid var(--border-color)'
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            padding: '8px',
-            borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+            padding: '6px',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+            justifyContent: 'center'
           }}>
-            <ShieldCheck size={22} color="#ffffff" />
+            <ShieldCheck size={20} color="#10b981" />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', margin: 0 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-high)', letterSpacing: '0.02em', margin: 0 }}>
               AEGIS
             </h2>
-            <span style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Command Center
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
+              Command Cockpit
             </span>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {/* Nav Tabs */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -79,30 +77,31 @@ export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '0.7rem 0.85rem',
-                  borderRadius: '10px',
-                  background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                  border: isActive ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid transparent',
-                  color: isActive ? '#ffffff' : '#94a3b8',
+                  padding: '0.55rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                  border: isActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                  color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'var(--transition)',
                   textAlign: 'left',
-                  width: '100%'
+                  width: '100%',
+                  fontFamily: 'inherit'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Icon size={18} color={isActive ? '#818cf8' : '#64748b'} />
-                  <span style={{ fontSize: '0.85rem', fontWeight: isActive ? 600 : 500 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Icon size={16} color={isActive ? '#10b981' : '#788882'} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: isActive ? 600 : 500 }}>
                     {item.label}
                   </span>
                 </div>
                 {item.badge && (
                   <span style={{
-                    fontSize: '0.65rem',
-                    padding: '2px 6px',
-                    borderRadius: '6px',
-                    background: isActive ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.05)',
-                    color: isActive ? '#c7d2fe' : '#64748b',
+                    fontSize: '0.6rem',
+                    padding: '2px 5px',
+                    borderRadius: '3px',
+                    background: isActive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                    color: isActive ? '#a7f3d0' : '#788882',
                     fontWeight: 600
                   }}>
                     {item.badge}
@@ -114,26 +113,26 @@ export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
         </nav>
       </div>
 
-      {/* Bottom: Core Status & Shortcut */}
+      {/* Core Status & Quick Action */}
       <div style={{
-        paddingTop: '1rem',
-        borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+        paddingTop: '0.75rem',
+        borderTop: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '6px'
       }}>
         <div style={{
-          fontSize: '0.7rem',
-          color: '#4ade80',
-          background: 'rgba(34, 197, 94, 0.08)',
-          border: '1px solid rgba(34, 197, 94, 0.2)',
-          padding: '6px 10px',
-          borderRadius: '8px',
+          fontSize: '0.68rem',
+          color: '#34d399',
+          background: 'rgba(16, 185, 129, 0.06)',
+          border: '1px solid rgba(16, 185, 129, 0.15)',
+          padding: '5px 8px',
+          borderRadius: 'var(--radius-md)',
           display: 'flex',
           alignItems: 'center',
           gap: '6px'
         }}>
-          <Cpu size={14} />
+          <Cpu size={13} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {coreStatus || 'Core Online'}
           </span>
@@ -143,18 +142,18 @@ export default function Sidebar({ activeTab, onSelectTab, coreStatus }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          fontSize: '0.7rem',
-          color: '#64748b',
-          padding: '4px 6px'
+          fontSize: '0.65rem',
+          color: 'var(--text-muted)',
+          padding: '2px 4px'
         }}>
-          <span>Paleta rápida</span>
+          <span>Atajo global</span>
           <kbd style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: '4px',
-            padding: '1px 5px',
-            fontSize: '0.65rem',
-            color: '#cbd5e1'
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '3px',
+            padding: '1px 4px',
+            fontSize: '0.6rem',
+            color: 'var(--text-high)'
           }}>Ctrl + K</kbd>
         </div>
       </div>

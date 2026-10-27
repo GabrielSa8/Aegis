@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckSquare, Square, Calendar, Plus, Tag, Clock } from 'lucide-react';
+import { CheckSquare, Square } from 'lucide-react';
 
 export default function TasksView() {
   const [tasks, setTasks] = useState([
@@ -18,40 +18,40 @@ export default function TasksView() {
   const pendingCount = tasks.filter(t => !t.done).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.25rem', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{
-        padding: '1.25rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.85rem 1.25rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
+        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckSquare color="#6366f1" size={20} />
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <CheckSquare color="#10b981" size={18} />
             Bandeja de Tareas Unificada (Inbox Zero)
           </h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
-            Sincronizadas con checkboxes <code>- [ ]</code> de notas de Obsidian
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            Checkboxes <code>- [ ]</code> de notas de Obsidian
           </p>
         </div>
-        <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', color: '#c7d2fe', fontWeight: 600 }}>
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600 }}>
           {pendingCount} Pendientes
         </div>
       </div>
 
       {/* Task List */}
       <div style={{
-        background: 'rgba(17, 24, 39, 0.75)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '6px'
       }}>
         {tasks.map((task) => (
           <div
@@ -61,46 +61,47 @@ export default function TasksView() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              background: task.done ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)',
-              border: task.done ? '1px solid rgba(255, 255, 255, 0.03)' : '1px solid rgba(255, 255, 255, 0.06)',
+              padding: '8px 12px',
+              borderRadius: 'var(--radius-md)',
+              background: task.done ? 'transparent' : 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid var(--border-color)',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'var(--transition)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {task.done ? (
-                <CheckSquare size={18} color="#10b981" />
+                <CheckSquare size={16} color="#10b981" />
               ) : (
-                <Square size={18} color="#64748b" />
+                <Square size={16} color="var(--text-muted)" />
               )}
               <span style={{
-                fontSize: '0.85rem',
-                color: task.done ? '#64748b' : '#f1f5f9',
+                fontSize: '0.8rem',
+                color: task.done ? 'var(--text-muted)' : 'var(--text-high)',
                 textDecoration: task.done ? 'line-through' : 'none',
                 fontWeight: task.done ? 400 : 500
               }}>
                 {task.text}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{
-                fontSize: '0.65rem',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                background: 'rgba(99, 102, 241, 0.15)',
-                color: '#a5b4fc',
+                fontSize: '0.62rem',
+                padding: '2px 6px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-muted)',
                 fontWeight: 600
               }}>
                 {task.category}
               </span>
               <span style={{
-                fontSize: '0.65rem',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                background: task.priority === 'Alta' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(251, 191, 36, 0.15)',
-                color: task.priority === 'Alta' ? '#f43f5e' : '#fbbf24',
+                fontSize: '0.62rem',
+                padding: '2px 6px',
+                borderRadius: 'var(--radius-md)',
+                background: task.priority === 'Alta' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(217, 119, 6, 0.1)',
+                color: task.priority === 'Alta' ? '#f87171' : '#fbbf24',
                 fontWeight: 600
               }}>
                 {task.priority}

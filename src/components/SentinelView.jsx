@@ -1,4 +1,4 @@
-import { Activity, Cpu, HardDrive, ShieldCheck, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Activity, Cpu, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export default function SentinelView() {
   const hardware = [
@@ -10,56 +10,56 @@ export default function SentinelView() {
   ];
 
   const monitors = [
-    { name: 'Consumo Aegis en Reposo', status: '< 65 MB RAM (Tauri v2)', ok: true },
-    { name: 'Sincronización BrainIA', status: 'Al día en GitHub (commit 670e1b3)', ok: true },
+    { name: 'Consumo Aegis en Reposo', status: '< 55 MB RAM (Tauri v2)', ok: true },
+    { name: 'Sincronización BrainIA', status: 'Al día en GitHub (commit 3ffddd2)', ok: true },
     { name: 'Compuertas TADÚ', status: 'Bloqueo estricto de git add -A activo', ok: true },
-    { name: 'Arsenal de Skills', status: '15/15 playbooks validados en ~/.agents/skills/', ok: true },
+    { name: 'Arsenal de Skills', status: '20/20 playbooks validados en ~/.agents/skills/', ok: true },
     { name: 'Entorno de Automatización', status: 'Playwright + Chromium Headless listo', ok: true }
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.25rem', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{
-        padding: '1.25rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.85rem 1.25rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
+        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity color="#6366f1" size={20} />
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Activity color="#10b981" size={18} />
             Centinela del Sistema & Hardware
           </h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
-            Vigilancia continua del entorno Intel N150 y salud de backups
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            Vigilancia del entorno Intel N150 y salud de backups
           </p>
         </div>
-        <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.25)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', color: '#4ade80', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ShieldCheck size={14} />
-          <span>Sistema Óptimo</span>
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <ShieldCheck size={13} />
+          <span>Sistema Saludable</span>
         </div>
       </div>
 
       {/* Hardware Specs Grid */}
       <div style={{
-        background: 'rgba(17, 24, 39, 0.75)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem'
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem'
       }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Cpu size={16} color="#6366f1" />
-          Especificaciones de Máquina (Host)
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Cpu size={14} color="#10b981" />
+          Especificaciones de Host (N150)
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '8px' }}>
           {hardware.map((hw, idx) => (
-            <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-              <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', textTransform: 'uppercase' }}>{hw.label}</span>
-              <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: 600 }}>{hw.value}</span>
+            <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{hw.label}</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-high)', fontWeight: 600 }}>{hw.value}</span>
             </div>
           ))}
         </div>
@@ -67,16 +67,16 @@ export default function SentinelView() {
 
       {/* Health Checks */}
       <div style={{
-        background: 'rgba(17, 24, 39, 0.75)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem'
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem'
       }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <ShieldCheck size={16} color="#10b981" />
-          Verificaciones de Integridad Soberana
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ShieldCheck size={14} color="#10b981" />
+          Verificaciones de Integridad
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {monitors.map((m, idx) => (
             <div
               key={idx}
@@ -84,17 +84,17 @@ export default function SentinelView() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
+                padding: '8px 12px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <CheckCircle2 size={16} color="#10b981" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>{m.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={14} color="#10b981" />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-high)' }}>{m.name}</span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{m.status}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{m.status}</span>
             </div>
           ))}
         </div>

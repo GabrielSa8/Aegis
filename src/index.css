@@ -1,40 +1,40 @@
-/* 🎨 SISTEMA DE DISEÑO LIFEOS FINANZAS — DARK MODE & GLASSMORPHISM PREMIUM */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* 🎨 SISTEMA DE DISEÑO AEGIS — NORDIC SLATE & MOSS (ANTI-SLOP) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Paleta de Colores HSL Tailored */
-  --bg-main: #0b0f19;
-  --bg-card: rgba(17, 24, 39, 0.6);
-  --bg-card-hover: rgba(31, 41, 55, 0.8);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(99, 102, 241, 0.5);
+  /* Paleta Nordic Slate & Moss */
+  --bg-main: #0f1211;
+  --bg-card: #161a19;
+  --bg-card-hover: #1c2220;
+  --border-color: #242b29;
+  --border-focus: #10b981;
   
-  --primary: #6366f1; /* Indigo */
-  --primary-glow: rgba(99, 102, 241, 0.15);
-  --primary-grad: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --primary: #10b981; /* Verde esmeralda salvia táctico */
+  --primary-glow: rgba(16, 185, 129, 0.1);
+  --primary-grad: linear-gradient(135deg, #10b981 0%, #059669 100%);
   
-  --success: #10b981; /* Esmeralda para Ingresos */
-  --success-glow: rgba(16, 185, 129, 0.15);
-  --success-grad: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.1);
+  --success-grad: linear-gradient(135deg, #10b981 0%, #047857 100%);
   
-  --danger: #f43f5e; /* Coral/Rosa fuerte para Gastos */
-  --danger-glow: rgba(244, 63, 94, 0.15);
-  --danger-grad: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  --danger: #ef4444;
+  --danger-glow: rgba(239, 68, 68, 0.1);
+  --danger-grad: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   
-  --warning: #fbbf24; /* Ámbar para alertas/límites */
+  --warning: #d97706; /* Ocre arcilla para avisos */
   
-  /* Gradiente decorativo */
-  --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 70%);
+  --bg-gradient: #0f1211;
 
-  /* Tipografías y sombras */
-  --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --shadow-lg: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
-  --shadow-sm: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.25);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --radius-xl: 20px;
-  --radius-lg: 14px;
-  --radius-md: 10px;
+  /* Tipografías y geometría disciplinada */
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-sm: none;
+  --shadow-glow: none;
+  --transition: all 0.15s ease;
+  --radius-xl: 6px;
+  --radius-lg: 4px;
+  --radius-md: 4px;
 }
 
 /* Modo Claro Opcional (Si el usuario decide cambiarlo, se adapta mediante variables) */

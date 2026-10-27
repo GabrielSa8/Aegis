@@ -1,4 +1,4 @@
-import { GitBranch, Shield, Zap, Terminal, CheckCircle2, AlertTriangle, Layers } from 'lucide-react';
+import { GitBranch, Shield, Zap, Terminal, CheckCircle2 } from 'lucide-react';
 
 export default function DevOpsView() {
   const repos = [
@@ -7,37 +7,38 @@ export default function DevOpsView() {
       path: '/home/zabrielsa/Proyects/projects/TADU',
       branch: 'desarrollo',
       stack: 'Python 3.12 · AWS SAM · DynamoDB Single-Table',
-      status: 'Clean (git add -A prohibido)',
-      verified: true
+      status: 'Clean (git add -A prohibido)'
     },
     {
       name: 'Granja Android App',
       path: '/home/zabrielsa/Proyects/projects/granja',
       branch: 'main',
       stack: 'Kotlin · Jetpack Compose · SoundPool · Material 3',
-      status: 'En pruebas locales',
-      verified: true
+      status: 'En pruebas locales'
     },
     {
       name: 'Aegis Master Cockpit',
       path: '/home/zabrielsa/Proyects/projects/Aegis',
       branch: 'main',
       stack: 'Tauri v2 · Rust · React 19 · TypeScript · Tailwind',
-      status: 'Hito 1 Activo (d457b5c)',
-      verified: true
+      status: 'Hito 1 Activo (Nordic Slate)'
     },
     {
       name: 'BrainIA (Obsidian Vault)',
       path: '/home/zabrielsa/Documentos/Obsidian Vault',
       branch: 'main',
       stack: 'Markdown · Frontmatter YAML · 5 Hubs MOC',
-      status: 'Sincronizado GitHub (670e1b3)',
-      verified: true
+      status: 'Sincronizado GitHub (3ffddd2)'
     }
   ];
 
   const skills = [
-    { name: 'diagram-design', desc: 'Diagramas HTML/SVG de grado editorial sin Mermaid' },
+    { name: 'impeccable', desc: 'Auditoría y lenguaje de diseño profesional (craft, critique, audit, harden)' },
+    { name: 'ponytail', desc: 'Pragmatismo senior (escalera de 7 peldaños contra sobre-ingeniería)' },
+    { name: 'superpowers', desc: 'Metodología rigurosa (skill check obligatorio, brainstorming, TDD)' },
+    { name: 'find-skills', desc: 'Búsqueda e instalación de skills desde el ecosistema abierto' },
+    { name: 'frontend-design', desc: 'Diseño visual intencional, anti-AI-slop y paletas sin azul genérico' },
+    { name: 'diagram-design', desc: 'Diagramas HTML/SVG de grado editorial sin dependencias' },
     { name: 'browser-automation', desc: 'Automatización web en Fedora con Playwright/Chromium' },
     { name: 'tadu-backend', desc: 'Reglas estrictas de TADÚ, DynamoDB y compuerta SAM' },
     { name: 'clean-code-security', desc: 'Código limpio, KISS/YAGNI, early returns y OWASP' },
@@ -55,63 +56,63 @@ export default function DevOpsView() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.25rem', overflowY: 'auto' }}>
-      {/* Top Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
+      {/* Header */}
       <div style={{
-        padding: '1.25rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.85rem 1.25rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
+        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GitBranch color="#6366f1" size={20} />
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <GitBranch color="#10b981" size={18} />
             Radar DevOps & Arsenal de Habilidades
           </h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
-            Monitor de flota Git local y playbooks de ingeniería activos
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            Flota Git local y 20 skills activas
           </p>
         </div>
-        <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '6px 14px', borderRadius: '8px', fontSize: '0.75rem', color: '#c7d2fe', fontWeight: 600 }}>
-          15 Skills Activas
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600 }}>
+          20 Skills Activas
         </div>
       </div>
 
       {/* Git Fleet Section */}
       <div>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
           Flota de Repositorios Locales
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem' }}>
           {repos.map((repo, idx) => (
             <div
               key={idx}
               style={{
-                background: 'rgba(17, 24, 39, 0.75)',
+                background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '10px'
+                gap: '8px'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>{repo.name}</span>
-                  <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-high)' }}>{repo.name}</span>
+                  <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.1)', color: '#a7f3d0', border: '1px solid rgba(16, 185, 129, 0.25)', fontWeight: 600 }}>
                     {repo.branch}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>{repo.stack}</p>
-                <code style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginTop: '6px' }}>{repo.path}</code>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>{repo.stack}</p>
+                <code style={{ fontSize: '0.65rem', color: '#52615a', display: 'block', marginTop: '4px' }}>{repo.path}</code>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#34d399', fontWeight: 500, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '8px' }}>
-                <CheckCircle2 size={13} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', color: '#34d399', fontWeight: 500, borderTop: '1px solid var(--border-color)', paddingTop: '6px' }}>
+                <CheckCircle2 size={12} />
                 <span>{repo.status}</span>
               </div>
             </div>
@@ -119,34 +120,34 @@ export default function DevOpsView() {
         </div>
       </div>
 
-      {/* Arsenal Skills Section */}
+      {/* Skills Grid */}
       <div>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-          Arsenal de 15 Agent Skills (~/.agents/skills/)
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+          Arsenal Activo (~/.agents/skills/)
         </h3>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: '8px'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: '6px'
         }}>
           {skills.map((s, idx) => (
             <div
               key={idx}
               style={{
-                background: 'rgba(17, 24, 39, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                borderRadius: '8px',
-                padding: '0.75rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.65rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '4px'
+                gap: '3px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Zap size={13} color="#818cf8" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f1f5f9' }}>{s.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Zap size={12} color="#10b981" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-high)' }}>{s.name}</span>
               </div>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0, lineHeight: 1.3 }}>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>
                 {s.desc}
               </p>
             </div>

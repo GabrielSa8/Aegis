@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gamepad2, Dices, Flame, Sparkles, Shield, Swords, Play } from 'lucide-react';
+import { Gamepad2, Dices, Flame, Sparkles } from 'lucide-react';
 
 export default function LeisureView() {
   const [lastRoll, setLastRoll] = useState(null);
@@ -18,81 +18,82 @@ export default function LeisureView() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1.25rem', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{
-        padding: '1.25rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.85rem 1.25rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
+        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Gamepad2 color="#ec4899" size={20} />
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Gamepad2 color="#10b981" size={18} />
             Zona de Ocio, Gaming N150 & D&D 5e
           </h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '3px 0 0 0' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
             Perfiles de rendimiento para Intel N150 y mesa de rol
           </p>
         </div>
         <button
           onClick={() => setGamemodeActive(!gamemodeActive)}
           style={{
-            background: gamemodeActive ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-            border: gamemodeActive ? '1px solid #ec4899' : '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.75rem',
-            color: gamemodeActive ? '#f472b6' : '#94a3b8',
+            background: gamemodeActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+            border: gamemodeActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+            padding: '5px 12px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.7rem',
+            color: gamemodeActive ? '#a7f3d0' : 'var(--text-muted)',
             fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '5px',
+            fontFamily: 'inherit'
           }}
         >
-          <Flame size={14} />
+          <Flame size={13} />
           <span>GameMode FSR: {gamemodeActive ? 'ON' : 'OFF'}</span>
         </button>
       </div>
 
       {/* D&D 5e Dice Roller & Knol */}
       <div style={{
-        background: 'rgba(17, 24, 39, 0.75)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem'
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <Dices size={16} color="#ec4899" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+            <Dices size={14} color="#10b981" />
             D&D 5e — Knol de Piedranegra
           </h3>
           {lastRoll && (
-            <span style={{ fontSize: '0.85rem', color: '#f472b6', fontWeight: 800, background: 'rgba(236, 72, 153, 0.15)', padding: '2px 10px', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '2px 8px', borderRadius: 'var(--radius-md)' }}>
               d{lastRoll.sides}: {lastRoll.res}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {[20, 12, 10, 8, 6, 4].map((sides) => (
             <button
               key={sides}
               onClick={() => rollDice(sides)}
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                color: '#f1f5f9',
-                fontSize: '0.85rem',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-color)',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-high)',
+                fontSize: '0.8rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                fontFamily: 'var(--font-mono)'
               }}
             >
               d{sides}
@@ -101,42 +102,42 @@ export default function LeisureView() {
         </div>
       </div>
 
-      {/* Lightweight Games Roster */}
+      {/* Lightweight Games */}
       <div style={{
-        background: 'rgba(17, 24, 39, 0.75)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem'
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem'
       }}>
-        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Gamepad2 size={16} color="#ec4899" />
-          Juegos Ligeros Optimizados (N150)
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Gamepad2 size={14} color="#10b981" />
+          Juegos Ligeros (N150)
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '8px' }}>
           {games.map((g, idx) => (
             <div
               key={idx}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                padding: '12px 14px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '8px'
+                gap: '6px'
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>{g.title}</span>
-                  <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-high)' }}>{g.title}</span>
+                  <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 'var(--radius-md)', background: 'rgba(16, 185, 129, 0.08)', color: '#a7f3d0' }}>
                     {g.type}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 0 0' }}>{g.desc}</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '3px 0 0 0' }}>{g.desc}</p>
               </div>
-              <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 600 }}>{g.status}</span>
+              <span style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: 600 }}>{g.status}</span>
             </div>
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send, Sparkles, Terminal, FolderGit2, CheckCircle2, Shield, RefreshCw } from 'lucide-react';
+import { Send, Terminal, FolderGit2, CheckCircle2, Shield, RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 export default function AgentView() {
@@ -9,24 +9,24 @@ export default function AgentView() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Aegis Copilot listo. Contexto activo: TADÚ Platform. ¿Qué tarea ejecutamos?',
+      content: 'Aegis Copilot en línea. Entorno táctico Nordic Slate & Moss activo. ¿Qué tarea ejecutamos?',
       timestamp: 'Ahora'
     }
   ]);
 
   const contexts = [
-    { id: 'TADU', label: 'TADÚ (AWS SAM)', path: '/home/zabrielsa/Proyects/projects/TADU' },
-    { id: 'MELI', label: 'Operaciones MELI', path: '/home/zabrielsa/Documentos/Obsidian Vault/01 Operaciones MELI' },
-    { id: 'Granja', label: 'Granja (Android)', path: '/home/zabrielsa/Proyects/projects/granja' },
-    { id: 'Vault', label: 'Bóveda BrainIA', path: '/home/zabrielsa/Documentos/Obsidian Vault' },
-    { id: 'Aegis', label: 'Aegis Cockpit', path: '/home/zabrielsa/Proyects/projects/Aegis' }
+    { id: 'TADU', label: 'TADÚ (SAM)', path: '/home/zabrielsa/Proyects/projects/TADU' },
+    { id: 'MELI', label: 'MELI Hub', path: '/home/zabrielsa/Documentos/Obsidian Vault/01 Operaciones MELI' },
+    { id: 'Granja', label: 'Granja (Kotlin)', path: '/home/zabrielsa/Proyects/projects/granja' },
+    { id: 'Vault', label: 'BrainIA', path: '/home/zabrielsa/Documentos/Obsidian Vault' },
+    { id: 'Aegis', label: 'Aegis Core', path: '/home/zabrielsa/Proyects/projects/Aegis' }
   ];
 
   const quickMacros = [
-    { label: 'Auditar Git & Tests', text: 'Revisa status de git y compuertas de test locales sin usar git add -A.' },
-    { label: 'Resumen de Bitácora', text: 'Lee la bitácora de proyectos y resume el estado del Hito 1.' },
-    { label: 'Generar Flashcards AWS', text: 'Analiza la última nota de estudio de AWS y genera 5 flashcards atómicas.' },
-    { label: 'SOP Ambulancia MELI', text: 'Consulta el MOC de MELI y extrae el protocolo operativo de ambulancias.' }
+    { label: 'Auditar Git TADÚ', text: 'Revisa status de git y compuertas de test locales sin usar git add -A.' },
+    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos y resume el estado del Hito 1.' },
+    { label: 'Flashcards AWS', text: 'Analiza la última nota de estudio de AWS y genera 5 flashcards atómicas.' },
+    { label: 'SOP Ambulancias', text: 'Consulta el MOC de MELI y extrae el protocolo operativo de ambulancias.' }
   ];
 
   const handleSend = async (customPrompt) => {
@@ -45,13 +45,12 @@ export default function AgentView() {
     setLoading(true);
 
     try {
-      // Invocación a Tauri Core
       const reply = await invoke('ping');
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: `[Contexto: ${selectedContext}]\nEjecutando comando en segundo plano...\n\nRespuesta del núcleo: ${reply}\n\nTarea recibida: "${textToSend}"`,
+          content: `[Contexto: ${selectedContext}]\nEjecución en segundo plano...\n\nNúcleo local: ${reply}\n\nInstrucción procesada: "${textToSend}"`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -70,110 +69,111 @@ export default function AgentView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
-      {/* Context Selector Chips */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem' }}>
+      {/* Context Router Bar */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0.75rem 1.25rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        padding: '0.6rem 1rem',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-lg)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginRight: '6px' }}>
-            Enrutador:
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
+            Contexto:
           </span>
           {contexts.map((ctx) => (
             <button
               key={ctx.id}
               onClick={() => setSelectedContext(ctx.id)}
               style={{
-                fontSize: '0.75rem',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                background: selectedContext === ctx.id ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                border: selectedContext === ctx.id ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.08)',
-                color: selectedContext === ctx.id ? '#c7d2fe' : '#94a3b8',
+                fontSize: '0.72rem',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-md)',
+                background: selectedContext === ctx.id ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                border: selectedContext === ctx.id ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                color: selectedContext === ctx.id ? 'var(--text-high)' : 'var(--text-muted)',
                 cursor: 'pointer',
                 fontWeight: selectedContext === ctx.id ? 700 : 500,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap'
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                transition: 'var(--transition)'
               }}
             >
-              <FolderGit2 size={13} />
+              <FolderGit2 size={12} color={selectedContext === ctx.id ? '#10b981' : '#788882'} />
               {ctx.label}
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#10b981' }}>
-          <CheckCircle2 size={14} />
-          <span>Caveman Full</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: '#10b981' }}>
+          <CheckCircle2 size={13} />
+          <span>Modo Caveman</span>
         </div>
       </div>
 
-      {/* Message Stream Viewport */}
+      {/* Message Viewport */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        background: 'rgba(11, 15, 25, 0.6)',
+        background: 'var(--bg-main)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '1.25rem',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1rem'
+        gap: '0.75rem'
       }}>
         {messages.map((m, idx) => (
           <div
             key={idx}
             style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '80%',
-              padding: '1rem 1.25rem',
-              borderRadius: 'var(--radius-lg)',
-              background: m.role === 'user' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(17, 24, 39, 0.85)',
-              border: m.role === 'user' ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: 'var(--shadow-sm)'
+              maxWidth: '85%',
+              padding: '0.85rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: m.role === 'user' ? '#1c2220' : 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'none'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: m.role === 'user' ? '#a5b4fc' : '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: m.role === 'user' ? '#a7f3d0' : '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 {m.role === 'user' ? 'Tú (Gabriel)' : 'Aegis Copilot'}
-                {m.context && <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.1)', color: '#cbd5e1' }}>{m.context}</span>}
+                {m.context && <span style={{ fontSize: '0.6rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>{m.context}</span>}
               </span>
-              <span style={{ fontSize: '0.65rem', color: '#64748b' }}>{m.timestamp}</span>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{m.timestamp}</span>
             </div>
-            <div style={{ fontSize: '0.9rem', lineHeight: '1.5', whiteSpace: 'pre-wrap', color: '#f1f5f9' }}>
+            <div style={{ fontSize: '0.85rem', lineHeight: '1.45', whiteSpace: 'pre-wrap', color: 'var(--text-high)', fontFamily: m.role === 'assistant' ? 'var(--font-mono)' : 'inherit' }}>
               {m.content}
             </div>
           </div>
         ))}
         {loading && (
-          <div style={{ alignSelf: 'flex-start', padding: '0.75rem 1rem', background: 'rgba(17, 24, 39, 0.85)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '0.85rem' }}>
-            <RefreshCw size={14} className="spin" />
+          <div style={{ alignSelf: 'flex-start', padding: '0.6rem 0.85rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+            <RefreshCw size={12} className="spin" />
             <span>Consultando núcleo local...</span>
           </div>
         )}
       </div>
 
       {/* Quick Macros */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', padding: '2px 0' }}>
-        <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>Macros:</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', padding: '2px 0' }}>
+        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>Macros:</span>
         {quickMacros.map((macro, idx) => (
           <button
             key={idx}
             onClick={() => handleSend(macro.text)}
             style={{
-              fontSize: '0.7rem',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: '#cbd5e1',
+              fontSize: '0.68rem',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-md)',
+              background: 'transparent',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-high)',
               cursor: 'pointer',
               whiteSpace: 'nowrap'
             }}
@@ -187,26 +187,26 @@ export default function AgentView() {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        background: 'rgba(17, 24, 39, 0.85)',
+        gap: '8px',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '0.5rem 0.75rem'
+        borderRadius: 'var(--radius-md)',
+        padding: '0.4rem 0.6rem'
       }}>
-        <Terminal size={18} color="#6366f1" />
+        <Terminal size={16} color="#10b981" />
         <input
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={`Escribe instrucción para el agente (Contexto: ${selectedContext})...`}
+          placeholder={`Instrucción para el agente (Contexto: ${selectedContext})...`}
           style={{
             flex: 1,
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: '#ffffff',
-            fontSize: '0.9rem',
+            color: 'var(--text-high)',
+            fontSize: '0.85rem',
             fontFamily: 'inherit'
           }}
         />
@@ -216,19 +216,19 @@ export default function AgentView() {
           style={{
             background: 'var(--primary-grad)',
             border: 'none',
-            borderRadius: '8px',
-            padding: '8px 14px',
+            borderRadius: 'var(--radius-md)',
+            padding: '6px 12px',
             color: '#fff',
             cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
-            opacity: loading || !prompt.trim() ? 0.5 : 1,
+            opacity: loading || !prompt.trim() ? 0.4 : 1,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.8rem',
+            gap: '5px',
+            fontSize: '0.75rem',
             fontWeight: 600
           }}
         >
-          <Send size={14} />
+          <Send size={12} />
           <span>Enviar</span>
         </button>
       </div>
