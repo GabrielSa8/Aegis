@@ -1,3 +1,5 @@
+mod agent;
+
 #[tauri::command]
 fn ping() -> String {
     "Aegis Core Online (Rust / Tauri v2)".into()
@@ -7,7 +9,10 @@ fn ping() -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![ping])
+        .invoke_handler(tauri::generate_handler![
+            ping,
+            agent::execute_agent_prompt
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
