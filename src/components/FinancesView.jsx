@@ -83,11 +83,17 @@ export default function FinancesView() {
     return getFinancialMonthRange(selectedDate);
   }, [selectedDate]);
 
+  const [visibleLimit, setVisibleLimit] = useState(30);
+
   const monthlyTxs = useMemo(() => {
     return safeTransactions
       .filter((t) => isDateInRange(t.date, startDate, endDate))
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [safeTransactions, startDate, endDate]);
+
+  const visibleMonthlyTxs = useMemo(() => {
+    return monthlyTxs.slice(0, visibleLimit);
+  }, [monthlyTxs, visibleLimit]);
 
   const selectedDayTxs = useMemo(() => {
     return safeTransactions
@@ -278,11 +284,16 @@ export default function FinancesView() {
         </div>
       )}
 
-      {/* 🚀 SUB-VISTA 1: OPERACIONES & REGISTRO */}
+      {/* 🚀 SUB-VISTA 1: OPERACIONES & REGISTRO (0MS RETARDO, SOLO KPIS + FORM + LISTA) */}
       {subTab === 'operations' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Métricas KPI Rápidas */}
-          <Dashboard transactions={safeTransactions} selectedDate={selectedDate} onBudgetChange={refreshSnapshots} />
+          {/* Métricas KPI Rápidas (Sin 20 tarjetas de presupuesto) */}
+          <Dashboard 
+            transactions={safeTransactions} 
+            selectedDate={selectedDate} 
+            onBudgetChange={refreshSnapshots} 
+            showBudgets={false} 
+          />
 
           {/* Formulario e Historial Lado a Lado */}
           <div className="main-layout" style={{ marginTop: '0.5rem' }}>
@@ -303,13 +314,13 @@ export default function FinancesView() {
                 <div>
                   <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Historial del Ciclo</h3>
                   <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>
-                    {monthlyTxs.length} registros registrados
+                    Mostrando {visibleMonthlyTxs.length} de {monthlyTxs.length} registros
                   </p>
                 </div>
               </div>
               <div className="tx-items">
-                {monthlyTxs.length > 0 ? (
-                  monthlyTxs.map((tx) => (
+                {visibleMonthlyTxs.length > 0 ? (
+                  visibleMonthlyTxs.map((tx) => (
                     <div key={tx.id} className="tx-item">
                       <div className="tx-left">
                         <div className={`tx-icon-wrapper ${tx.type}`}>
@@ -338,6 +349,15 @@ export default function FinancesView() {
                   <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
                     No hay transacciones registradas en este período.
                   </div>
+                )}
+                {monthlyTxs.length > visibleLimit && (
+                  <button
+                    onClick={() => setVisibleLimit(prev => prev + 30)}
+                    className="btn btn-secondary"
+                    style={{ margin: '8px auto', padding: '6px 14px', fontSize: '0.75rem', borderRadius: 'var(--radius-md)' }}
+                  >
+                    Cargar más registros ({monthlyTxs.length - visibleLimit} restantes)
+                  </button>
                 )}
               </div>
             </div>
@@ -453,6 +473,8 @@ export default function FinancesView() {
             transactions={safeTransactions} 
             selectedDate={selectedDate} 
             onBudgetChange={refreshSnapshots} 
+            showBudgets={true}
+            showStats={false}
           />
         </div>
       )}

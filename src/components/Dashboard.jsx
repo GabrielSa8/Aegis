@@ -2,7 +2,13 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Edit2, Check, X, CreditCard } from 'lucide-react';
 import { getBudgets, saveBudget, getCategories, getFinancialMonthRange, isDateInRange } from '../utils/storage';
 
-function Dashboard({ transactions, selectedDate, onBudgetChange }) {
+function Dashboard({ 
+  transactions, 
+  selectedDate, 
+  onBudgetChange, 
+  showBudgets = true, 
+  showStats = true 
+}) {
   const [budgets, setBudgets] = useState({});
   const [categories, setCategories] = useState([]);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -104,80 +110,83 @@ function Dashboard({ transactions, selectedDate, onBudgetChange }) {
   return (
     <div>
       {/* 📊 TARJETAS RESUMEN DE FINANZAS */}
-      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
-        <div className="stat-card glass balance">
-          <div className="stat-card-title">
-            <span>Balance Neto</span>
-            <Wallet size={16} style={{ color: 'var(--primary)' }} />
+      {showStats && (
+        <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', marginBottom: showBudgets ? '2rem' : '0' }}>
+          <div className="stat-card glass balance">
+            <div className="stat-card-title">
+              <span>Balance Neto</span>
+              <Wallet size={16} style={{ color: 'var(--primary)' }} />
+            </div>
+            <div className="stat-card-value" style={{ color: netBalance >= 0 ? '#ffffff' : 'var(--danger)' }}>
+              {netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
+              Ciclo financiero (Neto)
+            </div>
           </div>
-          <div className="stat-card-value" style={{ color: netBalance >= 0 ? '#ffffff' : 'var(--danger)' }}>
-            {netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
-            Ciclo financiero (Neto)
-          </div>
-        </div>
 
-        <div className="stat-card glass income">
-          <div className="stat-card-title">
-            <span>Ingresos</span>
-            <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+          <div className="stat-card glass income">
+            <div className="stat-card-title">
+              <span>Ingresos</span>
+              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+            </div>
+            <div className="stat-card-value" style={{ color: 'var(--success)' }}>
+              +${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
+              Entradas del ciclo
+            </div>
           </div>
-          <div className="stat-card-value" style={{ color: 'var(--success)' }}>
-            +${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
-            Entradas del ciclo
-          </div>
-        </div>
 
-        <div className="stat-card glass expense">
-          <div className="stat-card-title">
-            <span>Gastos</span>
-            <TrendingDown size={16} style={{ color: 'var(--danger)' }} />
+          <div className="stat-card glass expense">
+            <div className="stat-card-title">
+              <span>Gastos</span>
+              <TrendingDown size={16} style={{ color: 'var(--danger)' }} />
+            </div>
+            <div className="stat-card-value" style={{ color: 'var(--danger)' }}>
+              -${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
+              Salidas del ciclo
+            </div>
           </div>
-          <div className="stat-card-value" style={{ color: 'var(--danger)' }}>
-            -${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
-            Salidas del ciclo
-          </div>
-        </div>
 
-        {/* Nueva Tarjeta: Acumulado de Tarjeta de Crédito (Corte el 22) */}
-        <div className="stat-card glass" style={{ borderLeft: '4px solid #a855f7' }}>
-          <div className="stat-card-title">
-            <span>Acumulado Tarjeta</span>
-            <CreditCard size={16} style={{ color: '#a855f7' }} />
+          {/* Nueva Tarjeta: Acumulado de Tarjeta de Crédito (Corte el 22) */}
+          <div className="stat-card glass" style={{ borderLeft: '4px solid #a855f7' }}>
+            <div className="stat-card-title">
+              <span>Acumulado Tarjeta</span>
+              <CreditCard size={16} style={{ color: '#a855f7' }} />
+            </div>
+            <div className="stat-card-value" style={{ color: '#a855f7' }}>
+              ${totalCreditAccumulated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px', lineHeight: '1.2rem' }}>
+              Ciclo: {startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} al {endDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              <br />
+              <span style={{ color: daysRemaining <= 5 ? 'var(--danger)' : '#a855f7', fontWeight: '700' }}>
+                {daysRemaining} {daysRemaining === 1 ? 'día' : 'días'} para el corte
+              </span>
+            </div>
           </div>
-          <div className="stat-card-value" style={{ color: '#a855f7' }}>
-            ${totalCreditAccumulated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px', lineHeight: '1.2rem' }}>
-            Ciclo: {startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} al {endDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-            <br />
-            <span style={{ color: daysRemaining <= 5 ? 'var(--danger)' : '#a855f7', fontWeight: '700' }}>
-              {daysRemaining} {daysRemaining === 1 ? 'día' : 'días'} para el corte
-            </span>
-          </div>
-        </div>
 
-        <div className="stat-card glass savings">
-          <div className="stat-card-title">
-            <span>Tasa de Ahorro</span>
-            <PiggyBank size={16} style={{ color: 'var(--warning)' }} />
-          </div>
-          <div className="stat-card-value" style={{ color: savingsRate >= 0 ? 'var(--warning)' : '#f3f4f6' }}>
-            {savingsRate.toFixed(1)}%
-          </div>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
-            {netBalance >= 0 ? 'Ahorro sobre ingresos' : 'Déficit sobre ingresos'}
+          <div className="stat-card glass savings">
+            <div className="stat-card-title">
+              <span>Tasa de Ahorro</span>
+              <PiggyBank size={16} style={{ color: 'var(--warning)' }} />
+            </div>
+            <div className="stat-card-value" style={{ color: savingsRate >= 0 ? 'var(--warning)' : '#f3f4f6' }}>
+              {savingsRate.toFixed(1)}%
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '4px' }}>
+              {netBalance >= 0 ? 'Ahorro sobre ingresos' : 'Déficit sobre ingresos'}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 🎯 SECCIÓN DE PRESUPUESTOS POR CATEGORÍA */}
-      <div className="glass" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
+      {showBudgets && (
+        <div className="glass" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1.2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.6rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
             🎯 Presupuestos del Ciclo (Control de Límites)
@@ -264,6 +273,7 @@ function Dashboard({ transactions, selectedDate, onBudgetChange }) {
             })}
         </div>
       </div>
+      )}
     </div>
   );
 }

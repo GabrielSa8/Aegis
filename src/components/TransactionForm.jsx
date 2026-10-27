@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { Check, Trash2, X, Edit3, Settings } from 'lucide-react';
 import { getCategories, addCategory, updateCategory, deleteCategory } from '../utils/storage';
 
@@ -138,25 +138,27 @@ function TransactionForm({ selectedDate, onTransactionSave, editingTransaction, 
     resetForm();
   };
 
-  // Filtrar categorías según tipo (ej. "Ingresos" si es tipo ingreso)
-  const filteredCategories = categories.filter(cat => {
-    if (!cat) return false;
-    if (type === 'income') {
-      return (
-        cat.toLowerCase().includes('ingreso') ||
-        cat.toLowerCase().includes('sueldo') ||
-        cat.toLowerCase().includes('venta') ||
-        cat.toLowerCase().includes('otros') ||
-        cat.toLowerCase().includes('inversión') ||
-        cat.toLowerCase().includes('bono') ||
-        cat.toLowerCase().includes('freelance') ||
-        cat.toLowerCase().includes('comisi') ||
-        cat === category // Permite siempre la categoría activa o recién creada
-      );
-    } else {
-      return !cat.toLowerCase().includes('ingresos (sueldo/ventas)') && !cat.toLowerCase().includes('sueldo');
-    }
-  });
+  // Filtrar categorías según tipo memoizado
+  const filteredCategories = useMemo(() => {
+    return categories.filter(cat => {
+      if (!cat) return false;
+      if (type === 'income') {
+        return (
+          cat.toLowerCase().includes('ingreso') ||
+          cat.toLowerCase().includes('sueldo') ||
+          cat.toLowerCase().includes('venta') ||
+          cat.toLowerCase().includes('otros') ||
+          cat.toLowerCase().includes('inversión') ||
+          cat.toLowerCase().includes('bono') ||
+          cat.toLowerCase().includes('freelance') ||
+          cat.toLowerCase().includes('comisi') ||
+          cat === category
+        );
+      } else {
+        return !cat.toLowerCase().includes('ingresos (sueldo/ventas)') && !cat.toLowerCase().includes('sueldo');
+      }
+    });
+  }, [categories, type, category]);
 
   const safeCategories = filteredCategories.length > 0
     ? filteredCategories

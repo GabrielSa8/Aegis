@@ -70,16 +70,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 💎 EFECTOS GLASSMORPHISM */
+/* 💎 EFECTOS DE SUPERFICIE TÁCTICA (CERO SOBRECARGA GPU) */
 .glass {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  transition: var(--transition);
-  padding: 2.2rem; /* Aumentado de 1.5rem a 2.2rem para dar más respiro */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  padding: 1.25rem;
 }
 
 .glass:hover {
