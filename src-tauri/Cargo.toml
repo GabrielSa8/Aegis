@@ -1,0 +1,25 @@
+[package]
+name = "aegis"
+version = "0.1.0"
+description = "Aegis - Personal Executive Cockpit & Master Command Center"
+authors = ["Gabriel"]
+license = "MIT"
+repository = "git@github.com:GabrielSa8/Life_OS_ZBA.git"
+edition = "2021"
+
+[lib]
+name = "aegis_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.12.5", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-opener = "2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+tokio = { version = "1", features = ["full"] }

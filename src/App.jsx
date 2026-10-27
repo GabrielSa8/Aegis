@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Download, Upload, Trash2, Edit3, Plus, Sparkles, PiggyBank, History, AlertTriangle, ShieldCheck, X } from 'lucide-react';
+import { Download, Upload, Trash2, Edit3, Plus, Sparkles, PiggyBank, History, AlertTriangle, ShieldCheck, X, Cpu } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { getTransactions, saveTransaction, deleteTransaction, exportBackup, importBackup, getFinancialMonthRange, isDateInRange, initializeStorage, requestPersistentStorage, createAutoSnapshot, getSnapshots, restoreFromSnapshot, getTodayLocalDateStr } from './utils/storage';
 import Calendar from './components/Calendar';
 import TransactionForm from './components/TransactionForm';
@@ -14,6 +15,7 @@ export default function App() {
   // Snapshots & backups state
   const [snapshots, setSnapshots] = useState([]);
   const [showBackupsModal, setShowBackupsModal] = useState(false);
+  const [coreStatus, setCoreStatus] = useState('Conectando a Aegis Core...');
 
   // Estados para diálogos de confirmación en la app (sin depender del navegador)
   const [deletingTransaction, setDeletingTransaction] = useState(null);
@@ -32,6 +34,11 @@ export default function App() {
 
   // Initialize storage and sync with server (offline‑only mode)
   useEffect(() => {
+    // Probar IPC con Tauri Core
+    invoke('ping')
+      .then((res) => setCoreStatus(res))
+      .catch((err) => setCoreStatus('Modo Web Standalone'));
+
     initializeStorage();
     const initAndSync = async () => {
       // Solicitud de persistencia de datos (evita borrado automático del navegador)
@@ -160,11 +167,17 @@ export default function App() {
       {/* Header */}
       <header className="glass" style={{ padding: '1.25rem 2rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', marginBottom: '2rem' }}>
         <div className="logo-section">
-          <h1>
-            <PiggyBank style={{ color: 'var(--primary)' }} />
-            LifeOS
-          </h1>
-          <p>Tu centro local e inteligente de control financiero personal</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <ShieldCheck style={{ color: 'var(--primary)' }} size={28} />
+              Aegis
+            </h1>
+            <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.3)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Cpu size={12} />
+              {coreStatus}
+            </span>
+          </div>
+          <p>Cockpit y Centro de Mando Maestro Personal</p>
         </div>
         <div className="actions-section">
           <button onClick={() => setShowBackupsModal(true)} className="btn btn-secondary" title="Ver e importar copias automáticas locales">
