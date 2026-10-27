@@ -22,19 +22,19 @@ export default function CommandDock({ activeTab, onSelectTab }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '20px',
+      bottom: '16px',
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 1000,
-      background: 'rgba(22, 26, 25, 0.95)',
-      backdropFilter: 'blur(12px)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '5px 8px',
+      background: 'rgba(22, 26, 25, 0.94)',
+      backdropFilter: 'blur(16px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '24px',
+      padding: '4px 6px',
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
-      boxShadow: '0 12px 32px -8px rgba(0, 0, 0, 0.6)'
+      boxShadow: '0 12px 32px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(16, 185, 129, 0.1)'
     }}>
       {dockItems.map((item) => {
         const Icon = item.icon;
@@ -46,14 +46,14 @@ export default function CommandDock({ activeTab, onSelectTab }) {
             title={`${item.label} (Alt + ${item.shortcut})`}
             style={{
               position: 'relative',
-              background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-              border: isActive ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
-              borderRadius: 'var(--radius-md)',
-              padding: '8px 12px',
+              background: isActive ? 'rgba(16, 185, 129, 0.14)' : 'transparent',
+              border: isActive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
+              borderRadius: '14px',
+              padding: '6px 12px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '4px',
+              gap: '3px',
               cursor: 'pointer',
               color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
               transition: 'var(--transition)',
@@ -61,8 +61,8 @@ export default function CommandDock({ activeTab, onSelectTab }) {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Icon size={16} color={isActive ? '#10b981' : '#788882'} />
-              <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 600 : 500 }}>
+              <Icon size={15} color={isActive ? '#10b981' : '#788882'} />
+              <span style={{ fontSize: '0.74rem', fontWeight: isActive ? 600 : 500 }}>
                 {item.label}
               </span>
             </div>
@@ -71,10 +71,10 @@ export default function CommandDock({ activeTab, onSelectTab }) {
             {isActive && (
               <div style={{
                 position: 'absolute',
-                bottom: '2px',
+                bottom: '3px',
                 width: '16px',
                 height: '2px',
-                borderRadius: '1px',
+                borderRadius: '9999px',
                 background: '#10b981',
                 boxShadow: '0 0 6px #10b981'
               }} />

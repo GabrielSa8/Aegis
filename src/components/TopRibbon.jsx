@@ -60,8 +60,8 @@ export default function TopRibbon({ coreStatus, activeTab }) {
           gap: '6px',
           background: 'rgba(16, 185, 129, 0.08)',
           border: '1px solid rgba(16, 185, 129, 0.2)',
-          padding: '3px 8px',
-          borderRadius: 'var(--radius-md)',
+          padding: '3px 10px',
+          borderRadius: 'var(--radius-full)',
           fontSize: '0.68rem',
           color: '#34d399',
           fontWeight: 600

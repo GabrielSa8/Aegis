@@ -45,7 +45,7 @@ export default function FinancesView({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '1rem 1.5rem',
-        background: 'rgba(17, 24, 39, 0.7)',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-xl)'
       }}>

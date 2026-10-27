@@ -201,8 +201,11 @@ export default function App() {
       {/* 🚀 Lienzo Principal Completo (100% de Ancho) */}
       <main style={{
         flex: 1,
-        overflowY: 'auto',
-        padding: '1.25rem 1.5rem 85px 1.5rem',
+        minHeight: 0,
+        overflowY: activeTab === 'agent' ? 'hidden' : 'auto',
+        padding: activeTab === 'agent' 
+          ? '1rem 1.5rem 88px 1.5rem' 
+          : '1.25rem 1.5rem 100px 1.5rem',
         display: 'flex',
         flexDirection: 'column'
       }}>

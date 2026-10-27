@@ -69,7 +69,7 @@ export default function AgentView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: '0.75rem' }}>
       {/* Context Router Bar */}
       <div style={{
         display: 'flex',
@@ -78,7 +78,8 @@ export default function AgentView() {
         padding: '0.6rem 1rem',
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)'
+        borderRadius: 'var(--radius-lg)',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
@@ -90,7 +91,7 @@ export default function AgentView() {
               onClick={() => setSelectedContext(ctx.id)}
               style={{
                 fontSize: '0.72rem',
-                padding: '4px 10px',
+                padding: '5px 12px',
                 borderRadius: 'var(--radius-md)',
                 background: selectedContext === ctx.id ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
                 border: selectedContext === ctx.id ? '1px solid var(--primary)' : '1px solid var(--border-color)',
@@ -118,14 +119,15 @@ export default function AgentView() {
       {/* Message Viewport */}
       <div style={{
         flex: 1,
+        minHeight: 0,
         overflowY: 'auto',
         background: 'var(--bg-main)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-lg)',
-        padding: '1rem',
+        padding: '1.25rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem'
+        gap: '0.85rem'
       }}>
         {messages.map((m, idx) => (
           <div
@@ -133,8 +135,8 @@ export default function AgentView() {
             style={{
               alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '85%',
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
+              padding: '0.85rem 1.15rem',
+              borderRadius: 'var(--radius-lg)',
               background: m.role === 'user' ? '#1c2220' : 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               boxShadow: 'none'
@@ -143,7 +145,7 @@ export default function AgentView() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: m.role === 'user' ? '#a7f3d0' : '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 {m.role === 'user' ? 'Tú (Gabriel)' : 'Aegis Copilot'}
-                {m.context && <span style={{ fontSize: '0.6rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>{m.context}</span>}
+                {m.context && <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>{m.context}</span>}
               </span>
               <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{m.timestamp}</span>
             </div>
@@ -161,7 +163,7 @@ export default function AgentView() {
       </div>
 
       {/* Quick Macros */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', padding: '2px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', padding: '2px 0', flexShrink: 0 }}>
         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>Macros:</span>
         {quickMacros.map((macro, idx) => (
           <button
@@ -169,13 +171,14 @@ export default function AgentView() {
             onClick={() => handleSend(macro.text)}
             style={{
               fontSize: '0.68rem',
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-md)',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-sm)',
               background: 'transparent',
               border: '1px solid var(--border-color)',
               color: 'var(--text-high)',
               cursor: 'pointer',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              transition: 'var(--transition)'
             }}
           >
             {macro.label}
@@ -190,8 +193,10 @@ export default function AgentView() {
         gap: '8px',
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-md)',
-        padding: '0.4rem 0.6rem'
+        borderRadius: 'var(--radius-lg)',
+        padding: '0.5rem 0.8rem',
+        flexShrink: 0,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)'
       }}>
         <Terminal size={16} color="#10b981" />
         <input
@@ -217,7 +222,7 @@ export default function AgentView() {
             background: 'var(--primary-grad)',
             border: 'none',
             borderRadius: 'var(--radius-md)',
-            padding: '6px 12px',
+            padding: '7px 14px',
             color: '#fff',
             cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
             opacity: loading || !prompt.trim() ? 0.4 : 1,
@@ -225,7 +230,8 @@ export default function AgentView() {
             alignItems: 'center',
             gap: '5px',
             fontSize: '0.75rem',
-            fontWeight: 600
+            fontWeight: 600,
+            transition: 'var(--transition)'
           }}
         >
           <Send size={12} />

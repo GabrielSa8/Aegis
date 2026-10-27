@@ -34,7 +34,13 @@
 
 ## 📐 3. Geometría y Layout
 
-* **Radios de Borde:** `4px` para elementos pequeños/botones, `6px` para paneles contenedores. Prohibidos bordes de `20px` estilo píldora móvil.
+* **Radios de Borde Cohesivos:**
+  * `--radius-sm: 8px`: Badges, tags de metadatos, chips de contexto y micro-atajos.
+  * `--radius-md: 12px`: Botones interactivos, inputs de formulario y selectores.
+  * `--radius-lg: 16px`: Tarjetas de contenido, consolas de comandos y paneles internos.
+  * `--radius-xl: 20px`: Paneles principales, modales y contenedores de vista.
+  * `--radius-2xl: 26px`: Isla táctica flotante (Command Dock) y contornos exteriores.
+  * `--radius-full: 9999px`: Píldoras de telemetría y scrollbars.
 * **Profundidad y Capas:** La profundidad se define por bordes de 1px (`--border-wire`) y diferencias sutiles de tono, nunca por sombras difusas flotantes (`box-shadow: none`).
 * **Espaciado:** Cuadrícula de 8px estricta (`8px`, `16px`, `24px`).
 
