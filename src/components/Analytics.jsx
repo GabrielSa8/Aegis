@@ -1,3 +1,4 @@
+import { useMemo, memo } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -61,52 +62,57 @@ const getCategoryHoverColors = (count) => Array.from({ length: count }, (_, i) =
 const getMethodColors = (count) => Array.from({ length: count }, (_, i) => METHOD_COLORS[i % METHOD_COLORS.length]);
 const getMethodHoverColors = (count) => Array.from({ length: count }, (_, i) => METHOD_HOVER_COLORS[i % METHOD_HOVER_COLORS.length]);
 
-export default function Analytics({ transactions, selectedDate }) {
+function Analytics({ transactions, selectedDate }) {
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
   // Obtener rango del periodo financiero para la fecha seleccionada
-  const { startDate, endDate } = getFinancialMonthRange(selectedDate);
+  const { startDate, endDate, financialYear: activeFinancialYear } = useMemo(() => {
+    return getFinancialMonthRange(selectedDate);
+  }, [selectedDate]);
 
-  // --- 1. PROCESAR DATOS PARA EL GRÁFICO DE DONA (GASTOS POR CATEGORÍA DEL MES SELECCIONADO) ---
-  const monthlyExpenses = safeTransactions.filter(t => {
-    return t.type === 'expense' && isDateInRange(t.date, startDate, endDate);
-  });
+  // --- 1. PROCESAR DATOS PARA EL GRÁFICO DE DONA ---
+  const { doughnutData, hasExpenses } = useMemo(() => {
+    const monthlyExpenses = safeTransactions.filter(t => {
+      return t.type === 'expense' && isDateInRange(t.date, startDate, endDate);
+    });
 
-  const expenseByCategory = {};
-  monthlyExpenses.forEach(t => {
-    const amt = Number(t.amount) || 0;
-    const cat = t.category || 'Otros';
-    expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amt;
-  });
+    const expenseByCategory = {};
+    monthlyExpenses.forEach(t => {
+      const amt = Number(t.amount) || 0;
+      const cat = t.category || 'Otros';
+      expenseByCategory[cat] = (expenseByCategory[cat] || 0) + amt;
+    });
 
-  const doughnutLabels = Object.keys(expenseByCategory);
-  const doughnutDataValues = Object.values(expenseByCategory);
+    const labels = Object.keys(expenseByCategory);
+    const dataValues = Object.values(expenseByCategory);
 
-  const doughnutData = {
-    labels: doughnutLabels,
-    datasets: [
-      {
-        data: doughnutDataValues,
-        backgroundColor: getCategoryColors(doughnutLabels.length),
-        borderColor: 'rgba(11, 15, 25, 0.9)',
-        borderWidth: 2,
-        hoverBackgroundColor: getCategoryHoverColors(doughnutLabels.length),
+    return {
+      doughnutData: {
+        labels,
+        datasets: [
+          {
+            data: dataValues,
+            backgroundColor: getCategoryColors(labels.length),
+            borderColor: 'rgba(11, 15, 25, 0.9)',
+            borderWidth: 2,
+            hoverBackgroundColor: getCategoryHoverColors(labels.length),
+          },
+        ],
       },
-    ],
-  };
+      hasExpenses: dataValues.length > 0
+    };
+  }, [safeTransactions, startDate, endDate]);
 
-  const doughnutOptions = {
+  const doughnutOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: {
         position: 'right',
         labels: {
           color: '#d1d5db',
-          font: {
-            family: 'Outfit',
-            size: 11,
-          },
+          font: { family: 'inherit', size: 11 },
           boxWidth: 12,
         },
       },
@@ -114,129 +120,118 @@ export default function Analytics({ transactions, selectedDate }) {
         callbacks: {
           label: (context) => {
             const val = context.raw || 0;
-            const total = doughnutDataValues.reduce((a, b) => a + b, 0);
-            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-            return ` $${val.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${pct}%)`;
+            return ` $${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
           },
         },
       },
     },
-  };
+  }), []);
 
-  // --- 2. PROCESAR DATOS PARA EL GRÁFICO DE BARRAS ANUAL (EVOLUCIÓN MENSUAL) ---
-  const yearlyIncomes = Array(12).fill(0);
-  const yearlyExpenses = Array(12).fill(0);
+  // --- 2. PROCESAR DATOS PARA EL GRÁFICO DE BARRAS ANUAL ---
+  const barData = useMemo(() => {
+    const yearlyIncomes = Array(12).fill(0);
+    const yearlyExpenses = Array(12).fill(0);
 
-  // Obtener el año financiero activo para el periodo seleccionado
-  const { financialYear: activeFinancialYear } = getFinancialMonthRange(selectedDate);
-
-  safeTransactions.forEach(t => {
-    if (!t.date) return;
-    const { financialMonth, financialYear } = getFinancialMonthRange(t.date);
-    const amt = Number(t.amount) || 0;
-    if (financialYear === activeFinancialYear) {
-      if (t.type === 'income') {
-        yearlyIncomes[financialMonth] += amt;
-      } else {
-        yearlyExpenses[financialMonth] += amt;
+    safeTransactions.forEach(t => {
+      if (!t.date) return;
+      const { financialMonth, financialYear } = getFinancialMonthRange(t.date);
+      const amt = Number(t.amount) || 0;
+      if (financialYear === activeFinancialYear) {
+        if (t.type === 'income') {
+          yearlyIncomes[financialMonth] += amt;
+        } else {
+          yearlyExpenses[financialMonth] += amt;
+        }
       }
-    }
-  });
+    });
 
-  const barData = {
-    labels: MONTH_SHORT_NAMES,
-    datasets: [
-      {
-        label: 'Ingresos (+)',
-        data: yearlyIncomes,
-        backgroundColor: '#10b981', // Emerald
-        borderRadius: 4,
-        borderWidth: 0,
-      },
-      {
-        label: 'Gastos (-)',
-        data: yearlyExpenses,
-        backgroundColor: '#f43f5e', // Rose/Coral
-        borderRadius: 4,
-        borderWidth: 0,
-      },
-    ],
-  };
+    return {
+      labels: MONTH_SHORT_NAMES,
+      datasets: [
+        {
+          label: 'Ingresos (+)',
+          data: yearlyIncomes,
+          backgroundColor: '#10b981',
+          borderRadius: 6,
+          borderWidth: 0,
+        },
+        {
+          label: 'Gastos (-)',
+          data: yearlyExpenses,
+          backgroundColor: '#f43f5e',
+          borderRadius: 6,
+          borderWidth: 0,
+        },
+      ],
+    };
+  }, [safeTransactions, activeFinancialYear]);
 
-  const barOptions = {
+  const barOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: {
         position: 'top',
         labels: {
           color: '#d1d5db',
-          font: {
-            family: 'Outfit',
-            size: 12,
-            weight: '500',
-          },
+          font: { family: 'inherit', size: 12, weight: '500' },
         },
       },
     },
     scales: {
       x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          color: '#9ca3af',
-          font: { family: 'Outfit' },
-        },
+        grid: { display: false },
+        ticks: { color: '#9ca3af', font: { family: 'inherit' } },
       },
       y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.05)',
-        },
+        grid: { color: 'rgba(255, 255, 255, 0.05)' },
         ticks: {
           color: '#9ca3af',
-          font: { family: 'Outfit' },
+          font: { family: 'inherit' },
           callback: (value) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
         },
       },
     },
-  };
+  }), []);
 
   // --- 3. PROCESAR DATOS PARA EL GRÁFICO DE MÉTODOS DE PAGO ---
-  const expenseByMethod = { 'Efectivo': 0, 'Débito': 0, 'Crédito': 0 };
-  monthlyExpenses.forEach(t => {
-    const method = t.paymentMethod || 'Débito';
-    expenseByMethod[method] = (expenseByMethod[method] || 0) + (Number(t.amount) || 0);
-  });
+  const methodData = useMemo(() => {
+    const expenseByMethod = { 'Efectivo': 0, 'Débito': 0, 'Crédito': 0 };
+    safeTransactions.forEach(t => {
+      if (t.type === 'expense' && isDateInRange(t.date, startDate, endDate)) {
+        const method = t.paymentMethod || 'Débito';
+        expenseByMethod[method] = (expenseByMethod[method] || 0) + (Number(t.amount) || 0);
+      }
+    });
 
-  const methodLabels = Object.keys(expenseByMethod);
-  const methodDataValues = Object.values(expenseByMethod);
+    const labels = Object.keys(expenseByMethod);
+    const dataValues = Object.values(expenseByMethod);
 
-  const methodData = {
-    labels: methodLabels,
-    datasets: [
-      {
-        data: methodDataValues,
-        backgroundColor: getMethodColors(methodLabels.length),
-        borderColor: 'rgba(11, 15, 25, 0.9)',
-        borderWidth: 2,
-        hoverBackgroundColor: getMethodHoverColors(methodLabels.length),
-      },
-    ],
-  };
+    return {
+      labels,
+      datasets: [
+        {
+          data: dataValues,
+          backgroundColor: getMethodColors(labels.length),
+          borderColor: 'rgba(11, 15, 25, 0.9)',
+          borderWidth: 2,
+          hoverBackgroundColor: getMethodHoverColors(labels.length),
+        },
+      ],
+    };
+  }, [safeTransactions, startDate, endDate]);
 
-  const methodOptions = {
+  const methodOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
     plugins: {
       legend: {
         position: 'right',
         labels: {
           color: '#d1d5db',
-          font: {
-            family: 'Outfit',
-            size: 11,
-          },
+          font: { family: 'inherit', size: 11 },
           boxWidth: 12,
         },
       },
@@ -244,16 +239,12 @@ export default function Analytics({ transactions, selectedDate }) {
         callbacks: {
           label: (context) => {
             const val = context.raw || 0;
-            const total = methodDataValues.reduce((a, b) => a + b, 0);
-            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-            return ` $${val.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${pct}%)`;
+            return ` $${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
           },
         },
       },
     },
-  };
-
-  const hasExpenses = doughnutDataValues.length > 0;
+  }), []);
 
   return (
     <div className="analytics-layout">
@@ -316,3 +307,5 @@ export default function Analytics({ transactions, selectedDate }) {
     </div>
   );
 }
+
+export default memo(Analytics);

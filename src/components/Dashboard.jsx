@@ -1,68 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Edit2, Check, X, CreditCard } from 'lucide-react';
 import { getBudgets, saveBudget, getCategories, getFinancialMonthRange, isDateInRange } from '../utils/storage';
 
-export default function Dashboard({ transactions, selectedDate, onBudgetChange }) {
+function Dashboard({ transactions, selectedDate, onBudgetChange }) {
   const [budgets, setBudgets] = useState({});
   const [categories, setCategories] = useState([]);
   const [editingCategory, setEditingCategory] = useState(null);
   const [tempBudget, setTempBudget] = useState('');
 
-  // Cargar presupuestos y categorías al iniciar
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+  // Cargar presupuestos y categorías al iniciar o cuando cambia el conteo de transacciones
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
-      setBudgets(await getBudgets());
-      setCategories(await getCategories());
+      const [b, c] = await Promise.all([getBudgets(), getCategories()]);
+      if (isMounted) {
+        setBudgets(b || {});
+        setCategories(c || []);
+      }
     };
     loadData();
-  }, [transactions]);
+    return () => { isMounted = false; };
+  }, [safeTransactions.length]);
 
-  // Obtener rango del periodo financiero (ciclo del 22 al 22) para la fecha seleccionada
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const { startDate, endDate } = getFinancialMonthRange(selectedDate);
-  const validSelectedDate = selectedDate || new Date().toISOString().split('T')[0];
-  const currentDate = new Date(validSelectedDate + 'T12:00:00'); // Hora a mediodía para evitar problemas de husos horarios
+  // Obtener rango del periodo financiero para la fecha seleccionada
+  const { startDate, endDate } = useMemo(() => {
+    return getFinancialMonthRange(selectedDate);
+  }, [selectedDate]);
 
-  // Filtrar transacciones del periodo financiero seleccionado
-  const monthlyTxs = safeTransactions.filter(t => {
-    return isDateInRange(t.date, startDate, endDate);
-  });
+  // Cálculos consolidados y memoizados en un solo recorrido O(N)
+  const metrics = useMemo(() => {
+    const validSelectedDate = selectedDate || new Date().toISOString().split('T')[0];
+    const currentDate = new Date(validSelectedDate + 'T12:00:00');
 
-  // Calcular métricas mensuales
-  let totalIncome = 0;
-  let totalExpense = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let totalCreditAccumulated = 0;
+    const expenseByCategory = {};
+    const monthlyTxs = [];
 
-  monthlyTxs.forEach(t => {
-    const amt = Number(t.amount) || 0;
-    if (t.type === 'income') {
-      totalIncome += amt;
-    } else {
-      totalExpense += amt;
+    for (let i = 0; i < safeTransactions.length; i++) {
+      const t = safeTransactions[i];
+      if (!isDateInRange(t.date, startDate, endDate)) continue;
+
+      monthlyTxs.push(t);
+      const amt = Number(t.amount) || 0;
+
+      if (t.type === 'income') {
+        totalIncome += amt;
+      } else {
+        totalExpense += amt;
+        expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + amt;
+        if (t.paymentMethod === 'Crédito') {
+          totalCreditAccumulated += amt;
+        }
+      }
     }
-  });
 
-  const netBalance = totalIncome - totalExpense;
-  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
+    const netBalance = totalIncome - totalExpense;
+    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome) * 100 : 0;
 
-  // Filtrar transacciones de Crédito dentro del rango del ciclo activo
-  const creditTxs = safeTransactions.filter(t => {
-    return t.type === 'expense' && t.paymentMethod === 'Crédito' && isDateInRange(t.date, startDate, endDate);
-  });
+    const timeDiff = endDate.getTime() - currentDate.getTime();
+    const rawDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    const daysRemaining = isNaN(rawDays) ? 0 : Math.max(0, rawDays);
 
-  const totalCreditAccumulated = creditTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-  
-  // Calcular días restantes para el corte
-  const timeDiff = endDate.getTime() - currentDate.getTime();
-  const rawDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-  const daysRemaining = isNaN(rawDays) ? 0 : Math.max(0, rawDays);
+    return {
+      monthlyTxs,
+      totalIncome,
+      totalExpense,
+      netBalance,
+      savingsRate,
+      totalCreditAccumulated,
+      daysRemaining,
+      expenseByCategory
+    };
+  }, [safeTransactions, startDate, endDate, selectedDate]);
 
-  // Calcular gastos mensuales por categoría para los presupuestos
-  const expenseByCategory = {};
-  monthlyTxs.forEach(t => {
-    if (t.type === 'expense') {
-      expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + (Number(t.amount) || 0);
-    }
-  });
+  const {
+    totalIncome,
+    totalExpense,
+    netBalance,
+    savingsRate,
+    totalCreditAccumulated,
+    daysRemaining,
+    expenseByCategory
+  } = metrics;
 
   // Guardar cambio de presupuesto
   const handleSaveBudget = async (cat) => {
@@ -244,3 +267,5 @@ export default function Dashboard({ transactions, selectedDate, onBudgetChange }
     </div>
   );
 }
+
+export default memo(Dashboard);

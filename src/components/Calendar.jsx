@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 import { getTodayLocalDateStr } from '../utils/storage';
@@ -10,12 +10,34 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-export default function Calendar({ transactions, selectedDate, onDateSelect }) {
+function Calendar({ transactions, selectedDate, onDateSelect }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
   const today = new Date();
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+  // Mapa de transacciones por fecha precomputado en O(N) para lookup O(1)
+  const dailySummaryMap = useMemo(() => {
+    const map = new Map();
+    for (let i = 0; i < safeTransactions.length; i++) {
+      const t = safeTransactions[i];
+      if (!t.date) continue;
+      let entry = map.get(t.date);
+      if (!entry) {
+        entry = { income: 0, expense: 0, count: 0 };
+        map.set(t.date, entry);
+      }
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'income') {
+        entry.income += amt;
+      } else {
+        entry.expense += amt;
+      }
+      entry.count++;
+    }
+    return map;
+  }, [safeTransactions]);
 
   // Obtener días del mes seleccionado
   const getDaysInMonth = (month, year) => {
@@ -65,25 +87,7 @@ export default function Calendar({ transactions, selectedDate, onDateSelect }) {
     return `${currentYear}-${monthStr}-${dayStr}`;
   };
 
-  // Obtener resumen de transacciones de un día
-  const getDaySummary = (dayStr) => {
-    const dayTxs = safeTransactions.filter(t => t.date === dayStr);
-    let income = 0;
-    let expense = 0;
-
-    dayTxs.forEach(t => {
-      const amt = Number(t.amount) || 0;
-      if (t.type === 'income') {
-        income += amt;
-      } else {
-        expense += amt;
-      }
-    });
-
-    return { income, expense, hasTransactions: dayTxs.length > 0 };
-  };
-
-  // Generar grid de días
+  // Generar grid de días con lookup instantáneo O(1)
   const renderDays = () => {
     const days = [];
     
@@ -95,7 +99,9 @@ export default function Calendar({ transactions, selectedDate, onDateSelect }) {
     // Renderizar días reales del mes
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = formatDateString(day);
-      const { income, expense, hasTransactions } = getDaySummary(dateStr);
+      const summary = dailySummaryMap.get(dateStr) || { income: 0, expense: 0, count: 0 };
+      const hasTransactions = summary.count > 0;
+      const { income, expense } = summary;
       
       const isToday = today.getDate() === day && 
                       today.getMonth() === currentMonth && 
@@ -173,3 +179,5 @@ export default function Calendar({ transactions, selectedDate, onDateSelect }) {
     </div>
   );
 }
+
+export default memo(Calendar);

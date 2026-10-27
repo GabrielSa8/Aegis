@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Check, Trash2, X, Edit3, Settings } from 'lucide-react';
 import { getCategories, addCategory, updateCategory, deleteCategory } from '../utils/storage';
 
-export default function TransactionForm({ selectedDate, onTransactionSave, editingTransaction, onCancelEdit, onCategoriesChange }) {
+function TransactionForm({ selectedDate, onTransactionSave, editingTransaction, onCancelEdit, onCategoriesChange }) {
   const [type, setType] = useState('expense'); // 'income' | 'expense'
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -442,3 +442,5 @@ export default function TransactionForm({ selectedDate, onTransactionSave, editi
     </div>
   );
 }
+
+export default memo(TransactionForm);
