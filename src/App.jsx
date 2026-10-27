@@ -14,7 +14,8 @@ import {
   getTodayLocalDateStr 
 } from './utils/storage';
 
-import Sidebar from './components/Sidebar';
+import TopRibbon from './components/TopRibbon';
+import CommandDock from './components/CommandDock';
 import AgentView from './components/AgentView';
 import FinancesView from './components/FinancesView';
 import VaultView from './components/VaultView';
@@ -47,13 +48,34 @@ export default function App() {
     await refreshSnapshots();
   };
 
+  // Keyboard shortcut listener (Alt + 1..7)
   useEffect(() => {
-    // Probar IPC con Tauri Core
+    const handleKeyDown = (e) => {
+      if (e.altKey) {
+        const keyMap = {
+          '1': 'agent',
+          '2': 'finances',
+          '3': 'vault',
+          '4': 'devops',
+          '5': 'tasks',
+          '6': 'sentinel',
+          '7': 'leisure'
+        };
+        if (keyMap[e.key]) {
+          e.preventDefault();
+          setActiveTab(keyMap[e.key]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     invoke('ping')
       .then((res) => setCoreStatus(res))
-      .catch((err) => setCoreStatus('Modo Web Standalone'));
+      .catch(() => setCoreStatus('Modo Web Standalone'));
 
-    // Inicializar persistencia
     initializeStorage();
     const initAndSync = async () => {
       await requestPersistentStorage();
@@ -162,25 +184,25 @@ export default function App() {
   return (
     <div style={{
       display: 'flex',
+      flexDirection: 'column',
       width: '100vw',
       height: '100vh',
       background: 'var(--bg-main)',
-      color: '#f8fafc',
-      overflow: 'hidden'
+      color: 'var(--text-high)',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
-      {/* 🛡️ Sidebar de 7 Pilares */}
-      <Sidebar 
-        activeTab={activeTab} 
-        onSelectTab={setActiveTab} 
+      {/* 📡 Cinta Superior de Telemetría (Top Ribbon) */}
+      <TopRibbon 
         coreStatus={coreStatus} 
+        activeTab={activeTab} 
       />
 
-      {/* 🚀 Main Viewport */}
+      {/* 🚀 Lienzo Principal Completo (100% de Ancho) */}
       <main style={{
         flex: 1,
-        height: '100vh',
         overflowY: 'auto',
-        padding: '1.5rem',
+        padding: '1.25rem 1.5rem 85px 1.5rem',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -216,6 +238,12 @@ export default function App() {
         {activeTab === 'sentinel' && <SentinelView />}
         {activeTab === 'leisure' && <LeisureView />}
       </main>
+
+      {/* 🏝️ Isla Táctica Flotante (Floating Command Dock) */}
+      <CommandDock 
+        activeTab={activeTab} 
+        onSelectTab={setActiveTab} 
+      />
     </div>
   );
 }
