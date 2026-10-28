@@ -239,6 +239,249 @@ fn parse_skill_frontmatter(content: &str) -> (String, String, Option<String>) {
     (name, description, version)
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitCommitSummary {
+    pub hash: String,
+    pub author: String,
+    pub date: String,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitFileStatus {
+    pub status: String,
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitRepoDetails {
+    pub repo_path: String,
+    pub branch: String,
+    pub branches: Vec<String>,
+    pub status_files: Vec<GitFileStatus>,
+    pub diff_text: String,
+    pub recent_commits: Vec<GitCommitSummary>,
+}
+
+#[tauri::command]
+pub fn get_git_repo_details(path: String) -> Result<GitRepoDetails, String> {
+    let p = Path::new(&path);
+    if !p.exists() || !p.join(".git").exists() {
+        return Err("Ruta no es un repositorio Git válido".into());
+    }
+
+    // Branch actual
+    let branch = Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|_| "HEAD".to_string());
+
+    // Lista de ramas locales
+    let branches_output = Command::new("git")
+        .args(["branch", "--format=%(refname:short)"])
+        .current_dir(p)
+        .output()
+        .ok();
+    let mut branches = Vec::new();
+    if let Some(o) = branches_output {
+        for line in String::from_utf8_lossy(&o.stdout).lines() {
+            let b = line.trim();
+            if !b.is_empty() {
+                branches.push(b.to_string());
+            }
+        }
+    }
+
+    // Archivos modificados (git status -s)
+    let status_output = Command::new("git")
+        .args(["status", "-s"])
+        .current_dir(p)
+        .output()
+        .ok();
+    let mut status_files = Vec::new();
+    if let Some(o) = status_output {
+        for line in String::from_utf8_lossy(&o.stdout).lines() {
+            if line.len() >= 3 {
+                let code = line[..2].trim().to_string();
+                let fpath = line[3..].trim().to_string();
+                status_files.push(GitFileStatus { status: code, path: fpath });
+            }
+        }
+    }
+
+    // Diff en vivo (git diff HEAD)
+    let diff_output = Command::new("git")
+        .args(["diff", "HEAD"])
+        .current_dir(p)
+        .output()
+        .ok();
+    let diff_text = diff_output
+        .map(|o| {
+            let s = String::from_utf8_lossy(&o.stdout);
+            if s.len() > 300_000 {
+                format!("{}\n\n... [Diff truncado por tamaño >300KB] ...", &s[..300_000])
+            } else {
+                s.to_string()
+            }
+        })
+        .unwrap_or_default();
+
+    // Historial reciente de commits (git log -10)
+    let log_output = Command::new("git")
+        .args(["log", "-10", "--format=%h|%an|%cr|%s"])
+        .current_dir(p)
+        .output()
+        .ok();
+    let mut recent_commits = Vec::new();
+    if let Some(o) = log_output {
+        for line in String::from_utf8_lossy(&o.stdout).lines() {
+            let parts: Vec<&str> = line.trim().split('|').collect();
+            if parts.len() >= 4 {
+                recent_commits.push(GitCommitSummary {
+                    hash: parts[0].to_string(),
+                    author: parts[1].to_string(),
+                    date: parts[2].to_string(),
+                    message: parts[3..].join("|"),
+                });
+            }
+        }
+    }
+
+    Ok(GitRepoDetails {
+        repo_path: path,
+        branch,
+        branches,
+        status_files,
+        diff_text,
+        recent_commits,
+    })
+}
+
+#[tauri::command]
+pub fn git_fetch_repo(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if !p.exists() || !p.join(".git").exists() {
+        return Err("Ruta no es un repositorio Git válido".into());
+    }
+
+    let out = Command::new("git")
+        .args(["fetch"])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Error ejecutando git fetch: {}", e))?;
+
+    if out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        if stderr.trim().is_empty() {
+            Ok("Fetch completado: sin novedades remotas".to_string())
+        } else {
+            Ok(stderr.trim().to_string())
+        }
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub fn git_pull_repo(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if !p.exists() || !p.join(".git").exists() {
+        return Err("Ruta no es un repositorio Git válido".into());
+    }
+
+    let out = Command::new("git")
+        .args(["pull"])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Error ejecutando git pull: {}", e))?;
+
+    if out.status.success() {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        Ok(stdout.trim().to_string())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub fn git_checkout_branch(path: String, branch: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if !p.exists() || !p.join(".git").exists() {
+        return Err("Ruta no es un repositorio Git válido".into());
+    }
+
+    let clean_branch = branch.trim();
+    if clean_branch.starts_with('-') || clean_branch.contains(' ') || clean_branch.is_empty() {
+        return Err("Nombre de rama no válido".into());
+    }
+
+    let out = Command::new("git")
+        .args(["checkout", clean_branch])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Error cambiando de rama: {}", e))?;
+
+    if out.status.success() {
+        let msg = String::from_utf8_lossy(&out.stderr);
+        Ok(if msg.trim().is_empty() {
+            format!("Cambiado a rama {}", clean_branch)
+        } else {
+            msg.trim().to_string()
+        })
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub fn open_repo_in_editor(path: String, editor: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err("Ruta no existe".into());
+    }
+
+    match editor.as_str() {
+        "cursor" => {
+            Command::new("cursor")
+                .arg(&path)
+                .spawn()
+                .map_err(|e| format!("Error abriendo Cursor: {}", e))?;
+        }
+        "code" => {
+            Command::new("code")
+                .arg(&path)
+                .spawn()
+                .map_err(|e| format!("Error abriendo VS Code: {}", e))?;
+        }
+        "terminal" => {
+            if Path::new("/usr/bin/ptyxis").exists() {
+                Command::new("ptyxis")
+                    .args(["--working-directory", &path])
+                    .spawn()
+                    .map_err(|e| format!("Error abriendo terminal Ptyxis: {}", e))?;
+            } else if Path::new("/usr/bin/kgx").exists() {
+                Command::new("kgx")
+                    .args(["--working-directory", &path])
+                    .spawn()
+                    .map_err(|e| format!("Error abriendo terminal KGX: {}", e))?;
+            } else if Path::new("/usr/bin/gnome-terminal").exists() {
+                let arg = format!("--working-directory={}", path);
+                Command::new("gnome-terminal")
+                    .arg(arg)
+                    .spawn()
+                    .map_err(|e| format!("Error abriendo GNOME Terminal: {}", e))?;
+            } else {
+                return Err("No se encontró terminal compatible".into());
+            }
+        }
+        _ => return Err(format!("Editor desconocido: {}", editor)),
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_skills_catalog() -> Result<Vec<SkillInfo>, String> {
     let skills_dir = get_skills_dir();
