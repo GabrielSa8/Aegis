@@ -446,30 +446,35 @@ pub fn open_repo_in_editor(path: String, editor: String) -> Result<(), String> {
         "cursor" => {
             Command::new("cursor")
                 .arg(&path)
+                .current_dir(p)
                 .spawn()
                 .map_err(|e| format!("Error abriendo Cursor: {}", e))?;
         }
         "code" => {
             Command::new("code")
                 .arg(&path)
+                .current_dir(p)
                 .spawn()
                 .map_err(|e| format!("Error abriendo VS Code: {}", e))?;
         }
         "terminal" => {
             if Path::new("/usr/bin/ptyxis").exists() {
                 Command::new("ptyxis")
-                    .args(["--working-directory", &path])
+                    .args(["--new-window", &format!("--working-directory={}", path)])
+                    .current_dir(p)
                     .spawn()
                     .map_err(|e| format!("Error abriendo terminal Ptyxis: {}", e))?;
             } else if Path::new("/usr/bin/kgx").exists() {
                 Command::new("kgx")
-                    .args(["--working-directory", &path])
+                    .arg(&format!("--working-directory={}", path))
+                    .current_dir(p)
                     .spawn()
                     .map_err(|e| format!("Error abriendo terminal KGX: {}", e))?;
             } else if Path::new("/usr/bin/gnome-terminal").exists() {
                 let arg = format!("--working-directory={}", path);
                 Command::new("gnome-terminal")
                     .arg(arg)
+                    .current_dir(p)
                     .spawn()
                     .map_err(|e| format!("Error abriendo GNOME Terminal: {}", e))?;
             } else {
