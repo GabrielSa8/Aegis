@@ -56,27 +56,25 @@ export default function DevOpsView() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
-      {/* Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
+      {/* Barra de Arsenal y Flota Compacta */}
       <div style={{
-        padding: '0.85rem 1.25rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        padding: '0.45rem 0.85rem',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-md)',
+        flexShrink: 0
       }}>
-        <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <GitBranch color="#10b981" size={18} />
-            Radar DevOps & Arsenal de Habilidades
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-            Flota Git local y 20 skills activas
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <GitBranch color="#10b981" size={15} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-high)' }}>
+            Flota Git & Arsenal de Habilidades
+          </span>
         </div>
-        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '5px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.7rem', color: '#a7f3d0', fontWeight: 600 }}>
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: '0.68rem', color: '#a7f3d0', fontWeight: 600 }}>
           20 Skills Activas
         </div>
       </div>

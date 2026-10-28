@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-import TopRibbon from './components/TopRibbon';
-import CommandDock from './components/CommandDock';
+import TopHeader from './components/TopHeader';
 import AgentView from './components/AgentView';
 import FinancesView from './components/FinancesView';
 import VaultView from './components/VaultView';
@@ -14,11 +13,18 @@ import LeisureView from './components/LeisureView';
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent');
   const [coreStatus, setCoreStatus] = useState('Conectando a Rust Core...');
+  const [zenMode, setZenMode] = useState(false);
 
-  // Atajos de teclado globales (Alt + 1..7)
+  // Atajos de teclado globales (Alt + 1..7 y Alt + Z)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.altKey) {
+        if (e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          setZenMode((prev) => !prev);
+          return;
+        }
+
         const keyMap = {
           '1': 'agent',
           '2': 'finances',
@@ -56,20 +62,25 @@ export default function App() {
       overflow: 'hidden',
       position: 'relative'
     }}>
-      {/* 📡 Cinta Superior de Telemetría (Top Ribbon) */}
-      <TopRibbon 
-        coreStatus={coreStatus} 
-        activeTab={activeTab} 
-      />
+      {/* 🧭 Barra Superior Unificada (Navegación + Telemetría en 38px) */}
+      {!zenMode && (
+        <TopHeader 
+          coreStatus={coreStatus} 
+          activeTab={activeTab} 
+          onSelectTab={setActiveTab}
+          zenMode={zenMode}
+          onToggleZenMode={() => setZenMode(!zenMode)}
+        />
+      )}
 
-      {/* 🚀 Lienzo Principal Completo (100% de Ancho) */}
+      {/* 🚀 Lienzo de Contenido Ultra-Limpio (95% Viewport Disponible) */}
       <main style={{
         flex: 1,
         minHeight: 0,
         overflowY: activeTab === 'agent' ? 'hidden' : 'auto',
-        padding: activeTab === 'agent' 
-          ? '1rem 1.5rem 88px 1.5rem' 
-          : '1.25rem 1.5rem 100px 1.5rem',
+        padding: zenMode 
+          ? '0.5rem 0.75rem' 
+          : (activeTab === 'agent' ? '0.5rem 0.85rem' : '0.65rem 1rem'),
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -81,12 +92,6 @@ export default function App() {
         {activeTab === 'sentinel' && <SentinelView />}
         {activeTab === 'leisure' && <LeisureView />}
       </main>
-
-      {/* 🏝️ Isla Táctica Flotante (Floating Command Dock) */}
-      <CommandDock 
-        activeTab={activeTab} 
-        onSelectTab={setActiveTab} 
-      />
     </div>
   );
 }

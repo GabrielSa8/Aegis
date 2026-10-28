@@ -18,34 +18,32 @@ export default function LeisureView() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
-      {/* Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
+      {/* Barra de Ocio y GameMode Compacta */}
       <div style={{
-        padding: '0.85rem 1.25rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        padding: '0.45rem 0.85rem',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-md)',
+        flexShrink: 0
       }}>
-        <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <Gamepad2 color="#10b981" size={18} />
-            Zona de Ocio, Gaming N150 & D&D 5e
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-            Perfiles de rendimiento para Intel N150 y mesa de rol
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Gamepad2 color="#10b981" size={15} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-high)' }}>
+            Zona de Ocio, Gaming N150 & Mesa D&D 5e
+          </span>
         </div>
         <button
           onClick={() => setGamemodeActive(!gamemodeActive)}
           style={{
             background: gamemodeActive ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
             border: gamemodeActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-            padding: '5px 12px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.7rem',
+            padding: '3px 10px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.68rem',
             color: gamemodeActive ? '#a7f3d0' : 'var(--text-muted)',
             fontWeight: 600,
             cursor: 'pointer',

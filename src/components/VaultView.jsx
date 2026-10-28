@@ -401,104 +401,12 @@ export default function VaultView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflow: 'hidden' }}>
-      {/* 📡 Barra Superior de Control */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0.85rem 1.25rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        flexShrink: 0
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <BookOpen color="#10b981" size={18} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', margin: 0 }}>
-              Bóveda Obsidian (BrainIA)
-            </h2>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Árbol de carpetas y Hubs de Obsidian
-            </p>
-          </div>
-        </div>
-
-        {/* Telemetría y Acciones */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {stats && (
-            <div style={{
-              fontSize: '0.72rem',
-              color: 'var(--text-muted)',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid var(--border-color)',
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              gap: '8px'
-            }}>
-              <span><strong>{stats.total_notes}</strong> notas</span>
-              <span>•</span>
-              <span><strong>{stats.pending_tasks}</strong> tareas</span>
-            </div>
-          )}
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
-            padding: '5px 10px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.7rem',
-            color: '#34d399',
-            fontWeight: 600
-          }}>
-            <CheckCircle2 size={13} />
-            <span>Sincronizada</span>
-          </div>
-
-          <button
-            onClick={loadVaultData}
-            disabled={refreshing}
-            title="Recargar árbol de notas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-muted)',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-              transition: 'var(--transition)'
-            }}
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* 🧭 Lienzo Dividido: Explorador de Carpetas Desplegable (Izquierda) + Editor (Derecha) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '320px 1fr',
-        gap: '1rem',
+        gridTemplateColumns: '300px 1fr',
+        gap: '0.75rem',
         flex: 1,
         minHeight: 0
       }}>
@@ -514,7 +422,7 @@ export default function VaultView() {
         }}>
           {/* Barra de Búsqueda y Controles de Plegado */}
           <div style={{
-            padding: '0.65rem',
+            padding: '0.5rem 0.65rem',
             borderBottom: '1px solid var(--border-color)',
             display: 'flex',
             flexDirection: 'column',
@@ -527,12 +435,12 @@ export default function VaultView() {
               background: 'rgba(0, 0, 0, 0.25)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-md)',
-              padding: '5px 9px'
+              padding: '4px 8px'
             }}>
-              <Search size={14} color="var(--text-muted)" />
+              <Search size={13} color="var(--text-muted)" />
               <input
                 type="text"
-                placeholder="Buscar nota en la Bóveda..."
+                placeholder="Buscar nota en Bóveda..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -540,18 +448,31 @@ export default function VaultView() {
                   border: 'none',
                   outline: 'none',
                   color: 'var(--text-high)',
-                  fontSize: '0.78rem',
+                  fontSize: '0.75rem',
                   width: '100%'
                 }}
               />
+              {stats && (
+                <span style={{ 
+                  fontSize: '0.62rem', 
+                  color: '#a7f3d0', 
+                  background: 'rgba(16, 185, 129, 0.1)', 
+                  padding: '1px 5px', 
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap'
+                }}>
+                  {stats.total_notes}
+                </span>
+              )}
             </div>
 
             {/* Controles de Colapsar / Expandir Todo */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                EXPLORADOR DE ARCHIVOS
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>
+                ARCHIVOS
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <button
                   onClick={expandAll}
                   title="Expandir todas las carpetas"
@@ -564,12 +485,10 @@ export default function VaultView() {
                     borderRadius: '4px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '3px',
                     fontSize: '0.62rem'
                   }}
                 >
                   <ChevronsDown size={12} />
-                  <span>Expandir</span>
                 </button>
                 <button
                   onClick={collapseAll}
@@ -583,12 +502,28 @@ export default function VaultView() {
                     borderRadius: '4px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '3px',
                     fontSize: '0.62rem'
                   }}
                 >
                   <ChevronsUp size={12} />
-                  <span>Colapsar</span>
+                </button>
+                <button
+                  onClick={loadVaultData}
+                  disabled={refreshing}
+                  title="Recargar notas de la Bóveda"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: refreshing ? 'not-allowed' : 'pointer',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '0.62rem'
+                  }}
+                >
+                  <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
                 </button>
               </div>
             </div>

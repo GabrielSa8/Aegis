@@ -105,76 +105,135 @@ export default function TasksView() {
   }, [tasks]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflowY: 'auto' }}>
-      {/* 📡 Cabecera Táctica de Tareas */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem', overflowY: 'auto' }}>
+      {/* 🔍 Barra de Filtros, Búsqueda y Métricas Compacta */}
       <div style={{
-        padding: '0.85rem 1.25rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem'
+        gap: '0.5rem',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-md)',
+        padding: '0.45rem 0.75rem',
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Izquierda: Buscador y Hub */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 240px', minWidth: '220px' }}>
+          {/* Buscador */}
           <div style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            gap: '8px',
+            flex: 1,
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            padding: '4px 8px'
           }}>
-            <CheckSquare color="#10b981" size={18} />
+            <Search size={13} color="var(--text-muted)" />
+            <input
+              type="text"
+              placeholder="Filtrar tareas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--text-high)',
+                fontSize: '0.75rem',
+                width: '100%'
+              }}
+            />
           </div>
-          <div>
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-high)', margin: 0 }}>
-              Bandeja Unificada de Tareas
-            </h2>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Extracción en vivo de checkboxes <code>- [ ]</code> en notas de Obsidian
-            </p>
+
+          {/* Selector de Hub */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Filter size={12} color="var(--text-muted)" />
+            <select
+              value={selectedHub}
+              onChange={(e) => setSelectedHub(e.target.value)}
+              style={{
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-high)',
+                fontSize: '0.72rem',
+                padding: '4px 6px',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {hubs.map((h) => (
+                <option key={h} value={h} style={{ background: '#131716', color: '#e2e8f0' }}>
+                  {h}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Métricas y Botón Refrescar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Derecha: Pestañas de Estado, Chips y Refrescar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Status Tabs */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
-            padding: '5px 12px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.75rem',
-            color: '#a7f3d0',
-            fontWeight: 700
-          }}>
-            <Clock size={13} />
-            <span>{stats.pending} Pendientes</span>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'rgba(0, 0, 0, 0.25)',
             border: '1px solid var(--border-color)',
-            padding: '5px 12px',
             borderRadius: 'var(--radius-md)',
-            fontSize: '0.75rem',
-            color: 'var(--text-muted)',
-            fontWeight: 600
+            padding: '2px'
           }}>
-            <CheckCircle2 size={13} color="#10b981" />
-            <span>{stats.completed} Listas</span>
+            <button
+              onClick={() => setStatusFilter('pending')}
+              style={{
+                background: statusFilter === 'pending' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                border: statusFilter === 'pending' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                color: statusFilter === 'pending' ? '#a7f3d0' : 'var(--text-muted)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: statusFilter === 'pending' ? 700 : 500,
+                cursor: 'pointer'
+              }}
+            >
+              Pendientes ({stats.pending})
+            </button>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              style={{
+                background: statusFilter === 'completed' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                border: statusFilter === 'completed' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                color: statusFilter === 'completed' ? '#a7f3d0' : 'var(--text-muted)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: statusFilter === 'completed' ? 700 : 500,
+                cursor: 'pointer'
+              }}
+            >
+              Listas ({stats.completed})
+            </button>
+            <button
+              onClick={() => setStatusFilter('all')}
+              style={{
+                background: statusFilter === 'all' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                border: statusFilter === 'all' ? '1px solid var(--border-color)' : '1px solid transparent',
+                color: statusFilter === 'all' ? 'var(--text-high)' : 'var(--text-muted)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: statusFilter === 'all' ? 700 : 500,
+                cursor: 'pointer'
+              }}
+            >
+              Todas
+            </button>
           </div>
 
+          {/* Botón Refrescar */}
           <button
             onClick={fetchTasks}
             disabled={refreshing}
@@ -183,108 +242,18 @@ export default function TasksView() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-card)',
+              width: '26px',
+              height: '26px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'transparent',
               border: '1px solid var(--border-color)',
               color: 'var(--text-muted)',
               cursor: refreshing ? 'not-allowed' : 'pointer',
               transition: 'var(--transition)'
             }}
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
           </button>
-        </div>
-      </div>
-
-      {/* 🔍 Barra de Filtros y Búsqueda */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: '0.75rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-md)',
-        padding: '0.6rem 0.85rem'
-      }}>
-        {/* Buscador */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          flex: '1 1 200px',
-          background: 'rgba(0, 0, 0, 0.2)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-md)',
-          padding: '4px 10px'
-        }}>
-          <Search size={14} color="var(--text-muted)" />
-          <input
-            type="text"
-            placeholder="Buscar por texto o nombre de nota..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--text-high)',
-              fontSize: '0.8rem',
-              width: '100%'
-            }}
-          />
-        </div>
-
-        {/* Selector de Estado */}
-        <div style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.2)', borderRadius: 'var(--radius-md)', padding: '2px', border: '1px solid var(--border-color)' }}>
-          {[
-            { id: 'pending', label: 'Pendientes' },
-            { id: 'completed', label: 'Completadas' },
-            { id: 'all', label: 'Todas' }
-          ].map((st) => (
-            <button
-              key={st.id}
-              onClick={() => setStatusFilter(st.id)}
-              style={{
-                background: statusFilter === st.id ? 'var(--accent-primary)' : 'transparent',
-                color: statusFilter === st.id ? '#0f1211' : 'var(--text-muted)',
-                fontWeight: statusFilter === st.id ? 700 : 500,
-                fontSize: '0.72rem',
-                border: 'none',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'var(--transition)'
-              }}
-            >
-              {st.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Selector de Hubs */}
-        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', maxWidth: '100%' }}>
-          {hubs.map((hub) => (
-            <button
-              key={hub}
-              onClick={() => setSelectedHub(hub)}
-              style={{
-                background: selectedHub === hub ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                border: selectedHub === hub ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
-                color: selectedHub === hub ? '#34d399' : 'var(--text-muted)',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                padding: '3px 8px',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {hub.replace(/^\d+\s*/, '')}
-            </button>
-          ))}
         </div>
       </div>
 
