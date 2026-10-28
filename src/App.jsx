@@ -9,15 +9,47 @@ import DevOpsView from './components/DevOpsView';
 import TasksView from './components/TasksView';
 import SentinelView from './components/SentinelView';
 import LeisureView from './components/LeisureView';
+import SettingsView from './components/SettingsView';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent');
   const [coreStatus, setCoreStatus] = useState('Conectando a Rust Core...');
   const [zenMode, setZenMode] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState('nordic-moss');
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Atajos de teclado globales (Alt + 1..7 y Alt + Z)
+  // Cargar tema desde configuración en arranque
+  useEffect(() => {
+    invoke('get_aegis_config')
+      .then((cfg) => {
+        if (cfg?.theme) {
+          setCurrentTheme(cfg.theme);
+          document.documentElement.setAttribute('data-theme', cfg.theme);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleThemeChange = (newTheme) => {
+    setCurrentTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  // Atajos de teclado globales (Alt + 1..7, Alt + Z y Ctrl + ,)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Ctrl + , para abrir Ajustes
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setShowSettings((prev) => !prev);
+        return;
+      }
+
+      if (e.key === 'Escape' && showSettings) {
+        setShowSettings(false);
+        return;
+      }
+
       if (e.altKey) {
         if (e.key.toLowerCase() === 'z') {
           e.preventDefault();
@@ -32,7 +64,7 @@ export default function App() {
           '4': 'devops',
           '5': 'tasks',
           '6': 'sentinel',
-          '7': 'leisure'
+          '7': 'gaming'
         };
         if (keyMap[e.key]) {
           e.preventDefault();
@@ -42,7 +74,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [showSettings]);
 
   // Ping al núcleo Rust local
   useEffect(() => {
@@ -66,10 +98,11 @@ export default function App() {
       {!zenMode && (
         <TopHeader 
           coreStatus={coreStatus} 
-          activeTab={activeTab} 
+          activeTab={activeTab === 'leisure' ? 'gaming' : activeTab} 
           onSelectTab={setActiveTab}
           zenMode={zenMode}
           onToggleZenMode={() => setZenMode(!zenMode)}
+          onOpenSettings={() => setShowSettings(true)}
         />
       )}
 
@@ -90,8 +123,17 @@ export default function App() {
         {activeTab === 'devops' && <DevOpsView />}
         {activeTab === 'tasks' && <TasksView />}
         {activeTab === 'sentinel' && <SentinelView />}
-        {activeTab === 'leisure' && <LeisureView />}
+        {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
       </main>
+
+      {/* ⚙️ Modal Global de Ajustes y Temas */}
+      {showSettings && (
+        <SettingsView 
+          onClose={() => setShowSettings(false)}
+          currentTheme={currentTheme}
+          onThemeChange={handleThemeChange}
+        />
+      )}
     </div>
   );
 }

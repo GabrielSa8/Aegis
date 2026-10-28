@@ -4,6 +4,7 @@ mod devops;
 mod finances;
 mod sentinel;
 mod leisure;
+mod config;
 
 #[tauri::command]
 fn ping() -> String {
@@ -16,6 +17,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             ping,
+            config::get_aegis_config,
+            config::save_aegis_config,
             agent::execute_agent_prompt,
             vault::get_vault_notes,
             vault::read_vault_note,
@@ -47,11 +50,12 @@ pub fn run() {
             finances::sqlite_import_backup,
             sentinel::get_system_telemetry,
             sentinel::get_system_alerts,
+            sentinel::get_top_processes,
+            sentinel::kill_process,
+            sentinel::clean_system_memory,
             leisure::get_gaming_status,
-            leisure::launch_game,
-            leisure::get_knol_sheet,
-            leisure::update_knol_sheet,
-            leisure::roll_dice
+            leisure::get_installed_steam_games,
+            leisure::launch_game
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

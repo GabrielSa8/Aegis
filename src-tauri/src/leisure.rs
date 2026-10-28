@@ -3,8 +3,6 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const KNOL_PATH: &str = "/home/zabrielsa/.local/share/aegis/knol_character.json";
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GamingStatus {
@@ -16,42 +14,11 @@ pub struct GamingStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KnolSheet {
+pub struct SteamGame {
+    pub app_id: String,
     pub name: String,
-    pub title: String,
-    pub race: String,
-    pub class_name: String,
-    pub level: u32,
-    pub max_hp: i32,
-    pub current_hp: i32,
-    pub temp_hp: i32,
-    pub armor_class: i32,
-    pub initiative: i32,
-    pub speed_feet: u32,
-    pub proficiency: i32,
-    pub strength: i32,
-    pub constitution: i32,
-    pub dexterity: i32,
-    pub intelligence: i32,
-    pub wisdom: i32,
-    pub charisma: i32,
-    pub second_wind_used: bool,
-    pub relentless_endurance_used: bool,
-    pub hit_dice_remaining: u32,
-    pub poison_immune: bool,
-    pub notes: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DiceRollResult {
-    pub dice: String,
-    pub rolls: Vec<i32>,
-    pub modifier: i32,
-    pub total: i32,
-    pub is_critical_success: bool,
-    pub is_critical_fail: bool,
-    pub timestamp: String,
+    pub install_dir: String,
+    pub size_mb: u64,
 }
 
 #[tauri::command]
@@ -76,6 +43,76 @@ pub fn get_gaming_status() -> Result<GamingStatus, String> {
         gamescope_installed,
         default_launch_command: "gamemoderun %command%".to_string(),
     })
+}
+
+#[tauri::command]
+pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
+    let mut games = Vec::new();
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let steamapps_path = format!("{}/.local/share/Steam/steamapps", home);
+
+    if let Ok(entries) = fs::read_dir(steamapps_path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if let Some(file_name) = p.file_name().and_then(|n| n.to_str()) {
+                if file_name.starts_with("appmanifest_") && file_name.ends_with(".acf") {
+                    if let Ok(content) = fs::read_to_string(&p) {
+                        let mut appid = String::new();
+                        let mut name = String::new();
+                        let mut installdir = String::new();
+                        let mut size_bytes: u64 = 0;
+
+                        for line in content.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("\"appid\"") {
+                                if let Some(val) = extract_acf_val(trimmed) {
+                                    appid = val;
+                                }
+                            } else if trimmed.starts_with("\"name\"") {
+                                if let Some(val) = extract_acf_val(trimmed) {
+                                    name = val;
+                                }
+                            } else if trimmed.starts_with("\"installdir\"") {
+                                if let Some(val) = extract_acf_val(trimmed) {
+                                    installdir = val;
+                                }
+                            } else if trimmed.starts_with("\"SizeOnDisk\"") {
+                                if let Some(val) = extract_acf_val(trimmed) {
+                                    size_bytes = val.parse::<u64>().unwrap_or(0);
+                                }
+                            }
+                        }
+
+                        if !appid.is_empty()
+                            && !name.is_empty()
+                            && !name.contains("Steam Linux Runtime")
+                            && !name.contains("Proton")
+                            && !name.contains("Steamworks")
+                        {
+                            games.push(SteamGame {
+                                app_id: appid,
+                                name,
+                                install_dir: installdir,
+                                size_mb: size_bytes / (1024 * 1024),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    games.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(games)
+}
+
+fn extract_acf_val(line: &str) -> Option<String> {
+    let parts: Vec<&str> = line.split('"').filter(|s| !s.trim().is_empty()).collect();
+    if parts.len() >= 2 {
+        Some(parts[1].to_string())
+    } else {
+        None
+    }
 }
 
 #[tauri::command]
@@ -104,7 +141,6 @@ pub fn launch_game(
             Ok("PokéSurvivor lanzado.".to_string())
         }
         "emerald_rogue" | "mgba" => {
-            // Intentar abrir con flatpak mGBA o binario
             let spawned = Command::new("flatpak")
                 .args(["run", "io.mgba.mGBA"])
                 .spawn()
@@ -147,97 +183,4 @@ pub fn launch_game(
             }
         }
     }
-}
-
-// ================= D&D 5E KNOL DE PIEDRANEGRA =================
-
-fn default_knol() -> KnolSheet {
-    KnolSheet {
-        name: "Knoll de Piedranegra".to_string(),
-        title: "El Acorazado Resacoso".to_string(),
-        race: "Semiorco".to_string(),
-        class_name: "Guerrero (Fighter)".to_string(),
-        level: 1,
-        max_hp: 13,
-        current_hp: 13,
-        temp_hp: 0,
-        armor_class: 11,
-        initiative: 1,
-        speed_feet: 30,
-        proficiency: 2,
-        strength: 14,
-        constitution: 15,
-        dexterity: 12,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 8,
-        second_wind_used: false,
-        relentless_endurance_used: false,
-        hit_dice_remaining: 1,
-        poison_immune: true,
-        notes: "Inmune a venenos y toxinas (Yerba de Piedra). Placas de pizarra en hombros y nudillos. Calza una sola bota.".to_string(),
-    }
-}
-
-#[tauri::command]
-pub fn get_knol_sheet() -> Result<KnolSheet, String> {
-    if Path::new(KNOL_PATH).exists() {
-        if let Ok(content) = fs::read_to_string(KNOL_PATH) {
-            if let Ok(sheet) = serde_json::from_str::<KnolSheet>(&content) {
-                return Ok(sheet);
-            }
-        }
-    }
-    let default = default_knol();
-    let _ = update_knol_sheet(default.clone());
-    Ok(default)
-}
-
-#[tauri::command]
-pub fn update_knol_sheet(sheet: KnolSheet) -> Result<KnolSheet, String> {
-    if let Some(parent) = Path::new(KNOL_PATH).parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    let json_str = serde_json::to_string_pretty(&sheet).map_err(|e| e.to_string())?;
-    fs::write(KNOL_PATH, json_str).map_err(|e| e.to_string())?;
-    Ok(sheet)
-}
-
-#[tauri::command]
-pub fn roll_dice(dice: String, modifier: i32) -> Result<DiceRollResult, String> {
-    // Formato 'd20', 'd12', 'd10', 'd8', 'd6', 'd4', 'd100'
-    let sides_str = dice.trim_start_matches('d').trim_start_matches('D');
-    let sides: i32 = sides_str.parse().map_err(|_| format!("Dado inválido: {}", dice))?;
-
-    if sides < 2 || sides > 100 {
-        return Err("Caras de dado deben estar entre 2 y 100".to_string());
-    }
-
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos();
-    let roll = ((nanos % (sides as u32)) + 1) as i32;
-
-    let is_critical_success = sides == 20 && roll == 20;
-    let is_critical_fail = sides == 20 && roll == 1;
-    let total = roll + modifier;
-
-    let now_str = std::process::Command::new("date")
-        .arg("+%H:%M:%S")
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "12:00:00".to_string());
-
-    Ok(DiceRollResult {
-        dice,
-        rolls: vec![roll],
-        modifier,
-        total,
-        is_critical_success,
-        is_critical_fail,
-        timestamp: now_str,
-    })
 }

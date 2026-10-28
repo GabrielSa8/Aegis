@@ -10,7 +10,8 @@ import {
   Activity, 
   Gamepad2,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Settings
 } from 'lucide-react';
 
 export default function TopHeader({ 
@@ -18,7 +19,8 @@ export default function TopHeader({
   activeTab, 
   onSelectTab,
   zenMode,
-  onToggleZenMode 
+  onToggleZenMode,
+  onOpenSettings
 }) {
   const tabs = [
     { id: 'agent', label: 'Agente', icon: Bot, shortcut: '1' },
@@ -27,7 +29,7 @@ export default function TopHeader({
     { id: 'devops', label: 'DevOps', icon: GitBranch, shortcut: '4' },
     { id: 'tasks', label: 'Tareas', icon: CheckSquare, shortcut: '5' },
     { id: 'sentinel', label: 'Centinela', icon: Activity, shortcut: '6' },
-    { id: 'leisure', label: 'Ocio', icon: Gamepad2, shortcut: '7' }
+    { id: 'gaming', label: 'Gaming', icon: Gamepad2, shortcut: '7' }
   ];
 
   return (
@@ -219,6 +221,28 @@ export default function TopHeader({
           onMouseLeave={(e) => { e.currentTarget.style.color = zenMode ? '#34d399' : 'var(--text-muted)'; }}
         >
           {zenMode ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+        </button>
+
+        {/* Ajustes y Configuración (Ctrl + ,) */}
+        <button
+          onClick={onOpenSettings}
+          title="Ajustes y Temas (Ctrl + ,)"
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '3px 6px',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'var(--transition)'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          <Settings size={12} />
         </button>
       </div>
     </header>

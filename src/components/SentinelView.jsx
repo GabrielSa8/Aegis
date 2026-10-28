@@ -11,23 +11,30 @@ import {
   Clock, 
   RefreshCw,
   Server,
-  Zap
+  Zap,
+  Trash2,
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 export default function SentinelView() {
   const [telemetry, setTelemetry] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [processes, setProcesses] = useState([]);
+  const [cleanMessage, setCleanMessage] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchTelemetry = useCallback(async () => {
     try {
-      const [data, alts] = await Promise.all([
+      const [data, alts, procs] = await Promise.all([
         invoke('get_system_telemetry'),
-        invoke('get_system_alerts')
+        invoke('get_system_alerts'),
+        invoke('get_top_processes')
       ]);
       setTelemetry(data);
       setAlerts(Array.isArray(alts) ? alts : []);
+      setProcesses(Array.isArray(procs) ? procs : []);
     } catch (e) {
       console.error('Error obteniendo telemetría:', e);
     } finally {
@@ -40,6 +47,30 @@ export default function SentinelView() {
     const interval = setInterval(fetchTelemetry, 2500);
     return () => clearInterval(interval);
   }, [fetchTelemetry]);
+
+  const handleKillProcess = async (pid) => {
+    try {
+      const res = await invoke('kill_process', { pid });
+      setCleanMessage(res);
+      setTimeout(() => setCleanMessage(null), 3000);
+      fetchTelemetry();
+    } catch (e) {
+      setCleanMessage(`Error: ${e}`);
+      setTimeout(() => setCleanMessage(null), 3000);
+    }
+  };
+
+  const handleCleanMemory = async () => {
+    try {
+      const res = await invoke('clean_system_memory');
+      setCleanMessage(res);
+      setTimeout(() => setCleanMessage(null), 3500);
+      fetchTelemetry();
+    } catch (e) {
+      setCleanMessage(`Error: ${e}`);
+      setTimeout(() => setCleanMessage(null), 3500);
+    }
+  };
 
   const formatUptime = (sec) => {
     if (!sec) return '0m';
@@ -88,6 +119,22 @@ export default function SentinelView() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {cleanMessage && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
+              {cleanMessage}
+            </span>
+          )}
+
+          <button
+            onClick={handleCleanMemory}
+            className="btn btn-secondary"
+            style={{ padding: '2px 8px', fontSize: '0.68rem', height: '24px' }}
+            title="Sincroniza disco y compacta ZRAM"
+          >
+            <Sparkles size={11} color="var(--primary)" />
+            <span>Purgar RAM</span>
+          </button>
+
           <div style={{
             background: statusCfg.bg,
             border: `1px solid ${statusCfg.border}`,
@@ -346,6 +393,69 @@ export default function SentinelView() {
               Bloqueo git add -A / clean ACTIVO
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* ⚡ Gestor de Procesos en Tiempo Real (Process Killer) */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '12px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Server size={14} color="var(--primary)" />
+            Top Procesos por Consumo de Memoria RAM
+          </h3>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            {processes.length} procesos listados
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {processes.map(proc => (
+            <div
+              key={proc.pid}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '5px 10px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                gap: '8px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', width: '45px' }}>
+                  {proc.pid}
+                </span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {proc.name}
+                </span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {proc.cmdline}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: proc.memoryMb > 500 ? '#ef4444' : 'var(--text-high)', fontFamily: 'var(--font-mono)' }}>
+                  {proc.memoryMb} MB
+                </span>
+                <button
+                  onClick={() => handleKillProcess(proc.pid)}
+                  className="btn btn-secondary"
+                  style={{ padding: '2px 6px', fontSize: '0.65rem', height: '22px', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.25)' }}
+                  title={`Terminar proceso ${proc.pid}`}
+                >
+                  <Trash2 size={11} />
+                  <span>Matar</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

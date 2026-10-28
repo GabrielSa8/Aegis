@@ -40,7 +40,73 @@
   --radius-full: 9999px;
 }
 
-/* Modo Claro Opcional (Si el usuario decide cambiarlo, se adapta mediante variables) */
+/* 🎨 TEMAS VISUALES AEGIS (DATA-THEME) */
+[data-theme="nordic-moss"], :root {
+  --bg-main: #0f1211;
+  --bg-card: #161a19;
+  --bg-card-hover: #1c2220;
+  --border-color: #242b29;
+  --border-focus: #10b981;
+  --primary: #10b981;
+  --primary-glow: rgba(16, 185, 129, 0.15);
+  --primary-grad: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --text-high: #f3f4f6;
+  --text-muted: #8b9994;
+}
+
+[data-theme="tokyo-night"] {
+  --bg-main: #13141f;
+  --bg-card: #1a1b26;
+  --bg-card-hover: #24283b;
+  --border-color: #2f3549;
+  --border-focus: #7dcfff;
+  --primary: #7dcfff;
+  --primary-glow: rgba(125, 207, 255, 0.15);
+  --primary-grad: linear-gradient(135deg, #7dcfff 0%, #7aa2f7 100%);
+  --text-high: #c0caf5;
+  --text-muted: #7982a9;
+}
+
+[data-theme="oled-black"] {
+  --bg-main: #000000;
+  --bg-card: #0a0a0a;
+  --bg-card-hover: #141414;
+  --border-color: #222222;
+  --border-focus: #00ff88;
+  --primary: #00ff88;
+  --primary-glow: rgba(0, 255, 136, 0.15);
+  --primary-grad: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+  --text-high: #ffffff;
+  --text-muted: #888888;
+}
+
+[data-theme="amber-terminal"] {
+  --bg-main: #0a0802;
+  --bg-card: #141005;
+  --bg-card-hover: #1c1608;
+  --border-color: #2c2109;
+  --border-focus: #f59e0b;
+  --primary: #f59e0b;
+  --primary-glow: rgba(245, 158, 11, 0.15);
+  --primary-grad: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --text-high: #fbbf24;
+  --text-muted: #927429;
+}
+
+[data-theme="dracula"] {
+  --bg-main: #21222c;
+  --bg-card: #282a36;
+  --bg-card-hover: #343746;
+  --border-color: #44475a;
+  --border-focus: #bd93f9;
+  --primary: #bd93f9;
+  --primary-glow: rgba(189, 147, 249, 0.15);
+  --primary-grad: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%);
+  --text-high: #f8f8f2;
+  --text-muted: #6272a4;
+}
+
+/* Modo Claro Opcional */
 [data-theme="light"] {
   --bg-main: #f3f4f6;
   --bg-card: rgba(255, 255, 255, 0.75);

@@ -356,3 +356,94 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
 
     Ok(alerts)
 }
+
+// ================= GESTOR DE PROCESOS & LIMPIADOR =================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessInfo {
+    pub pid: u32,
+    pub name: String,
+    pub memory_mb: f64,
+    pub cmdline: String,
+}
+
+#[tauri::command]
+pub fn get_top_processes() -> Result<Vec<ProcessInfo>, String> {
+    let mut list = Vec::new();
+
+    if let Ok(entries) = fs::read_dir("/proc") {
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let name_str = file_name.to_string_lossy();
+            if let Ok(pid) = name_str.parse::<u32>() {
+                let status_path = entry.path().join("status");
+                if let Ok(status) = fs::read_to_string(status_path) {
+                    let mut proc_name = String::new();
+                    let mut rss_kb = 0.0;
+
+                    for line in status.lines() {
+                        if line.starts_with("Name:") {
+                            proc_name = line[5..].trim().to_string();
+                        } else if line.starts_with("VmRSS:") {
+                            let parts: Vec<&str> = line.split_whitespace().collect();
+                            if parts.len() >= 2 {
+                                rss_kb = parts[1].parse::<f64>().unwrap_or(0.0);
+                            }
+                        }
+                    }
+
+                    if rss_kb > 10240.0 {
+                        let cmd_path = entry.path().join("cmdline");
+                        let cmd = fs::read(cmd_path)
+                            .map(|b| String::from_utf8_lossy(&b).replace('\0', " ").trim().to_string())
+                            .unwrap_or_else(|_| proc_name.clone());
+
+                        list.push(ProcessInfo {
+                            pid,
+                            name: proc_name,
+                            memory_mb: (rss_kb / 1024.0 * 10.0).round() / 10.0,
+                            cmdline: if cmd.len() > 60 { format!("{}...", &cmd[..60]) } else { cmd },
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    list.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal));
+    list.truncate(10);
+    Ok(list)
+}
+
+#[tauri::command]
+pub fn kill_process(pid: u32) -> Result<String, String> {
+    if pid <= 1 || pid == std::process::id() {
+        return Err("Operación denegada: Proceso crítico o Aegis.".to_string());
+    }
+
+    let status = std::process::Command::new("kill")
+        .arg("-15")
+        .arg(pid.to_string())
+        .status()
+        .map_err(|e| format!("Error enviando SIGTERM: {}", e))?;
+
+    if status.success() {
+        Ok(format!("Proceso {} terminado.", pid))
+    } else {
+        let _ = std::process::Command::new("kill")
+            .arg("-9")
+            .arg(pid.to_string())
+            .status();
+        Ok(format!("Proceso {} terminado con SIGKILL.", pid))
+    }
+}
+
+#[tauri::command]
+pub fn clean_system_memory() -> Result<String, String> {
+    let _ = std::process::Command::new("sync").status();
+    if std::path::Path::new("/sys/block/zram0/compact").exists() {
+        let _ = fs::write("/sys/block/zram0/compact", "1");
+    }
+    Ok("Sincronización I/O y compactación ZRAM completadas.".to_string())
+}
