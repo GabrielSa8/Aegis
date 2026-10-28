@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   BookOpen, 
   Folder, 
@@ -73,6 +73,11 @@ export default function VaultView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Referencias para persistir posición exacta de lectura/edición
+  const viewerContainerRef = useRef(null);
+  const textareaRef = useRef(null);
+  const scrollPosRef = useRef({ ratio: 0, px: 0 });
+
   // Set de carpetas desplegadas (estilo Obsidian)
   const [expandedFolders, setExpandedFolders] = useState(() => new Set([
     '00 Sistema',
@@ -82,6 +87,41 @@ export default function VaultView() {
     '04 Estudios y Certificaciones',
     '04 Estudios y Certs'
   ]));
+
+  // Alternar modo preservando la posición exacta de scroll
+  const handleToggleEdit = () => {
+    if (!isEditing && viewerContainerRef.current) {
+      const el = viewerContainerRef.current;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      const ratio = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+      scrollPosRef.current = { ratio, px: el.scrollTop };
+    } else if (isEditing && textareaRef.current) {
+      const el = textareaRef.current;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      const ratio = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+      scrollPosRef.current = { ratio, px: el.scrollTop };
+    }
+
+    setIsEditing((prev) => !prev);
+  };
+
+  // Restaurar posición de scroll al alternar entre Vista Lectura y Edición
+  useLayoutEffect(() => {
+    const { ratio, px } = scrollPosRef.current;
+    const frameId = requestAnimationFrame(() => {
+      if (isEditing && textareaRef.current) {
+        const el = textareaRef.current;
+        const maxScroll = el.scrollHeight - el.clientHeight;
+        el.scrollTop = maxScroll > 0 ? ratio * maxScroll : px;
+      } else if (!isEditing && viewerContainerRef.current) {
+        const el = viewerContainerRef.current;
+        const maxScroll = el.scrollHeight - el.clientHeight;
+        el.scrollTop = maxScroll > 0 ? ratio * maxScroll : px;
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isEditing]);
 
   const loadVaultData = useCallback(async () => {
     try {
@@ -115,6 +155,9 @@ export default function VaultView() {
     setActiveNote(note);
     setLoadingNote(true);
     setSaveSuccess(false);
+    scrollPosRef.current = { ratio: 0, px: 0 };
+    if (viewerContainerRef.current) viewerContainerRef.current.scrollTop = 0;
+    if (textareaRef.current) textareaRef.current.scrollTop = 0;
     try {
       const content = await invoke('read_vault_note', { path: note.path });
       setNoteContent(content);
@@ -570,7 +613,7 @@ export default function VaultView() {
 
                   {/* Toggle Vista / Edición */}
                   <button
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={handleToggleEdit}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -614,7 +657,15 @@ export default function VaultView() {
               </div>
 
               {/* Área de Visualización / Edición de Contenido */}
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '1.25rem' }}>
+              <div
+                ref={viewerContainerRef}
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: isEditing ? 'hidden' : 'auto',
+                  padding: isEditing ? '0.75rem' : '1.25rem'
+                }}
+              >
                 {loadingNote ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', gap: '8px' }}>
                     <RefreshCw size={18} className="animate-spin" />
@@ -622,6 +673,7 @@ export default function VaultView() {
                   </div>
                 ) : isEditing ? (
                   <textarea
+                    ref={textareaRef}
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     style={{
@@ -636,7 +688,8 @@ export default function VaultView() {
                       fontSize: '0.82rem',
                       lineHeight: '1.5',
                       resize: 'none',
-                      outline: 'none'
+                      outline: 'none',
+                      overflowY: 'auto'
                     }}
                   />
                 ) : (
