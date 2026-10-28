@@ -1,10 +1,30 @@
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-const VAULT_ROOT: &str = "/home/zabrielsa/Documentos/Obsidian Vault";
+pub fn get_vault_root() -> PathBuf {
+    if let Ok(cfg) = crate::config::get_aegis_config() {
+        if !cfg.vault_path.trim().is_empty() {
+            let p = PathBuf::from(&cfg.vault_path);
+            if p.exists() {
+                return p;
+            }
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let p = PathBuf::from(&home).join("Documentos/Obsidian Vault");
+        if p.exists() {
+            return p;
+        }
+        let fallback_docs = PathBuf::from(&home).join("Documents/Obsidian Vault");
+        if fallback_docs.exists() {
+            return fallback_docs;
+        }
+    }
+    PathBuf::from("Documentos/Obsidian Vault")
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VaultTask {
@@ -58,8 +78,9 @@ fn resolve_hub(relative_path: &str) -> String {
 }
 
 fn is_vault_path_safe(target_path: &Path) -> bool {
+    let vault_root = get_vault_root();
     if let Ok(canonical) = target_path.canonicalize() {
-        if let Ok(root) = Path::new(VAULT_ROOT).canonicalize() {
+        if let Ok(root) = vault_root.canonicalize() {
             return canonical.starts_with(root);
         }
     }
@@ -68,13 +89,13 @@ fn is_vault_path_safe(target_path: &Path) -> bool {
 
 #[tauri::command]
 pub fn get_vault_notes() -> Result<Vec<VaultNote>, String> {
-    let root = Path::new(VAULT_ROOT);
+    let root = get_vault_root();
     if !root.exists() {
-        return Err(format!("Bóveda no encontrada en {}", VAULT_ROOT));
+        return Err(format!("Bóveda no encontrada en {}", root.display()));
     }
 
     let mut notes = Vec::new();
-    collect_notes(root, root, &mut notes)?;
+    collect_notes(&root, &root, &mut notes)?;
     
     // Ordenar notas alfabéticamente por Hub y luego por Título
     notes.sort_by(|a, b| {
@@ -127,13 +148,13 @@ fn collect_notes(dir: &Path, root: &Path, notes: &mut Vec<VaultNote>) -> Result<
 
 #[tauri::command]
 pub fn get_vault_tasks() -> Result<Vec<VaultTask>, String> {
-    let root = Path::new(VAULT_ROOT);
+    let root = get_vault_root();
     if !root.exists() {
-        return Err(format!("Bóveda no encontrada en {}", VAULT_ROOT));
+        return Err(format!("Bóveda no encontrada en {}", root.display()));
     }
 
     let mut tasks = Vec::new();
-    collect_tasks(root, root, &mut tasks)?;
+    collect_tasks(&root, &root, &mut tasks)?;
 
     // Ordenar: primero pendientes, luego completadas
     tasks.sort_by(|a, b| {

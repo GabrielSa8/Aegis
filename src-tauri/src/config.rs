@@ -11,7 +11,7 @@ fn get_config_dir() -> PathBuf {
     if let Ok(home) = std::env::var("HOME") {
         return PathBuf::from(home).join(".config").join("aegis");
     }
-    PathBuf::from("/home/zabrielsa/.config/aegis")
+    PathBuf::from(".config/aegis")
 }
 
 fn get_config_file_path() -> PathBuf {
@@ -40,8 +40,8 @@ pub struct AegisConfig {
     pub git_repos: Vec<GitRepoConfig>,
 }
 
-fn default_config() -> AegisConfig {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+pub fn default_config() -> AegisConfig {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     AegisConfig {
         vault_path: format!("{}/Documentos/Obsidian Vault", home),
         agent_type: "agy".to_string(),

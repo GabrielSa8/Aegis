@@ -27,13 +27,29 @@ pub async fn execute_agent_prompt(
     stream_id: String,
     effort: Option<String>,
 ) -> Result<String, String> {
-    let agy_path = if Path::new("/home/zabrielsa/.local/bin/agy").exists() {
-        "/home/zabrielsa/.local/bin/agy"
-    } else {
-        "agy"
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let cfg = crate::config::get_aegis_config().ok();
+
+    // Resolver motor de IA según configuración
+    let agent_type = cfg.as_ref().map(|c| c.agent_type.as_str()).unwrap_or("agy");
+    let custom_cmd = cfg.as_ref().and_then(|c| c.agent_custom_cmd.clone());
+
+    let agent_binary = match agent_type {
+        "claude" => "claude".to_string(),
+        "ollama" => "ollama".to_string(),
+        "custom" => custom_cmd.unwrap_or_else(|| "agy".to_string()),
+        _ => {
+            let local_agy = Path::new(&home).join(".local/bin/agy");
+            if local_agy.exists() {
+                local_agy.to_string_lossy().to_string()
+            } else if Path::new("/usr/local/bin/agy").exists() {
+                "/usr/local/bin/agy".to_string()
+            } else {
+                "agy".to_string()
+            }
+        }
     };
 
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
     let ctx_name = context_id.unwrap_or_else(|| "general".to_string());
 
     // Crear workspace aislado para el contexto de Aegis (~/.local/share/aegis/contexts/<id>)
@@ -72,7 +88,7 @@ pub async fn execute_agent_prompt(
         }
     }
 
-    let mut cmd = Command::new(agy_path);
+    let mut cmd = Command::new(&agent_binary);
     cmd.arg("-p")
         .arg(&prompt)
         .arg("--output-format")
@@ -108,7 +124,7 @@ pub async fn execute_agent_prompt(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("Error iniciando agy ({:?}): {}", agy_path, e))?;
+        .map_err(|e| format!("Error iniciando agente ({:?}): {}", agent_binary, e))?;
 
     let stdout = child.stdout.take().ok_or("Fallo al capturar stdout")?;
     let stderr = child.stderr.take().ok_or("Fallo al capturar stderr")?;

@@ -28,42 +28,42 @@ export const DEFAULT_CONTEXTS = [
   {
     id: 'general',
     label: 'General',
-    path: '/home/zabrielsa/.local/share/aegis/contexts/general',
+    path: '',
     effort: 'low',
     skills: ['obsidian-vault-architect', 'caveman']
   },
   {
     id: 'tadu',
     label: 'TADÚ (SAM)',
-    path: '/home/zabrielsa/Proyects/projects/TADU',
+    path: '',
     effort: 'high',
     skills: ['tadu-backend', 'clean-code-security', 'tdd-practitioner']
   },
   {
     id: 'meli',
     label: 'MELI Hub',
-    path: '/home/zabrielsa/Documentos/Obsidian Vault/01 Operaciones MELI',
+    path: '',
     effort: 'low',
     skills: ['obsidian-vault-architect']
   },
   {
     id: 'granja',
     label: 'Granja (Kotlin)',
-    path: '/home/zabrielsa/AndroidStudioProjects/granja',
+    path: '',
     effort: 'high',
     skills: ['jetpack-compose-patterns', 'clean-code-security']
   },
   {
     id: 'vault',
     label: 'BrainIA (Bóveda)',
-    path: '/home/zabrielsa/Documentos/Obsidian Vault',
+    path: '',
     effort: 'low',
     skills: ['obsidian-vault-architect', 'feynman-technique-mentor']
   },
   {
     id: 'aegis',
     label: 'Aegis Core',
-    path: '/home/zabrielsa/Proyects/projects/Aegis',
+    path: '',
     effort: 'high',
     skills: ['react-ts-performance', 'impeccable', 'frontend-design']
   }
@@ -85,7 +85,7 @@ export default function ContextManagerModal({
   const activeCtx = editingList.find((c) => c.id === selectedId) || editingList[0] || {
     id: 'nuevo',
     label: 'Nuevo Contexto',
-    path: '/home/zabrielsa',
+    path: '',
     effort: 'low',
     skills: []
   };
@@ -109,7 +109,7 @@ export default function ContextManagerModal({
     const newCtx = {
       id: newId,
       label: 'Nuevo Proyecto',
-      path: '/home/zabrielsa',
+      path: '',
       effort: 'low',
       skills: []
     };
@@ -275,7 +275,7 @@ export default function ContextManagerModal({
                 type="text"
                 value={activeCtx.path || ''}
                 onChange={(e) => handleUpdateActive('path', e.target.value)}
-                placeholder="/home/zabrielsa/Proyects/..."
+                placeholder="~/Proyectos/mi-proyecto..."
                 style={{ fontSize: '0.82rem', fontFamily: 'var(--font-mono)', padding: '0.5rem 0.8rem' }}
               />
               <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>

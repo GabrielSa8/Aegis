@@ -1,7 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+
+fn get_skills_dir() -> PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        PathBuf::from(home).join(".agents/skills")
+    } else {
+        PathBuf::from(".agents/skills")
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GitRepoStatus {
@@ -170,50 +178,17 @@ fn inspect_git_repo(id: &str, name: &str, path_str: &str, role: &str, warning: O
 
 #[tauri::command]
 pub fn get_git_fleet_status() -> Result<Vec<GitRepoStatus>, String> {
-    let repos = vec![
-        inspect_git_repo(
-            "tadu",
-            "TADÚ Mobility Platform",
-            "/home/zabrielsa/Proyects/projects/TADU",
-            "Backend Lead (Python 3.12 / SAM)",
-            Some("⚠️ git add -A y git clean -fdx PROHIBIDOS (demo local crítica)"),
-        ),
-        inspect_git_repo(
-            "granja",
-            "Granja Android",
-            "/home/zabrielsa/AndroidStudioProjects/granja",
-            "Mobile App (Kotlin / Compose)",
-            None,
-        ),
-        inspect_git_repo(
-            "aegis",
-            "Aegis Master Cockpit",
-            "/home/zabrielsa/Proyects/projects/Aegis",
-            "Life OS Core (Tauri v2 / React 19)",
-            None,
-        ),
-        inspect_git_repo(
-            "brainia",
-            "BrainIA (Obsidian Vault)",
-            "/home/zabrielsa/Documentos/Obsidian Vault",
-            "Memoria Central (5 Hubs MOC)",
-            None,
-        ),
-        inspect_git_repo(
-            "aegisTrack",
-            "AegisTrack (Gaming)",
-            "/home/zabrielsa/Proyects/projects/AegisTrack",
-            "Game Tracking (Tauri / Vite)",
-            None,
-        ),
-        inspect_git_repo(
-            "booklet",
-            "Booklet V2",
-            "/home/zabrielsa/Proyects/projects/Booklet_V2",
-            "Desktop Utilities",
-            None,
-        ),
-    ];
+    let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let mut repos = Vec::new();
+    for r in cfg.git_repos {
+        repos.push(inspect_git_repo(
+            &r.id,
+            &r.name,
+            &r.path,
+            &r.role,
+            r.warning.as_deref(),
+        ));
+    }
     Ok(repos)
 }
 
@@ -266,13 +241,13 @@ fn parse_skill_frontmatter(content: &str) -> (String, String, Option<String>) {
 
 #[tauri::command]
 pub fn get_skills_catalog() -> Result<Vec<SkillInfo>, String> {
-    let skills_dir = Path::new("/home/zabrielsa/.agents/skills");
+    let skills_dir = get_skills_dir();
     if !skills_dir.exists() {
         return Ok(Vec::new());
     }
 
     let mut skills = Vec::new();
-    let entries = fs::read_dir(skills_dir).map_err(|e| e.to_string())?;
+    let entries = fs::read_dir(&skills_dir).map_err(|e| e.to_string())?;
 
     for entry in entries.flatten() {
         let path = entry.path();
@@ -309,7 +284,7 @@ pub fn read_skill_markdown(skill_id: String) -> Result<String, String> {
         return Err("Identificador de habilidad inválido".into());
     }
 
-    let p = Path::new("/home/zabrielsa/.agents/skills").join(&skill_id).join("SKILL.md");
+    let p = get_skills_dir().join(&skill_id).join("SKILL.md");
     if !p.exists() {
         return Err(format!("Manual SKILL.md no encontrado para {}", skill_id));
     }

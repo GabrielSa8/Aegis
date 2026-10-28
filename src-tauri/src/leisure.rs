@@ -48,7 +48,7 @@ pub fn get_gaming_status() -> Result<GamingStatus, String> {
 #[tauri::command]
 pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
     let mut games = Vec::new();
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let steamapps_path = format!("{}/.local/share/Steam/steamapps", home);
 
     if let Ok(entries) = fs::read_dir(steamapps_path) {

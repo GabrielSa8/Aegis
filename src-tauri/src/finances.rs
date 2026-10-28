@@ -2,10 +2,24 @@ use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 
-const DB_DIR: &str = "/home/zabrielsa/.local/share/aegis";
-const DB_PATH: &str = "/home/zabrielsa/.local/share/aegis/aegis_lifeos.db";
+fn get_db_paths() -> (PathBuf, PathBuf) {
+    let dir = if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+        if !xdg.is_empty() {
+            PathBuf::from(xdg).join("aegis")
+        } else {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(home).join(".local/share/aegis")
+        }
+    } else if let Ok(home) = std::env::var("HOME") {
+        PathBuf::from(home).join(".local/share/aegis")
+    } else {
+        PathBuf::from(".aegis_data")
+    };
+    let file = dir.join("aegis_lifeos.db");
+    (dir, file)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,10 +72,11 @@ pub struct BackupPayload {
 }
 
 fn get_db_connection() -> Result<Connection, String> {
-    if !Path::new(DB_DIR).exists() {
-        fs::create_dir_all(DB_DIR).map_err(|e| format!("Error creando carpeta {}: {}", DB_DIR, e))?;
+    let (db_dir, db_path) = get_db_paths();
+    if !db_dir.exists() {
+        fs::create_dir_all(&db_dir).map_err(|e| format!("Error creando carpeta {}: {}", db_dir.display(), e))?;
     }
-    let conn = Connection::open(DB_PATH).map_err(|e| format!("Error abriendo SQLite {}: {}", DB_PATH, e))?;
+    let conn = Connection::open(&db_path).map_err(|e| format!("Error abriendo SQLite {}: {}", db_path.display(), e))?;
     init_db_schema(&conn)?;
     Ok(conn)
 }
