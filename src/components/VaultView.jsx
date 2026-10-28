@@ -10,12 +10,13 @@ import {
   CheckCircle2, 
   RefreshCw, 
   Save, 
-  Edit3,
+  Edit3, 
   Eye,
   ChevronsDown,
   ChevronsUp
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import MarkdownViewer from './MarkdownViewer';
 
 // Construcción recursiva del árbol de carpetas estilo Obsidian
 function buildVaultTree(notesList) {
@@ -639,17 +640,16 @@ export default function VaultView() {
                     }}
                   />
                 ) : (
-                  <pre style={{
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    color: 'var(--text-high)',
-                    fontSize: '0.82rem',
-                    lineHeight: '1.6',
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    margin: 0
-                  }}>
-                    {noteContent}
-                  </pre>
+                  <MarkdownViewer
+                    content={noteContent}
+                    onNavigateNote={(targetName) => {
+                      const clean = targetName.trim().replace(/\.md$/, '').toLowerCase();
+                      const found = notes.find((n) => n.title.toLowerCase() === clean);
+                      if (found) {
+                        loadNote(found);
+                      }
+                    }}
+                  />
                 )}
               </div>
             </>

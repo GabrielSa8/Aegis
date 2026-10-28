@@ -19,6 +19,7 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ContextManagerModal, { DEFAULT_CONTEXTS } from './ContextManagerModal';
+import MarkdownViewer from './MarkdownViewer';
 
 export default function AgentView() {
   // Carga de contextos desde localStorage con fallback
@@ -418,17 +419,23 @@ export default function AgentView() {
                 color: 'var(--text-high)',
                 fontFamily: isUser ? 'inherit' : 'var(--font-mono)'
               }}>
-                {m.content}
-                {m.loading && (
-                  <span style={{
-                    display: 'inline-block',
-                    width: '8px',
-                    height: '14px',
-                    marginLeft: '4px',
-                    background: '#10b981',
-                    verticalAlign: 'middle',
-                    animation: 'pulse 1s infinite'
-                  }} />
+                {!isUser && !m.loading && m.content.includes('```mermaid') ? (
+                  <MarkdownViewer content={m.content} />
+                ) : (
+                  <>
+                    {m.content}
+                    {m.loading && (
+                      <span style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '14px',
+                        marginLeft: '4px',
+                        background: '#10b981',
+                        verticalAlign: 'middle',
+                        animation: 'pulse 1s infinite'
+                      }} />
+                    )}
+                  </>
                 )}
               </div>
 
