@@ -30,28 +30,37 @@ import MarkdownViewer from './MarkdownViewer';
 function parseThoughtBlocks(rawContent) {
   if (!rawContent) return { thoughts: '', cleanContent: '' };
 
-  const thoughtRegex = /<(?:thought|thinking)>([\s\S]*?)<\/(?:thought|thinking)>/gi;
+  const thoughtRegex = /<(?:thought|thinking|think)>([\s\S]*?)<\/(?:thought|thinking|think)>/gi;
   const thoughts = [];
   let match;
   while ((match = thoughtRegex.exec(rawContent)) !== null) {
-    thoughts.push(match[1].trim());
+    const text = match[1].trim();
+    if (text) thoughts.push(text);
   }
 
-  // Si el stream sigue abierto dentro de un bloque de pensamiento
-  const openThoughtRegex = /<(?:thought|thinking)>([\s\S]*)$/i;
-  const openMatch = openThoughtRegex.exec(rawContent);
-  if (openMatch && !rawContent.includes('</thought>') && !rawContent.includes('</thinking>')) {
-    thoughts.push(openMatch[1].trim());
-  }
+  // Si hay un bloque de pensamiento que todavía se está transmitiendo en vivo
+  let cleanContent = rawContent.replace(thoughtRegex, '');
+  const lastOpenIndex = Math.max(
+    cleanContent.lastIndexOf('<thought>'),
+    cleanContent.lastIndexOf('<thinking>'),
+    cleanContent.lastIndexOf('<think>')
+  );
+  const lastCloseIndex = Math.max(
+    cleanContent.lastIndexOf('</thought>'),
+    cleanContent.lastIndexOf('</thinking>'),
+    cleanContent.lastIndexOf('</think>')
+  );
 
-  const cleanContent = rawContent
-    .replace(thoughtRegex, '')
-    .replace(openThoughtRegex, '')
-    .trim();
+  if (lastOpenIndex > lastCloseIndex) {
+    const openBlock = cleanContent.slice(lastOpenIndex);
+    const openText = openBlock.replace(/^<(?:thought|thinking|think)>/i, '').trim();
+    if (openText) thoughts.push(openText);
+    cleanContent = cleanContent.slice(0, lastOpenIndex);
+  }
 
   return {
     thoughts: thoughts.join('\n\n'),
-    cleanContent
+    cleanContent: cleanContent.trim()
   };
 }
 
@@ -65,9 +74,16 @@ function ThoughtAccordion({ thoughts, defaultOpen }) {
   if (!thoughts) return null;
 
   const toolMatches = (thoughts.match(/⚙️ \[Herramienta/g) || []).length;
-  const badgeText = toolMatches > 0 
-    ? `${toolMatches} ${toolMatches === 1 ? 'herramienta ejecutada' : 'herramientas ejecutadas'}`
-    : 'Razonamiento activo';
+  const thinkingMatches = (thoughts.match(/🧠 \[Razonamiento/g) || []).length;
+
+  let badgeText = 'Razonamiento activo';
+  if (toolMatches > 0 && thinkingMatches > 0) {
+    badgeText = `${toolMatches} ${toolMatches === 1 ? 'herramienta' : 'herramientas'} · Razonamiento`;
+  } else if (toolMatches > 0) {
+    badgeText = `${toolMatches} ${toolMatches === 1 ? 'herramienta ejecutada' : 'herramientas ejecutadas'}`;
+  } else if (thinkingMatches > 0) {
+    badgeText = 'Razonamiento activo';
+  }
 
   return (
     <div style={{
@@ -382,9 +398,9 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               } else if (chunk.event_type === 'delta') {
                 currentAccumulatorRef.current[chunk.stream_id] = (currentAccumulatorRef.current[chunk.stream_id] || '') + chunk.content;
                 let currentStatus = msg.statusText;
-                if (chunk.step_type === 'thinking' || chunk.content.includes('<thought>') || chunk.content.includes('<thinking>')) {
+                if (chunk.step_type === 'thinking' || chunk.content.includes('<thought>') || chunk.content.includes('<thinking>') || chunk.content.includes('<think>')) {
                   currentStatus = '🧠 Razonando proceso técnico...';
-                } else if (chunk.step_type === 'tool_call') {
+                } else if (chunk.step_type === 'tool' || chunk.step_type === 'tool_call' || chunk.content.includes('⚙️ [Herramienta')) {
                   currentStatus = '⚙️ Ejecutando herramienta de sistema...';
                 } else if (msg.content && msg.content.length > 30) {
                   currentStatus = '⚡ Transmitiendo respuesta...';

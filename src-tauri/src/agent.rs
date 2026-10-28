@@ -46,6 +46,65 @@ pub async fn send_agent_input(stream_id: String, input: String) -> Result<(), St
     }
 }
 
+async fn extract_unseen_thoughts(
+    home: &str,
+    conv_id: &str,
+    processed_steps: &mut std::collections::HashSet<i64>,
+) -> Vec<String> {
+    let base_logs = std::path::PathBuf::from(home)
+        .join(".gemini/antigravity-cli/brain")
+        .join(conv_id)
+        .join(".system_generated/logs");
+    let tpath = base_logs.join("transcript.jsonl");
+    if !tpath.exists() {
+        return Vec::new();
+    }
+    let Ok(content) = tokio::fs::read_to_string(&tpath).await else {
+        return Vec::new();
+    };
+
+    let mut new_thoughts = Vec::new();
+    for (line_idx, line) in content.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Ok(entry) = serde_json::from_str::<serde_json::Value>(line) {
+            let step_idx = entry.get("step_index").and_then(|i| i.as_i64()).unwrap_or(-1);
+            if step_idx >= 0 && !processed_steps.contains(&step_idx) {
+                let mut thinking_text = entry.get("thinking").and_then(|t| t.as_str()).map(|s| s.to_string());
+
+                let is_truncated = entry
+                    .get("truncated_fields")
+                    .and_then(|tf| tf.as_array())
+                    .map(|arr| arr.iter().any(|v| v.as_str() == Some("thinking")))
+                    .unwrap_or(false);
+
+                if is_truncated {
+                    let full_path = base_logs.join("transcript_full.jsonl");
+                    if let Ok(full_content) = tokio::fs::read_to_string(&full_path).await {
+                        if let Some(full_line) = full_content.lines().nth(line_idx) {
+                            if let Ok(full_entry) = serde_json::from_str::<serde_json::Value>(full_line) {
+                                if let Some(ft) = full_entry.get("thinking").and_then(|t| t.as_str()) {
+                                    thinking_text = Some(ft.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let Some(th) = thinking_text {
+                    let trimmed = th.trim();
+                    if !trimmed.is_empty() {
+                        processed_steps.insert(step_idx);
+                        new_thoughts.push(trimmed.to_string());
+                    }
+                }
+            }
+        }
+    }
+    new_thoughts
+}
+
 #[tauri::command]
 pub async fn execute_agent_prompt(
     app: AppHandle,
@@ -117,14 +176,9 @@ pub async fn execute_agent_prompt(
         }
     }
 
-    let formatted_prompt = format!(
-        "[Directriz de Sistema: Si requieres planificar, analizar o razonar técnicamente antes de tu respuesta, coloca ese proceso dentro de bloques <thought>...</thought>.]\n\n{}",
-        prompt
-    );
-
     let mut cmd = Command::new(&agent_binary);
     cmd.arg("-p")
-        .arg(&formatted_prompt)
+        .arg(&prompt)
         .arg("--output-format")
         .arg("stream-json");
 
@@ -185,8 +239,12 @@ pub async fn execute_agent_prompt(
     // Streaming de stdout
     let app_stdout = app.clone();
     let stream_id_stdout = stream_id.clone();
+    let home_stream = home.clone();
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout).lines();
+        let mut captured_conv_id: Option<String> = None;
+        let mut processed_thinking_steps: std::collections::HashSet<i64> = std::collections::HashSet::new();
+
         while let Ok(Some(line)) = reader.next_line().await {
             if line.trim().is_empty() {
                 continue;
@@ -195,12 +253,18 @@ pub async fn execute_agent_prompt(
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
                 if let Some(event) = val.get("event").and_then(|e| e.as_str()) {
                     match event {
+                        "init" => {
+                            if let Some(cid) = val.get("conversation_id").and_then(|c| c.as_str()) {
+                                captured_conv_id = Some(cid.to_string());
+                            }
+                        }
                         "step_update" => {
                             if let Some(step) = val.get("step_update") {
                                 let step_type = step
                                     .get("step_type")
                                     .and_then(|s| s.as_str())
                                     .map(|s| s.to_string());
+                                let state = step.get("state").and_then(|s| s.as_str());
 
                                 // 1. Emisión de deltas de texto normales
                                 if let Some(delta) = step.get("text_delta").and_then(|d| d.as_str()) {
@@ -217,36 +281,58 @@ pub async fn execute_agent_prompt(
                                     let _ = app_stdout.emit("agent-stream", chunk);
                                 }
 
-                                // 2. Captura y formateo de llamadas y ejecuciones de herramientas
+                                // 2. Captura y streaming de razonamiento interno (Chain of Thought)
+                                if state == Some("DONE") {
+                                    if let Some(ref cid) = captured_conv_id {
+                                        let thoughts = extract_unseen_thoughts(&home_stream, cid, &mut processed_thinking_steps).await;
+                                        for th in thoughts {
+                                            let formatted_thinking = format!(
+                                                "<thought>\n🧠 [Razonamiento Técnico]\n{}\n</thought>\n",
+                                                th
+                                            );
+                                            let chunk = AgentStreamChunk {
+                                                stream_id: stream_id_stdout.clone(),
+                                                event_type: "delta".into(),
+                                                content: formatted_thinking,
+                                                step_type: Some("thinking".into()),
+                                                duration_seconds: None,
+                                                input_tokens: None,
+                                                output_tokens: None,
+                                                total_tokens: None,
+                                            };
+                                            let _ = app_stdout.emit("agent-stream", chunk);
+                                        }
+                                    }
+                                }
+
+                                // 3. Captura y formateo de llamadas y ejecuciones de herramientas
                                 if step_type.as_deref() == Some("tool") {
-                                    if let Some(state) = step.get("state").and_then(|s| s.as_str()) {
-                                        if state == "DONE" {
-                                            if let Some(tool_info) = step.get("tool_info") {
-                                                let tool_name = step.get("tool_name").and_then(|n| n.as_str()).unwrap_or("herramienta");
-                                                let params_str = tool_info
-                                                    .get("parameters")
-                                                    .map(|p| serde_json::to_string_pretty(p).unwrap_or_default())
-                                                    .unwrap_or_default();
-                                                let output_str = tool_info.get("output").and_then(|o| o.as_str()).unwrap_or("");
-                                                let duration = step.get("duration_seconds").and_then(|d| d.as_f64()).unwrap_or(0.0);
+                                    if state == Some("DONE") {
+                                        if let Some(tool_info) = step.get("tool_info") {
+                                            let tool_name = step.get("tool_name").and_then(|n| n.as_str()).unwrap_or("herramienta");
+                                            let params_str = tool_info
+                                                .get("parameters")
+                                                .map(|p| serde_json::to_string_pretty(p).unwrap_or_default())
+                                                .unwrap_or_default();
+                                            let output_str = tool_info.get("output").and_then(|o| o.as_str()).unwrap_or("");
+                                            let duration = step.get("duration_seconds").and_then(|d| d.as_f64()).unwrap_or(0.0);
 
-                                                let formatted_tool = format!(
-                                                    "<thought>\n⚙️ [Herramienta: {} ({:.2}s)]\nParámetros:\n{}\n\nResultado:\n{}\n</thought>\n",
-                                                    tool_name, duration, params_str.trim(), output_str.trim()
-                                                );
+                                            let formatted_tool = format!(
+                                                "<thought>\n⚙️ [Herramienta: {} ({:.2}s)]\nParámetros:\n{}\n\nResultado:\n{}\n</thought>\n",
+                                                tool_name, duration, params_str.trim(), output_str.trim()
+                                            );
 
-                                                let chunk = AgentStreamChunk {
-                                                    stream_id: stream_id_stdout.clone(),
-                                                    event_type: "delta".into(),
-                                                    content: formatted_tool,
-                                                    step_type: Some("tool".into()),
-                                                    duration_seconds: None,
-                                                    input_tokens: None,
-                                                    output_tokens: None,
-                                                    total_tokens: None,
-                                                };
-                                                let _ = app_stdout.emit("agent-stream", chunk);
-                                            }
+                                            let chunk = AgentStreamChunk {
+                                                stream_id: stream_id_stdout.clone(),
+                                                event_type: "delta".into(),
+                                                content: formatted_tool,
+                                                step_type: Some("tool".into()),
+                                                duration_seconds: None,
+                                                input_tokens: None,
+                                                output_tokens: None,
+                                                total_tokens: None,
+                                            };
+                                            let _ = app_stdout.emit("agent-stream", chunk);
                                         }
                                     }
                                 }
@@ -254,6 +340,28 @@ pub async fn execute_agent_prompt(
                         }
                         "result" => {
                             if let Some(res) = val.get("result") {
+                                // Barrido final de pensamientos antes de emitir done
+                                if let Some(ref cid) = captured_conv_id {
+                                    let thoughts = extract_unseen_thoughts(&home_stream, cid, &mut processed_thinking_steps).await;
+                                    for th in thoughts {
+                                        let formatted_thinking = format!(
+                                            "<thought>\n🧠 [Razonamiento Técnico]\n{}\n</thought>\n",
+                                            th
+                                        );
+                                        let chunk = AgentStreamChunk {
+                                            stream_id: stream_id_stdout.clone(),
+                                            event_type: "delta".into(),
+                                            content: formatted_thinking,
+                                            step_type: Some("thinking".into()),
+                                            duration_seconds: None,
+                                            input_tokens: None,
+                                            output_tokens: None,
+                                            total_tokens: None,
+                                        };
+                                        let _ = app_stdout.emit("agent-stream", chunk);
+                                    }
+                                }
+
                                 let duration = res.get("duration_seconds").and_then(|d| d.as_f64());
                                 let usage = res.get("usage");
                                 let input_tokens = usage
