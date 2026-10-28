@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -85,16 +85,23 @@ pub async fn execute_agent_prompt(
         }
     }
 
-    // Determinar directorio de ejecución:
-    // Si context_path es HOME (/home/zabrielsa) o vacío, usamos ctx_workspace
-    // para evitar que agy cargue los 41 skills globales de ~/.agents/skills.
-    let target_dir = match context_path.as_deref() {
-        Some(p) if !p.trim().is_empty() && Path::new(p).exists() && p != home.as_str() => {
-            PathBuf::from(p)
+    // Siempre establecemos el workspace del contexto como cwd principal.
+    // Esto garantiza al 100% que agy descubra EXCLUSIVAMENTE los symlinks de skills
+    // que el usuario activó o desactivó en la interfaz de Aegis.
+    cmd.current_dir(&ctx_workspace);
+
+    // Si el contexto define una ruta de proyecto (ej: TADU, Granja, Bóveda) y no es HOME ni el workspace,
+    // se agrega con --add-dir para que el agente tenga acceso inmediato a sus archivos y repositorios.
+    if let Some(ref path) = context_path {
+        let clean = path.trim();
+        if !clean.is_empty()
+            && clean != home.as_str()
+            && Path::new(clean).exists()
+            && Path::new(clean) != ctx_workspace.as_path()
+        {
+            cmd.arg("--add-dir").arg(clean);
         }
-        _ => ctx_workspace,
-    };
-    cmd.current_dir(&target_dir);
+    }
 
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
