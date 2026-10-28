@@ -3,22 +3,25 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// Limpiar cualquier Service Worker heredado del modo web para evitar bloqueos
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        caches.delete(name);
+      }
+    });
+  }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
-
-// Registro del Service Worker para soporte Offline y PWA móvil
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('Service Worker registrado con éxito en el ámbito:', reg.scope);
-      })
-      .catch((err) => {
-        console.error('Fallo en el registro del Service Worker:', err);
-      });
-  });
-}
 
