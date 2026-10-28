@@ -28,6 +28,15 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 
 // Extractor de metadatos Obsidian Tasks (fechas, prioridad, etiquetas)
+function groupTasksByHub(taskList) {
+  const map = {};
+  taskList.forEach((t) => {
+    if (!map[t.hub]) map[t.hub] = [];
+    map[t.hub].push(t);
+  });
+  return map;
+}
+
 function parseTask(t) {
   const text = t.text;
   
@@ -78,6 +87,7 @@ export default function TasksView() {
   
   // Modos de Vista: 'list' (agrupada por Hub), 'kanban' (3 columnas), 'matrix' (4 cuadrantes)
   const [viewMode, setViewMode] = useState('list');
+  const [kanbanLayout, setKanbanLayout] = useState('swimlanes'); // 'swimlanes' (por Hub) o 'columns' (3 columnas con subgrupos)
   const [collapsedHubs, setCollapsedHubs] = useState(() => new Set());
 
   // Temporizador Pomodoro Táctico
@@ -449,6 +459,53 @@ export default function TasksView() {
           </button>
         </div>
 
+        {/* Sub-conmutador de diseño Kanban (Swimlanes por Hub vs 3 Columnas) */}
+        {viewMode === 'kanban' && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            padding: '2px'
+          }}>
+            <button
+              type="button"
+              onClick={() => setKanbanLayout('swimlanes')}
+              title="Agrupar por Hubs (Swimlanes como en Vista Lista)"
+              style={{
+                background: kanbanLayout === 'swimlanes' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                border: kanbanLayout === 'swimlanes' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                color: kanbanLayout === 'swimlanes' ? '#34d399' : 'var(--text-muted)',
+                padding: '3px 7px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Swimlanes (Hubs)
+            </button>
+            <button
+              type="button"
+              onClick={() => setKanbanLayout('columns')}
+              title="3 Columnas con subgrupos por Hub"
+              style={{
+                background: kanbanLayout === 'columns' ? 'rgba(16, 185, 129, 0.18)' : 'transparent',
+                border: kanbanLayout === 'columns' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                color: kanbanLayout === 'columns' ? '#34d399' : 'var(--text-muted)',
+                padding: '3px 7px',
+                borderRadius: '4px',
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              3 Columnas
+            </button>
+          </div>
+        )}
+
         {/* Derecha: Pomodoro Táctico + Status Tabs + Refrescar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Widget Pomodoro */}
@@ -717,122 +774,363 @@ export default function TasksView() {
           })}
         </div>
       ) : viewMode === 'kanban' ? (
-        /* 📌 2. VISTA TABLERO KANBAN TÁCTICO (3 Columnas) */
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '0.75rem',
-          alignItems: 'start'
-        }}>
-          {/* Columna 1: Por Hacer */}
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: 'calc(100vh - 170px)'
-          }}>
-            <div style={{
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(255, 255, 255, 0.02)',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                📥 Por Hacer ({kanbanColumns.todo.length})
-              </span>
-            </div>
-            <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {kanbanColumns.todo.length === 0 ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                  Sin tareas en cola
-                </div>
-              ) : (
-                kanbanColumns.todo.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={handleToggle} compact />
-                ))
-              )}
-            </div>
-          </div>
+        /* 📌 2. VISTA TABLERO KANBAN TÁCTICO (Agrupado por Hub) */
+        kanbanLayout === 'swimlanes' ? (
+          /* Sub-modo A: Swimlanes por Hub (idéntico a la Lista, agrupado por carpetas) */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {Object.entries(tasksByHub).map(([hubName, hubTasks]) => {
+              const isCollapsed = collapsedHubs.has(hubName);
+              const hubTotal = hubTasks.length;
+              const hubDone = hubTasks.filter((t) => t.completed).length;
+              const hubPercent = hubTotal > 0 ? Math.round((hubDone / hubTotal) * 100) : 0;
 
-          {/* Columna 2: En Foco / Prioritarias */}
+              const hubTodo = [];
+              const hubFocus = [];
+              const hubCompleted = [];
+
+              hubTasks.forEach((t) => {
+                if (t.completed) {
+                  hubCompleted.push(t);
+                } else if (t.priority === 'high' || t.dueDate) {
+                  hubFocus.push(t);
+                } else {
+                  hubTodo.push(t);
+                }
+              });
+
+              return (
+                <div
+                  key={hubName}
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Cabecera del Hub colapsable con progreso */}
+                  <div
+                    onClick={() => toggleHubCollapse(hubName)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.5rem 0.85rem',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      borderBottom: isCollapsed ? 'none' : '1px solid var(--border-color)',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {isCollapsed ? <ChevronRight size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)' }}>
+                        {hubName}
+                      </span>
+                      <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
+                        ({hubTasks.length} {hubTasks.length === 1 ? 'tarea' : 'tareas'})
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Mini barra de progreso */}
+                      <div style={{ width: '60px', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${hubPercent}%`, height: '100%', background: '#10b981', transition: 'width 0.3s ease' }} />
+                      </div>
+                      <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {hubDone}/{hubTotal} ({hubPercent}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 3 Columnas Kanban para este Hub */}
+                  {!isCollapsed && (
+                    <div style={{
+                      padding: '0.6rem',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                      gap: '0.6rem',
+                      background: 'rgba(0, 0, 0, 0.15)'
+                    }}>
+                      {/* Col 1: Por Hacer */}
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.25)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          borderBottom: '1px solid var(--border-color)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <span>📥 Por Hacer</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.64rem' }}>{hubTodo.length}</span>
+                        </div>
+                        <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '52px' }}>
+                          {hubTodo.length === 0 ? (
+                            <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
+                              Sin tareas en cola
+                            </div>
+                          ) : (
+                            hubTodo.map((t) => <TaskCard key={t.id} task={t} onToggle={handleToggle} compact />)
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Col 2: En Foco / Urgente */}
+                      <div style={{
+                        background: 'rgba(245, 158, 11, 0.03)',
+                        border: '1px solid rgba(245, 158, 11, 0.2)',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          padding: '4px 8px',
+                          background: 'rgba(245, 158, 11, 0.06)',
+                          borderBottom: '1px solid rgba(245, 158, 11, 0.2)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: '#fbbf24',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Flame size={11} color="#fbbf24" />
+                            🔥 En Foco
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.64rem' }}>{hubFocus.length}</span>
+                        </div>
+                        <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '52px' }}>
+                          {hubFocus.length === 0 ? (
+                            <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
+                              Sin tareas urgentes
+                            </div>
+                          ) : (
+                            hubFocus.map((t) => <TaskCard key={t.id} task={t} onToggle={handleToggle} compact highlight />)
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Col 3: Completadas */}
+                      <div style={{
+                        background: 'rgba(16, 185, 129, 0.02)',
+                        border: '1px solid rgba(16, 185, 129, 0.15)',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          padding: '4px 8px',
+                          background: 'rgba(16, 185, 129, 0.05)',
+                          borderBottom: '1px solid rgba(16, 185, 129, 0.15)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: '#34d399',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <span>✅ Completadas</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.64rem' }}>{hubCompleted.length}</span>
+                        </div>
+                        <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '52px' }}>
+                          {hubCompleted.length === 0 ? (
+                            <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
+                              Sin tareas completadas
+                            </div>
+                          ) : (
+                            hubCompleted.map((t) => <TaskCard key={t.id} task={t} onToggle={handleToggle} compact />)
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Sub-modo B: 3 Columnas Globales (con tarjetas agrupadas por Hub internamente) */
           <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: 'calc(100vh - 170px)',
-            boxShadow: '0 0 12px rgba(245, 158, 11, 0.04)'
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '0.75rem',
+            alignItems: 'start'
           }}>
+            {/* Columna 1: Por Hacer */}
             <div style={{
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(245, 158, 11, 0.08)',
-              borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 170px)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Flame size={13} color="#fbbf24" />
-                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#fbbf24' }}>
-                  🔥 En Foco / Urgente ({kanbanColumns.focus.length})
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                  📥 Por Hacer ({kanbanColumns.todo.length})
                 </span>
               </div>
+              <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {kanbanColumns.todo.length === 0 ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                    Sin tareas en cola
+                  </div>
+                ) : (
+                  Object.entries(groupTasksByHub(kanbanColumns.todo)).map(([hub, tasks]) => (
+                    <div key={hub} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        color: '#34d399',
+                        padding: '2px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px dashed rgba(255, 255, 255, 0.08)'
+                      }}>
+                        <span>{hub}</span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>({tasks.length})</span>
+                      </div>
+                      {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} onToggle={handleToggle} compact />
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-            <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {kanbanColumns.focus.length === 0 ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                  Sin tareas urgentes en foco
-                </div>
-              ) : (
-                kanbanColumns.focus.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={handleToggle} compact highlight />
-                ))
-              )}
-            </div>
-          </div>
 
-          {/* Columna 3: Completadas */}
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: 'calc(100vh - 170px)'
-          }}>
+            {/* Columna 2: En Foco / Prioritarias */}
             <div style={{
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(16, 185, 129, 0.06)',
-              borderBottom: '1px solid var(--border-color)',
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 170px)',
+              boxShadow: '0 0 12px rgba(245, 158, 11, 0.04)'
             }}>
-              <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#34d399' }}>
-                ✅ Completadas ({kanbanColumns.done.length})
-              </span>
-            </div>
-            <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {kanbanColumns.done.length === 0 ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                  Aún no has completado tareas hoy
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                background: 'rgba(245, 158, 11, 0.08)',
+                borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Flame size={13} color="#fbbf24" />
+                  <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#fbbf24' }}>
+                    🔥 En Foco / Urgente ({kanbanColumns.focus.length})
+                  </span>
                 </div>
-              ) : (
-                kanbanColumns.done.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={handleToggle} compact />
-                ))
-              )}
+              </div>
+              <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {kanbanColumns.focus.length === 0 ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                    Sin tareas urgentes en foco
+                  </div>
+                ) : (
+                  Object.entries(groupTasksByHub(kanbanColumns.focus)).map(([hub, tasks]) => (
+                    <div key={hub} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        color: '#fbbf24',
+                        padding: '2px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px dashed rgba(245, 158, 11, 0.2)'
+                      }}>
+                        <span>{hub}</span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>({tasks.length})</span>
+                      </div>
+                      {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} onToggle={handleToggle} compact highlight />
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Columna 3: Completadas */}
+            <div style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: 'calc(100vh - 170px)'
+            }}>
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                background: 'rgba(16, 185, 129, 0.06)',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#34d399' }}>
+                  ✅ Completadas ({kanbanColumns.done.length})
+                </span>
+              </div>
+              <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {kanbanColumns.done.length === 0 ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                    Aún no has completado tareas hoy
+                  </div>
+                ) : (
+                  Object.entries(groupTasksByHub(kanbanColumns.done)).map(([hub, tasks]) => (
+                    <div key={hub} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        color: '#34d399',
+                        padding: '2px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px dashed rgba(16, 185, 129, 0.2)'
+                      }}>
+                        <span>{hub}</span>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>({tasks.length})</span>
+                      </div>
+                      {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} onToggle={handleToggle} compact />
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )
       ) : (
         /* 🎯 3. VISTA MATRIZ DE ENFOQUE & CUADRANTES */
         <div style={{
