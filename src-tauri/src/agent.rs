@@ -23,6 +23,7 @@ pub async fn execute_agent_prompt(
     prompt: String,
     context_path: Option<String>,
     stream_id: String,
+    effort: Option<String>,
 ) -> Result<String, String> {
     let agy_path = if Path::new("/home/zabrielsa/.local/bin/agy").exists() {
         "/home/zabrielsa/.local/bin/agy"
@@ -35,6 +36,13 @@ pub async fn execute_agent_prompt(
         .arg(&prompt)
         .arg("--output-format")
         .arg("stream-json");
+
+    // Inyección de nivel de esfuerzo/razonamiento (low para flash, high para profundo)
+    if let Some(ref eff) = effort {
+        if !eff.trim().is_empty() {
+            cmd.arg("--effort").arg(eff.trim());
+        }
+    }
 
     if let Some(ref path) = context_path {
         if Path::new(path).exists() {

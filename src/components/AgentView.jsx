@@ -10,14 +10,38 @@ import {
   Trash2, 
   Cpu, 
   Clock,
-  Sparkles,
-  AlertCircle
+  Settings,
+  Plus,
+  Zap,
+  Brain,
+  ShieldAlert
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import ContextManagerModal, { DEFAULT_CONTEXTS } from './ContextManagerModal';
 
 export default function AgentView() {
-  const [selectedContext, setSelectedContext] = useState('TADU');
+  // Carga de contextos desde localStorage con fallback
+  const [contexts, setContexts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aegis_agent_contexts');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error cargando contextos:', e);
+    }
+    return DEFAULT_CONTEXTS;
+  });
+
+  const [selectedContextId, setSelectedContextId] = useState(() => {
+    return contexts[0]?.id || 'general';
+  });
+
+  const activeContext = contexts.find((c) => c.id === selectedContextId) || contexts[0] || DEFAULT_CONTEXTS[0];
+
+  // Nivel de esfuerzo / modelo activo ('low' = Flash, 'high' = Profundo)
+  const [effortMode, setEffortMode] = useState(activeContext.effort || 'low');
+  const [showContextModal, setShowContextModal] = useState(false);
+
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
@@ -27,28 +51,36 @@ export default function AgentView() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Aegis Copilot en línea. Conectado al agente local (`agy 1.4.8`). ¿Qué tarea técnica ejecutamos?',
-      context: 'Aegis',
+      content: 'Aegis Copilot táctico en línea. Conectado al agente local (`agy 1.4.8`). ¿Qué tarea ejecutamos?',
+      context: activeContext.label,
       timestamp: 'Ahora'
     }
   ]);
 
-  const contexts = [
-    { id: 'TADU', label: 'TADÚ (SAM)', path: '/home/zabrielsa/Proyects/projects/TADU' },
-    { id: 'MELI', label: 'MELI Hub', path: '/home/zabrielsa/Documentos/Obsidian Vault/01 Operaciones MELI' },
-    { id: 'Granja', label: 'Granja (Kotlin)', path: '/home/zabrielsa/AndroidStudioProjects/granja' },
-    { id: 'Vault', label: 'BrainIA', path: '/home/zabrielsa/Documentos/Obsidian Vault' },
-    { id: 'Aegis', label: 'Aegis Core', path: '/home/zabrielsa/Proyects/projects/Aegis' }
-  ];
+  // Al conmutar de contexto, adoptar su esfuerzo por defecto
+  const handleSelectContext = (id) => {
+    setSelectedContextId(id);
+    const target = contexts.find((c) => c.id === id);
+    if (target && target.effort) {
+      setEffortMode(target.effort);
+    }
+  };
+
+  const handleSaveContexts = (updatedList) => {
+    setContexts(updatedList);
+    try {
+      localStorage.setItem('aegis_agent_contexts', JSON.stringify(updatedList));
+    } catch (e) {
+      console.error('Error guardando contextos:', e);
+    }
+  };
 
   const quickMacros = [
-    { label: 'Auditar Git TADÚ', text: 'Revisa status de git y ramas locales sin usar git add -A.' },
-    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del Hito 1.' },
+    { label: 'Auditar Git', text: 'Revisa status de git y ramas locales sin usar git add -A.' },
+    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del Hito actual.' },
     { label: 'Flashcards AWS', text: 'Analiza la última nota de estudio de AWS y genera 3 flashcards atómicas.' },
-    { label: 'SOP Ambulancias', text: 'Consulta el MOC de MELI y resume el protocolo de ambulancias.' }
+    { label: 'Revisar Pendientes', text: 'Inspecciona las tareas pendientes del proyecto activo y prioriza las 3 más críticas.' }
   ];
-
-  const activeContextObj = contexts.find(c => c.id === selectedContext) || contexts[0];
 
   // Escuchar chunks de streaming emitidos desde Rust
   useEffect(() => {
@@ -120,7 +152,8 @@ export default function AgentView() {
       id: 'usr_' + Date.now(),
       role: 'user',
       content: textToSend,
-      context: selectedContext,
+      context: activeContext.label,
+      effort: effortMode,
       timestamp: timeStr
     };
 
@@ -128,7 +161,8 @@ export default function AgentView() {
       id: streamId,
       role: 'assistant',
       content: '',
-      context: selectedContext,
+      context: activeContext.label,
+      effort: effortMode,
       timestamp: timeStr,
       loading: true
     };
@@ -140,8 +174,9 @@ export default function AgentView() {
     try {
       await invoke('execute_agent_prompt', {
         prompt: textToSend,
-        contextPath: activeContextObj.path,
-        streamId
+        contextPath: activeContext.path,
+        streamId,
+        effort: effortMode
       });
     } catch (err) {
       setMessages((prev) =>
@@ -171,8 +206,8 @@ export default function AgentView() {
       {
         id: 'welcome_' + Date.now(),
         role: 'assistant',
-        content: 'Historial despejado. Entorno táctico listo.',
-        context: selectedContext,
+        content: `Historial despejado. Entorno táctico listo (${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
+        context: activeContext.label,
         timestamp: 'Ahora'
       }
     ]);
@@ -180,7 +215,7 @@ export default function AgentView() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: '0.75rem' }}>
-      {/* 🧭 Context Router Bar */}
+      {/* 🧭 Context Router & Effort Bar */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -193,17 +228,17 @@ export default function AgentView() {
         gap: '8px',
         flexWrap: 'wrap'
       }}>
-        {/* Selector de carpetas de proyecto */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '4px' }}>
+        {/* Selector de perfiles dinámicos */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '260px' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '2px' }}>
             Contexto:
           </span>
           {contexts.map((ctx) => {
-            const isSelected = selectedContext === ctx.id;
+            const isSelected = selectedContextId === ctx.id;
             return (
               <button
                 key={ctx.id}
-                onClick={() => setSelectedContext(ctx.id)}
+                onClick={() => handleSelectContext(ctx.id)}
                 style={{
                   fontSize: '0.72rem',
                   padding: '4px 10px',
@@ -222,28 +257,84 @@ export default function AgentView() {
               >
                 <FolderGit2 size={12} color={isSelected ? '#10b981' : '#788882'} />
                 <span>{ctx.label}</span>
+                {ctx.skills?.length > 0 && (
+                  <span style={{ fontSize: '0.6rem', padding: '0 4px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.08)', color: '#a7f3d0' }}>
+                    {ctx.skills.length}
+                  </span>
+                )}
               </button>
             );
           })}
+
+          {/* Botón Gestión de Contextos */}
+          <button
+            onClick={() => setShowContextModal(true)}
+            className="btn btn-secondary"
+            style={{ padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '4px' }}
+            title="Administrar carpetas, skills y modelos de contextos"
+          >
+            <Settings size={12} />
+            <span>Editar</span>
+          </button>
         </div>
 
-        {/* Estado y Limpieza */}
+        {/* Toggle de Esfuerzo (Flash vs Profundo) y Limpieza */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Toggle Flash / Profundo */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
-            fontSize: '0.68rem',
-            color: '#10b981',
-            background: 'rgba(16, 185, 129, 0.08)',
-            padding: '3px 8px',
-            borderRadius: 'var(--radius-sm)',
-            fontWeight: 600
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            padding: '2px'
           }}>
-            <CheckCircle2 size={12} />
-            <span>Streaming PTY agy</span>
+            <button
+              onClick={() => setEffortMode('low')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-sm)',
+                background: effortMode === 'low' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                border: effortMode === 'low' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
+                color: effortMode === 'low' ? '#a7f3d0' : 'var(--text-muted)',
+                fontSize: '0.68rem',
+                fontWeight: effortMode === 'low' ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'var(--transition)'
+              }}
+              title="Modo Rápido: ~1.9s de respuesta, bajo consumo de tokens de pensamiento"
+            >
+              <Zap size={11} color={effortMode === 'low' ? '#10b981' : '#788882'} />
+              <span>Flash (1.9s)</span>
+            </button>
+
+            <button
+              onClick={() => setEffortMode('high')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-sm)',
+                background: effortMode === 'high' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+                border: effortMode === 'high' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+                color: effortMode === 'high' ? '#e9d5ff' : 'var(--text-muted)',
+                fontSize: '0.68rem',
+                fontWeight: effortMode === 'high' ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'var(--transition)'
+              }}
+              title="Modo Profundo: Razonamiento exhaustivo para refactorización y lógica compleja"
+            >
+              <Brain size={11} color={effortMode === 'high' ? '#c084fc' : '#788882'} />
+              <span>Profundo</span>
+            </button>
           </div>
 
+          {/* Limpiar Historial */}
           <button
             onClick={clearHistory}
             className="btn btn-secondary"
@@ -294,6 +385,11 @@ export default function AgentView() {
                   {m.context && (
                     <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
                       {m.context}
+                    </span>
+                  )}
+                  {m.effort && (
+                    <span style={{ fontSize: '0.58rem', padding: '1px 4px', borderRadius: '3px', background: m.effort === 'high' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(16, 185, 129, 0.1)', color: m.effort === 'high' ? '#c084fc' : '#34d399' }}>
+                      {m.effort === 'high' ? '🧠 Profundo' : '⚡ Flash'}
                     </span>
                   )}
                 </span>
@@ -410,7 +506,7 @@ export default function AgentView() {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
-          placeholder={loading ? 'Agente ejecutando en segundo plano...' : `Instrucción para el agente (Contexto: ${selectedContext})...`}
+          placeholder={loading ? 'Agente ejecutando en segundo plano...' : `[${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}] Instrucción para el agente...`}
           disabled={loading}
           style={{
             flex: 1,
@@ -454,6 +550,16 @@ export default function AgentView() {
           )}
         </button>
       </div>
+
+      {/* ⚙️ Modal Administrador de Contextos */}
+      <ContextManagerModal
+        isOpen={showContextModal}
+        onClose={() => setShowContextModal(false)}
+        contexts={contexts}
+        onSaveContexts={handleSaveContexts}
+        currentContextId={selectedContextId}
+        onSelectContext={handleSelectContext}
+      />
     </div>
   );
 }
