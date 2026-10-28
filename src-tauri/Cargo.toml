@@ -4,7 +4,7 @@ version = "2.0.0"
 description = "Aegis - Personal Executive Cockpit & Master Command Center"
 authors = ["Gabriel"]
 license = "MIT"
-repository = "git@github.com:GabrielSa8/Life_OS_ZBA.git"
+repository = "git@github.com:GabrielSa8/Aegis.git"
 edition = "2021"
 
 [lib]

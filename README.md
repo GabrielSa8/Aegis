@@ -136,7 +136,7 @@ Aegis was specifically engineered and battle-tested on ultra-efficient, resource
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/GabrielSa8/Life_OS_ZBA.git aegis
+git clone https://github.com/GabrielSa8/Aegis.git aegis
 cd aegis
 npm install
 ```
