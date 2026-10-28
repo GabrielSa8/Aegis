@@ -674,7 +674,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
                   <select
                     value={accountForm.type}
                     onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
-                    style={{ width: '100%', padding: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: '#fff', fontSize: '0.75rem' }}
+                    style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px' }}
                   >
                     <option value="debit">Débito</option>
                     <option value="credit">Crédito</option>
@@ -838,7 +838,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
                 <select
                   value={msiForm.paymentMethod}
                   onChange={(e) => setMsiForm({ ...msiForm, paymentMethod: e.target.value })}
-                  style={{ width: '100%', padding: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: '#fff', fontSize: '0.75rem' }}
+                  style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px' }}
                 >
                   {paymentMethods.map((pm) => (
                     <option key={pm.id} value={pm.name}>{pm.name}</option>
@@ -937,7 +937,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
                 <select
                   value={recurringForm.paymentMethod}
                   onChange={(e) => setRecurringForm({ ...recurringForm, paymentMethod: e.target.value })}
-                  style={{ width: '100%', padding: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: '#fff', fontSize: '0.75rem' }}
+                  style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px' }}
                 >
                   {paymentMethods.map((pm) => (
                     <option key={pm.id} value={pm.name}>{pm.name}</option>

@@ -156,13 +156,9 @@ export default function TasksView() {
               value={selectedHub}
               onChange={(e) => setSelectedHub(e.target.value)}
               style={{
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-high)',
                 fontSize: '0.72rem',
-                padding: '4px 6px',
-                outline: 'none',
+                padding: '4px 22px 4px 8px',
+                width: 'auto',
                 cursor: 'pointer'
               }}
             >
