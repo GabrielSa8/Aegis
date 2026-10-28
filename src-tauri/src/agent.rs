@@ -117,9 +117,14 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    let formatted_prompt = format!(
+        "[Directriz de Sistema: Si requieres planificar, analizar o razonar técnicamente antes de tu respuesta, coloca ese proceso dentro de bloques <thought>...</thought>.]\n\n{}",
+        prompt
+    );
+
     let mut cmd = Command::new(&agent_binary);
     cmd.arg("-p")
-        .arg(&prompt)
+        .arg(&formatted_prompt)
         .arg("--output-format")
         .arg("stream-json");
 
@@ -197,18 +202,53 @@ pub async fn execute_agent_prompt(
                                     .and_then(|s| s.as_str())
                                     .map(|s| s.to_string());
 
+                                // 1. Emisión de deltas de texto normales
                                 if let Some(delta) = step.get("text_delta").and_then(|d| d.as_str()) {
                                     let chunk = AgentStreamChunk {
                                         stream_id: stream_id_stdout.clone(),
                                         event_type: "delta".into(),
                                         content: delta.to_string(),
-                                        step_type,
+                                        step_type: step_type.clone(),
                                         duration_seconds: None,
                                         input_tokens: None,
                                         output_tokens: None,
                                         total_tokens: None,
                                     };
                                     let _ = app_stdout.emit("agent-stream", chunk);
+                                }
+
+                                // 2. Captura y formateo de llamadas y ejecuciones de herramientas
+                                if step_type.as_deref() == Some("tool") {
+                                    if let Some(state) = step.get("state").and_then(|s| s.as_str()) {
+                                        if state == "DONE" {
+                                            if let Some(tool_info) = step.get("tool_info") {
+                                                let tool_name = step.get("tool_name").and_then(|n| n.as_str()).unwrap_or("herramienta");
+                                                let params_str = tool_info
+                                                    .get("parameters")
+                                                    .map(|p| serde_json::to_string_pretty(p).unwrap_or_default())
+                                                    .unwrap_or_default();
+                                                let output_str = tool_info.get("output").and_then(|o| o.as_str()).unwrap_or("");
+                                                let duration = step.get("duration_seconds").and_then(|d| d.as_f64()).unwrap_or(0.0);
+
+                                                let formatted_tool = format!(
+                                                    "<thought>\n⚙️ [Herramienta: {} ({:.2}s)]\nParámetros:\n{}\n\nResultado:\n{}\n</thought>\n",
+                                                    tool_name, duration, params_str.trim(), output_str.trim()
+                                                );
+
+                                                let chunk = AgentStreamChunk {
+                                                    stream_id: stream_id_stdout.clone(),
+                                                    event_type: "delta".into(),
+                                                    content: formatted_tool,
+                                                    step_type: Some("tool".into()),
+                                                    duration_seconds: None,
+                                                    input_tokens: None,
+                                                    output_tokens: None,
+                                                    total_tokens: None,
+                                                };
+                                                let _ = app_stdout.emit("agent-stream", chunk);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

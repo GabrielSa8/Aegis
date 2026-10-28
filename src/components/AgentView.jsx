@@ -19,7 +19,8 @@ import {
   History,
   MessageSquare,
   X,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -52,6 +53,85 @@ function parseThoughtBlocks(rawContent) {
     thoughts: thoughts.join('\n\n'),
     cleanContent
   };
+}
+
+function ThoughtAccordion({ thoughts, defaultOpen }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    setIsOpen(defaultOpen);
+  }, [defaultOpen]);
+
+  if (!thoughts) return null;
+
+  const toolMatches = (thoughts.match(/⚙️ \[Herramienta/g) || []).length;
+  const badgeText = toolMatches > 0 
+    ? `${toolMatches} ${toolMatches === 1 ? 'herramienta ejecutada' : 'herramientas ejecutadas'}`
+    : 'Razonamiento activo';
+
+  return (
+    <div style={{
+      marginBottom: '8px',
+      background: 'rgba(0, 0, 0, 0.35)',
+      border: '1px solid rgba(168, 85, 247, 0.3)',
+      borderRadius: 'var(--radius-md)',
+      overflow: 'hidden'
+    }}>
+      <div
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          padding: '6px 10px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.72rem',
+          color: '#c084fc',
+          userSelect: 'none',
+          background: 'rgba(168, 85, 247, 0.08)',
+          borderBottom: isOpen ? '1px solid rgba(168, 85, 247, 0.2)' : 'none'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+          <Brain size={13} color="#c084fc" />
+          <span>Proceso Técnico & Herramientas</span>
+          <span style={{
+            fontSize: '0.62rem',
+            padding: '1px 6px',
+            borderRadius: '3px',
+            background: 'rgba(168, 85, 247, 0.18)',
+            color: '#e9d5ff',
+            fontFamily: 'var(--font-mono)'
+          }}>
+            {badgeText}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <kbd style={{ fontSize: '0.58rem', padding: '1px 5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', color: 'var(--text-muted)' }}>
+            Ctrl + O
+          </kbd>
+          {isOpen ? <ChevronDown size={14} color="#c084fc" /> : <ChevronRight size={14} color="#c084fc" />}
+        </div>
+      </div>
+
+      {isOpen && (
+        <div style={{
+          padding: '8px 12px',
+          color: 'var(--text-normal)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.72rem',
+          lineHeight: '1.45',
+          whiteSpace: 'pre-wrap',
+          maxHeight: '260px',
+          overflowY: 'auto',
+          background: 'rgba(10, 12, 11, 0.6)'
+        }}>
+          {thoughts}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AgentView({ zenMode, onToggleZenMode }) {
@@ -854,53 +934,9 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                 </div>
               </div>
 
-              {/* 🧠 Acordeón Colapsable de Razonamiento / Pensamiento */}
+              {/* 🧠 Acordeón Colapsable de Razonamiento & Herramientas */}
               {!isUser && thoughts ? (
-                <details
-                  open={expandThoughts}
-                  style={{
-                    marginBottom: '8px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(168, 85, 247, 0.25)',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <summary
-                    style={{
-                      padding: '5px 10px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.72rem',
-                      color: '#c084fc',
-                      userSelect: 'none',
-                      background: 'rgba(168, 85, 247, 0.06)'
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                      <Brain size={12} color="#c084fc" />
-                      <span>Proceso de Razonamiento Técnico</span>
-                    </span>
-                    <kbd style={{ fontSize: '0.6rem', padding: '1px 5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', color: 'var(--text-muted)' }}>
-                      Ctrl + O
-                    </kbd>
-                  </summary>
-                  <div style={{
-                    padding: '8px 12px',
-                    borderTop: '1px solid rgba(168, 85, 247, 0.15)',
-                    color: 'var(--text-muted)',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.72rem',
-                    lineHeight: '1.45',
-                    whiteSpace: 'pre-wrap',
-                    maxHeight: '200px',
-                    overflowY: 'auto'
-                  }}>
-                    {thoughts}
-                  </div>
-                </details>
+                <ThoughtAccordion thoughts={thoughts} defaultOpen={expandThoughts} />
               ) : null}
 
               {/* ⚠️ Tarjeta de Permiso Interactivo CLI (Human-in-the-loop) */}
