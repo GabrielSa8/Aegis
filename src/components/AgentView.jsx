@@ -14,14 +14,15 @@ import {
   Plus,
   Zap,
   Brain,
-  ShieldAlert
+  ShieldAlert,
+  Minimize2
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ContextManagerModal, { DEFAULT_CONTEXTS } from './ContextManagerModal';
 import MarkdownViewer from './MarkdownViewer';
 
-export default function AgentView() {
+export default function AgentView({ zenMode, onToggleZenMode }) {
   // Carga de contextos desde localStorage con fallback
   const [contexts, setContexts] = useState(() => {
     try {
@@ -471,30 +472,75 @@ export default function AgentView() {
         })}
       </div>
 
-      {/* ⚡ Quick Macros */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', padding: '2px 0', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>Macros:</span>
-        {quickMacros.map((macro, idx) => (
+      {/* ⚡ Quick Macros Row */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '8px',
+        padding: '2px 0',
+        flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>Macros:</span>
+          {quickMacros.map((macro, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSend(macro.text)}
+              disabled={loading}
+              style={{
+                fontSize: '0.68rem',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-high)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'var(--transition)',
+                opacity: loading ? 0.5 : 1
+              }}
+            >
+              {macro.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 🪟 Pegado a la derecha hasta el tope sobre la misma línea de macros */}
+        {zenMode && (
           <button
-            key={idx}
-            onClick={() => handleSend(macro.text)}
-            disabled={loading}
+            onClick={onToggleZenMode}
+            title="Restaurar barra de navegación (Escape o Alt + Z)"
             style={{
-              fontSize: '0.68rem',
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)',
-              background: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
-              color: 'var(--text-high)',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              color: 'var(--text-muted)',
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+              fontSize: '0.68rem',
+              fontWeight: 600,
               whiteSpace: 'nowrap',
               transition: 'var(--transition)',
-              opacity: loading ? 0.5 : 1
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--text-high)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
           >
-            {macro.label}
+            <Minimize2 size={12} color="var(--accent)" />
+            <span>Restaurar Barra</span>
+            <kbd style={{ fontSize: '0.6rem', opacity: 0.65, background: 'rgba(255,255,255,0.08)', padding: '1px 4px', borderRadius: '3px' }}>Esc</kbd>
           </button>
-        ))}
+        )}
       </div>
 
       {/* ⌨️ Input Command Box */}

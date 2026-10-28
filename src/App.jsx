@@ -111,52 +111,45 @@ export default function App() {
           onToggleZenMode={() => setZenMode(!zenMode)}
           onOpenSettings={() => setShowSettings(true)}
         />
-      ) : (
-        /* 🪟 Botón Flotante para Salir de Modo Zen (Top Center para no tapar controles) */
+      ) : activeTab !== 'agent' ? (
+        /* 🪟 Botón de restauración para vistas sin barra de macros */
         <button
           onClick={() => setZenMode(false)}
           title="Restaurar barra y menús (Escape o Alt + Z)"
           style={{
             position: 'fixed',
-            top: '6px',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            top: '8px',
+            right: '12px',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             background: 'var(--bg-surface)',
-            backdropFilter: 'blur(12px)',
+            backdropFilter: 'blur(10px)',
             border: '1px solid var(--border-color)',
             color: 'var(--text-muted)',
-            padding: '3px 12px',
+            padding: '3px 10px',
             borderRadius: 'var(--radius-full)',
             cursor: 'pointer',
             fontSize: '0.68rem',
             fontWeight: 600,
-            opacity: 0.85,
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
-            transition: 'all 0.15s ease',
-            whiteSpace: 'nowrap'
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
+            transition: 'all 0.15s ease'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '1';
             e.currentTarget.style.color = 'var(--text-high)';
             e.currentTarget.style.borderColor = 'var(--accent)';
-            e.currentTarget.style.transform = 'translateX(-50%) translateY(1px)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '0.85';
             e.currentTarget.style.color = 'var(--text-muted)';
             e.currentTarget.style.borderColor = 'var(--border-color)';
-            e.currentTarget.style.transform = 'translateX(-50%)';
           }}
         >
           <Minimize2 size={12} color="var(--accent)" />
           <span>Restaurar Barra</span>
-          <kbd style={{ fontSize: '0.6rem', opacity: 0.7, background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '3px' }}>Esc</kbd>
+          <kbd style={{ fontSize: '0.6rem', opacity: 0.65, background: 'rgba(255,255,255,0.08)', padding: '1px 4px', borderRadius: '3px' }}>Esc</kbd>
         </button>
-      )}
+      ) : null}
 
       {/* 🚀 Lienzo de Contenido Ultra-Limpio (95% Viewport Disponible) */}
       <main style={{
@@ -169,7 +162,7 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {activeTab === 'agent' && <AgentView />}
+        {activeTab === 'agent' && <AgentView zenMode={zenMode} onToggleZenMode={() => setZenMode(false)} />}
         {activeTab === 'finances' && <FinancesView />}
         {activeTab === 'vault' && <VaultView />}
         {activeTab === 'devops' && <DevOpsView />}
