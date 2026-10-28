@@ -1,6 +1,7 @@
 mod agent;
 mod vault;
 mod devops;
+mod finances;
 
 #[tauri::command]
 fn ping() -> String {
@@ -22,7 +23,26 @@ pub fn run() {
             vault::get_vault_stats,
             devops::get_git_fleet_status,
             devops::get_skills_catalog,
-            devops::read_skill_markdown
+            devops::read_skill_markdown,
+            finances::sqlite_get_transactions,
+            finances::sqlite_save_transaction,
+            finances::sqlite_delete_transaction,
+            finances::sqlite_get_budgets,
+            finances::sqlite_save_budget,
+            finances::sqlite_delete_budget,
+            finances::sqlite_get_categories,
+            finances::sqlite_add_category,
+            finances::sqlite_update_category,
+            finances::sqlite_delete_category,
+            finances::sqlite_get_snapshots,
+            finances::sqlite_create_snapshot,
+            finances::sqlite_restore_snapshot,
+            finances::sqlite_get_timeline_events,
+            finances::sqlite_save_timeline_event,
+            finances::sqlite_toggle_timeline_event,
+            finances::sqlite_delete_timeline_event,
+            finances::sqlite_export_backup,
+            finances::sqlite_import_backup
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

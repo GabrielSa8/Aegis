@@ -14,7 +14,12 @@ import {
   Calendar as CalendarIcon,
   PieChart,
   Target,
-  ReceiptText
+  ReceiptText,
+  CalendarRange,
+  CheckSquare,
+  Square,
+  Clock,
+  MapPin
 } from 'lucide-react';
 
 import { 
@@ -30,17 +35,23 @@ import {
   restoreFromSnapshot, 
   getTodayLocalDateStr,
   getFinancialMonthRange, 
-  isDateInRange 
+  isDateInRange,
+  getTimelineEvents,
+  saveTimelineEvent,
+  toggleTimelineEvent,
+  deleteTimelineEvent
 } from '../utils/storage';
 
 import Calendar from './Calendar';
 import TransactionForm from './TransactionForm';
 import Dashboard from './Dashboard';
 import Analytics from './Analytics';
+import TimelineView from './TimelineView';
 
 export default function FinancesView() {
-  const [subTab, setSubTab] = useState('operations'); // 'operations' | 'calendar' | 'analytics' | 'budgets'
+  const [subTab, setSubTab] = useState('operations'); // 'operations' | 'timeline' | 'calendar' | 'analytics' | 'budgets'
   const [transactions, setTransactions] = useState([]);
+  const [timelineEvents, setTimelineEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getTodayLocalDateStr());
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [snapshots, setSnapshots] = useState([]);
@@ -54,23 +65,30 @@ export default function FinancesView() {
     setSnapshots(await getSnapshots());
   }, []);
 
+  const refreshTimeline = useCallback(async () => {
+    const list = await getTimelineEvents();
+    setTimelineEvents(Array.isArray(list) ? list : []);
+  }, []);
+
   const refreshTransactionsAndSnapshots = useCallback(async () => {
     const list = await getTransactions();
     setTransactions(Array.isArray(list) ? list : []);
     await refreshSnapshots();
-  }, [refreshSnapshots]);
+    await refreshTimeline();
+  }, [refreshSnapshots, refreshTimeline]);
 
   useEffect(() => {
     let isMounted = true;
     const init = async () => {
-      initializeStorage();
+      await initializeStorage();
       await requestPersistentStorage();
       await createAutoSnapshot();
       if (!isMounted) return;
-      const [snaps, list] = await Promise.all([getSnapshots(), getTransactions()]);
+      const [snaps, list, evts] = await Promise.all([getSnapshots(), getTransactions(), getTimelineEvents()]);
       if (isMounted) {
         setSnapshots(snaps || []);
         setTransactions(Array.isArray(list) ? list : []);
+        setTimelineEvents(Array.isArray(evts) ? evts : []);
       }
     };
     init();
@@ -103,7 +121,38 @@ export default function FinancesView() {
 
   const isToday22 = new Date().getDate() === 22;
 
+  const selectedDayEvents = useMemo(() => {
+    return (timelineEvents || []).filter((e) => e.date === selectedDate);
+  }, [timelineEvents, selectedDate]);
+
   // Handlers
+  const handleToggleTimelineEvent = async (id, completed) => {
+    try {
+      const updated = await toggleTimelineEvent(id, completed);
+      setTimelineEvents(Array.isArray(updated) ? updated : await getTimelineEvents());
+    } catch (error) {
+      console.error('Error alternando evento del timeline:', error);
+    }
+  };
+
+  const handleSaveTimelineEvent = async (evt) => {
+    try {
+      const updated = await saveTimelineEvent(evt);
+      setTimelineEvents(Array.isArray(updated) ? updated : await getTimelineEvents());
+    } catch (error) {
+      console.error('Error guardando evento en timeline:', error);
+    }
+  };
+
+  const handleDeleteTimelineEvent = async (id) => {
+    try {
+      const updated = await deleteTimelineEvent(id);
+      setTimelineEvents(Array.isArray(updated) ? updated : await getTimelineEvents());
+    } catch (error) {
+      console.error('Error eliminando evento de timeline:', error);
+    }
+  };
+
   const handleTransactionSave = async (txData) => {
     try {
       const updated = await saveTransaction(txData);
@@ -200,6 +249,7 @@ export default function FinancesView() {
 
   const subTabs = [
     { id: 'operations', label: 'Operaciones & Registro', icon: ReceiptText },
+    { id: 'timeline', label: 'Timeline Maestro (MELI / TADÚ / Certs)', icon: CalendarRange },
     { id: 'calendar', label: 'Calendario Mensual', icon: CalendarIcon },
     { id: 'analytics', label: 'Métricas & Analítica', icon: PieChart },
     { id: 'budgets', label: 'Presupuestos & Respaldos', icon: Target }
@@ -365,12 +415,23 @@ export default function FinancesView() {
         </div>
       )}
 
-      {/* 📅 SUB-VISTA 2: CALENDARIO */}
+      {/* 🧭 SUB-VISTA 2: TIMELINE MAESTRO CRUZADO (MELI, TADÚ, CERTS, UNI) */}
+      {subTab === 'timeline' && (
+        <TimelineView 
+          events={timelineEvents}
+          onToggleEvent={handleToggleTimelineEvent}
+          onSaveEvent={handleSaveTimelineEvent}
+          onDeleteEvent={handleDeleteTimelineEvent}
+        />
+      )}
+
+      {/* 📅 SUB-VISTA 3: CALENDARIO */}
       {subTab === 'calendar' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 1fr) minmax(300px, 380px)', gap: '1.25rem' }}>
           <div>
             <Calendar 
               transactions={safeTransactions} 
+              timelineEvents={timelineEvents}
               selectedDate={selectedDate} 
               onDateSelect={setSelectedDate} 
             />
@@ -381,7 +442,7 @@ export default function FinancesView() {
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Movimientos del {selectedDate}</h3>
                 <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '2px' }}>
-                  {selectedDayTxs.length} registros en esta fecha
+                  {selectedDayTxs.length} transacciones • {selectedDayEvents.length} hitos
                 </p>
               </div>
               <button 
@@ -392,6 +453,40 @@ export default function FinancesView() {
                 + Añadir en este día
               </button>
             </div>
+
+            {/* Hitos Operativos del Día */}
+            {selectedDayEvents.length > 0 && (
+              <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Hitos & Operaciones ({selectedDayEvents.length})
+                </span>
+                {selectedDayEvents.map((evt) => {
+                  const isCompleted = evt.status === 'completed';
+                  return (
+                    <div key={evt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '5px 8px', background: 'rgba(0,0,0,0.25)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                        <button
+                          onClick={() => handleToggleTimelineEvent(evt.id, !isCompleted)}
+                          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: isCompleted ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+                          title={isCompleted ? 'Marcar pendiente' : 'Marcar completado'}
+                        >
+                          {isCompleted ? <CheckSquare size={14} /> : <Square size={14} />}
+                        </button>
+                        <span style={{ fontSize: '0.76rem', color: isCompleted ? 'var(--text-muted)' : '#fff', textDecoration: isCompleted ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {evt.title}
+                        </span>
+                      </div>
+                      {evt.time && (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          {evt.time}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="tx-items" style={{ flex: 1, overflowY: 'auto' }}>
               {selectedDayTxs.length > 0 ? (
                 selectedDayTxs.map((tx) => (

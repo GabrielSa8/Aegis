@@ -1,5 +1,5 @@
 import { useState, useMemo, memo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Layers } from 'lucide-react';
 
 import { getTodayLocalDateStr } from '../utils/storage';
 
@@ -10,12 +10,21 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-function Calendar({ transactions, selectedDate, onDateSelect }) {
+const DOMAIN_COLORS = {
+  meli: '#f59e0b',
+  tadu: '#3b82f6',
+  certs: '#10b981',
+  uni: '#a855f7',
+  personal: '#f97316'
+};
+
+function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelect }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
   const today = new Date();
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const safeEvents = Array.isArray(timelineEvents) ? timelineEvents : [];
 
   // Mapa de transacciones por fecha precomputado en O(N) para lookup O(1)
   const dailySummaryMap = useMemo(() => {
@@ -38,6 +47,22 @@ function Calendar({ transactions, selectedDate, onDateSelect }) {
     }
     return map;
   }, [safeTransactions]);
+
+  // Mapa de eventos del timeline por fecha O(N)
+  const dailyEventsMap = useMemo(() => {
+    const map = new Map();
+    for (let i = 0; i < safeEvents.length; i++) {
+      const evt = safeEvents[i];
+      if (!evt.date) continue;
+      let list = map.get(evt.date);
+      if (!list) {
+        list = [];
+        map.set(evt.date, list);
+      }
+      list.push(evt);
+    }
+    return map;
+  }, [safeEvents]);
 
   // Obtener días del mes seleccionado
   const getDaysInMonth = (month, year) => {
@@ -100,7 +125,9 @@ function Calendar({ transactions, selectedDate, onDateSelect }) {
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = formatDateString(day);
       const summary = dailySummaryMap.get(dateStr) || { income: 0, expense: 0, count: 0 };
+      const dayEvents = dailyEventsMap.get(dateStr) || [];
       const hasTransactions = summary.count > 0;
+      const hasEvents = dayEvents.length > 0;
       const { income, expense } = summary;
       
       const isToday = today.getDate() === day && 
@@ -115,11 +142,32 @@ function Calendar({ transactions, selectedDate, onDateSelect }) {
           onClick={() => onDateSelect(dateStr)}
           className={`calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
         >
-          <div className="day-number">{day}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <span className="day-number">{day}</span>
+            {hasEvents && (
+              <div style={{ display: 'flex', gap: '3px' }} title={`${dayEvents.length} eventos operativos`}>
+                {dayEvents.slice(0, 3).map((e) => (
+                  <span
+                    key={e.id}
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: DOMAIN_COLORS[e.domain] || '#9ca3af',
+                      boxShadow: `0 0 5px ${DOMAIN_COLORS[e.domain] || '#9ca3af'}`
+                    }}
+                  />
+                ))}
+                {dayEvents.length > 3 && (
+                  <span style={{ fontSize: '0.6rem', color: '#9ca3af', lineHeight: 1 }}>+</span>
+                )}
+              </div>
+            )}
+          </div>
           
           {/* Indicadores visuales y resumen financiero diario */}
           {hasTransactions && (
-            <div className="day-dots-container" style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+            <div className="day-dots-container" style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', marginTop: 'auto' }}>
               {income > 0 && (
                 <div className="day-amount-summary income">
                   +${income.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
