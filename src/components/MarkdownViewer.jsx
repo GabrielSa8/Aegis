@@ -15,8 +15,208 @@ import {
   HelpCircle, 
   ListTree,
   CheckSquare,
-  Square
+  Square,
+  Hash,
+  Calendar,
+  Layers,
+  Link2
 } from 'lucide-react';
+
+// Parseo e inspección de YAML Frontmatter (estilo Obsidian)
+function parseFrontmatter(rawMarkdown) {
+  if (!rawMarkdown) return { frontmatter: null, content: '' };
+
+  const fmMatch = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(rawMarkdown);
+  if (!fmMatch) {
+    return { frontmatter: null, content: rawMarkdown };
+  }
+
+  const rawYaml = fmMatch[1];
+  const bodyContent = rawMarkdown.slice(fmMatch[0].length);
+
+  const parsed = {
+    tags: [],
+    aliases: [],
+    tipo: null,
+    estado: null,
+    fecha_actualizacion: null,
+    extra: {}
+  };
+
+  const lines = rawYaml.split(/\r?\n/);
+  let currentKey = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (trimmed.startsWith('- ') && currentKey) {
+      const val = trimmed.slice(2).trim().replace(/^["']|["']$/g, '');
+      if (currentKey === 'tags' || currentKey === 'tag') {
+        parsed.tags.push(val);
+      } else if (currentKey === 'aliases' || currentKey === 'alias') {
+        parsed.aliases.push(val);
+      } else {
+        if (!Array.isArray(parsed.extra[currentKey])) {
+          parsed.extra[currentKey] = [];
+        }
+        parsed.extra[currentKey].push(val);
+      }
+      continue;
+    }
+
+    const colonIdx = line.indexOf(':');
+    if (colonIdx > 0) {
+      const key = line.slice(0, colonIdx).trim().toLowerCase();
+      const rawVal = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
+      currentKey = key;
+
+      if (key === 'tags' || key === 'tag') {
+        if (rawVal.startsWith('[') && rawVal.endsWith(']')) {
+          const list = rawVal.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+          parsed.tags.push(...list);
+        } else if (rawVal) {
+          parsed.tags.push(rawVal);
+        }
+      } else if (key === 'aliases' || key === 'alias') {
+        if (rawVal.startsWith('[') && rawVal.endsWith(']')) {
+          const list = rawVal.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+          parsed.aliases.push(...list);
+        } else if (rawVal) {
+          parsed.aliases.push(rawVal);
+        }
+      } else if (key === 'tipo') {
+        parsed.tipo = rawVal;
+      } else if (key === 'estado') {
+        parsed.estado = rawVal;
+      } else if (key === 'fecha_actualizacion' || key === 'fecha' || key === 'date') {
+        parsed.fecha_actualizacion = rawVal;
+      } else if (rawVal) {
+        parsed.extra[key] = rawVal;
+      }
+    }
+  }
+
+  const hasMeta = parsed.tags.length > 0 || parsed.aliases.length > 0 || parsed.tipo || parsed.estado || parsed.fecha_actualizacion || Object.keys(parsed.extra).length > 0;
+
+  return {
+    frontmatter: hasMeta ? parsed : null,
+    content: bodyContent
+  };
+}
+
+function FrontmatterCard({ frontmatter, onTagClick }) {
+  if (!frontmatter) return null;
+
+  return (
+    <div style={{
+      marginBottom: '1.25rem',
+      padding: '0.75rem 1rem',
+      borderRadius: 'var(--radius-md)',
+      background: 'rgba(0, 0, 0, 0.35)',
+      border: '1px solid var(--border-color)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      fontSize: '0.75rem'
+    }}>
+      {/* Cabecera de Metadatos */}
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        {frontmatter.tipo && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            background: 'rgba(16, 185, 129, 0.12)',
+            color: '#10b981',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            fontSize: '0.65rem'
+          }}>
+            <Layers size={11} />
+            {frontmatter.tipo}
+          </span>
+        )}
+
+        {frontmatter.estado && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            background: 'rgba(217, 119, 6, 0.15)',
+            color: '#fbbf24',
+            fontWeight: 600,
+            fontSize: '0.65rem'
+          }}>
+            <CheckCircle2 size={11} />
+            {frontmatter.estado}
+          </span>
+        )}
+
+        {frontmatter.fecha_actualizacion && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: 'var(--text-muted)',
+            fontSize: '0.68rem',
+            fontFamily: 'var(--font-mono)'
+          }}>
+            <Calendar size={11} />
+            {frontmatter.fecha_actualizacion}
+          </span>
+        )}
+
+        {frontmatter.aliases && frontmatter.aliases.length > 0 && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: 'var(--text-muted)',
+            fontSize: '0.68rem'
+          }}>
+            <Link2 size={11} />
+            {frontmatter.aliases.join(', ')}
+          </span>
+        )}
+      </div>
+
+      {/* Tags Interactivos */}
+      {frontmatter.tags && frontmatter.tags.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '5px' }}>
+          {frontmatter.tags.map((tag) => (
+            <span
+              key={tag}
+              onClick={() => onTagClick && onTagClick(tag)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                padding: '2px 7px',
+                borderRadius: '4px',
+                background: 'rgba(168, 85, 247, 0.12)',
+                color: '#c084fc',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.65rem',
+                cursor: onTagClick ? 'pointer' : 'default',
+                transition: 'var(--transition)'
+              }}
+              title={`Filtrar por #${tag}`}
+            >
+              <Hash size={10} />
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Configuraciones visuales para Callouts / Admonitions de Obsidian
 const CALLOUT_CONFIGS = {
@@ -241,8 +441,10 @@ function CalloutCard({ type, customTitle, bodyLines, onNavigateNote }) {
   );
 }
 
-export default function MarkdownViewer({ content, onNavigateNote, onToggleTask }) {
+export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, onTagClick }) {
   const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const { frontmatter, content: cleanContent } = useMemo(() => parseFrontmatter(content), [content]);
 
   const handleCopy = (text, index) => {
     navigator.clipboard.writeText(text);
@@ -252,18 +454,18 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask }
 
   // Desglosar contenido en bloques (código vs texto regular)
   const segments = useMemo(() => {
-    if (!content) return [];
+    if (!cleanContent) return [];
 
     const result = [];
     const codeBlockRegex = /```([a-zA-Z0-9_\-]+)?\n([\s\S]*?)```/g;
     let lastIndex = 0;
     let match;
 
-    while ((match = codeBlockRegex.exec(content)) !== null) {
+    while ((match = codeBlockRegex.exec(cleanContent)) !== null) {
       if (match.index > lastIndex) {
         result.push({
           type: 'text',
-          content: content.slice(lastIndex, match.index),
+          content: cleanContent.slice(lastIndex, match.index),
           startIndex: lastIndex
         });
       }
@@ -289,21 +491,24 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask }
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < content.length) {
+    if (lastIndex < cleanContent.length) {
       result.push({
         type: 'text',
-        content: content.slice(lastIndex),
+        content: cleanContent.slice(lastIndex),
         startIndex: lastIndex
       });
     }
 
     return result;
-  }, [content]);
+  }, [cleanContent]);
 
   // Formateador de texto Markdown que agrupa Callouts y bloques multilínea
   const renderTextSegment = (seg, blockIdx) => {
     const textBlock = seg.content;
-    const segStartLine = content.slice(0, seg.startIndex || 0).split('\n').length;
+    const frontmatterOffset = content && cleanContent && content.length > cleanContent.length
+      ? content.slice(0, content.length - cleanContent.length).split('\n').length - 1
+      : 0;
+    const segStartLine = cleanContent.slice(0, seg.startIndex || 0).split('\n').length + frontmatterOffset;
     const lines = textBlock.split('\n');
     const elements = [];
     let i = 0;
@@ -539,6 +744,7 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+      {frontmatter && <FrontmatterCard frontmatter={frontmatter} onTagClick={onTagClick} />}
       {segments.map((seg, idx) => {
         if (seg.type === 'mermaid') {
           return <MermaidRenderer key={`mermaid-${idx}`} chart={seg.code} />;

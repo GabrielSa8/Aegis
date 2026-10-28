@@ -57,6 +57,21 @@ pub struct VaultStats {
     pub hubs_count: usize,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultSearchResult {
+    pub path: String,
+    pub relative_path: String,
+    pub title: String,
+    pub hub: String,
+    pub matches: Vec<MatchSnippet>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MatchSnippet {
+    pub line_number: usize,
+    pub line_text: String,
+}
+
 fn resolve_hub(relative_path: &str) -> String {
     let parts: Vec<&str> = relative_path.split('/').collect();
     if parts.len() > 1 {
@@ -317,4 +332,125 @@ pub fn get_vault_stats() -> Result<VaultStats, String> {
         completed_tasks,
         hubs_count: hubs.len(),
     })
+}
+
+#[tauri::command]
+pub fn search_vault_content(query: String, hub_filter: Option<String>) -> Result<Vec<VaultSearchResult>, String> {
+    let clean_query = query.trim().to_lowercase();
+    if clean_query.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let root = get_vault_root();
+    if !root.exists() {
+        return Err(format!("Bóveda no encontrada en {}", root.display()));
+    }
+
+    let notes = get_vault_notes()?;
+    let mut results = Vec::new();
+
+    for note in notes {
+        if let Some(ref hf) = hub_filter {
+            let hf_clean = hf.trim();
+            if !hf_clean.is_empty() && hf_clean != "Todos" && note.hub != *hf_clean {
+                continue;
+            }
+        }
+
+        let p = Path::new(&note.path);
+        if let Ok(file) = File::open(p) {
+            let reader = BufReader::new(file);
+            let mut matches = Vec::new();
+
+            for (idx, line_res) in reader.lines().enumerate() {
+                if let Ok(line) = line_res {
+                    if line.to_lowercase().contains(&clean_query) {
+                        let snippet = line.trim().chars().take(220).collect::<String>();
+                        matches.push(MatchSnippet {
+                            line_number: idx + 1,
+                            line_text: snippet,
+                        });
+                        if matches.len() >= 4 {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if !matches.is_empty() {
+                results.push(VaultSearchResult {
+                    path: note.path,
+                    relative_path: note.relative_path,
+                    title: note.title,
+                    hub: note.hub,
+                    matches,
+                });
+            }
+        }
+
+        if results.len() >= 50 {
+            break;
+        }
+    }
+
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn create_vault_note(relative_path: String, content: Option<String>) -> Result<VaultNote, String> {
+    let root = get_vault_root();
+    let mut clean_rel = relative_path.trim().to_string();
+    if !clean_rel.ends_with(".md") {
+        clean_rel.push_str(".md");
+    }
+    let target = root.join(&clean_rel);
+
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let initial = content.unwrap_or_else(|| {
+        let title = target.file_stem().and_then(|s| s.to_str()).unwrap_or("Nota");
+        format!(
+            "---\ntags:\n  - nota\ntipo: Nota\n---\n\n# {}\n\n",
+            title
+        )
+    });
+
+    fs::write(&target, initial.as_bytes()).map_err(|e| e.to_string())?;
+
+    let hub = resolve_hub(&clean_rel);
+    let title = target.file_stem().and_then(|s| s.to_str()).unwrap_or("Sin título").to_string();
+
+    Ok(VaultNote {
+        path: target.to_string_lossy().to_string(),
+        relative_path: clean_rel,
+        title,
+        hub,
+        modified_time: std::time::SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0),
+        size_bytes: initial.len() as u64,
+    })
+}
+
+#[tauri::command]
+pub fn create_vault_folder(relative_path: String) -> Result<(), String> {
+    let root = get_vault_root();
+    let target = root.join(relative_path.trim());
+    fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_vault_note(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if !is_vault_path_safe(p) {
+        return Err("Acceso denegado: ruta fuera de la Bóveda".into());
+    }
+    if p.exists() {
+        fs::remove_file(p).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
