@@ -454,3 +454,36 @@ pub fn delete_vault_note(path: String) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[tauri::command]
+pub fn get_vault_folders() -> Result<Vec<String>, String> {
+    let root = get_vault_root();
+    if !root.exists() {
+        return Err(format!("Bóveda no encontrada en {}", root.display()));
+    }
+    let mut folders = Vec::new();
+    collect_vault_folders(&root, &root, &mut folders)?;
+    folders.sort();
+    Ok(folders)
+}
+
+fn collect_vault_folders(dir: &Path, root: &Path, folders: &mut Vec<String>) -> Result<(), String> {
+    let entries = fs::read_dir(dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if file_name.starts_with('.') || file_name == ".trash" || file_name == "Skills" {
+            continue;
+        }
+        if path.is_dir() {
+            if let Ok(relative) = path.strip_prefix(root) {
+                let rel_str = relative.to_string_lossy().to_string();
+                if !rel_str.is_empty() {
+                    folders.push(rel_str);
+                }
+            }
+            collect_vault_folders(&path, root, folders)?;
+        }
+    }
+    Ok(())
+}

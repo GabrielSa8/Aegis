@@ -37,6 +37,7 @@ pub fn run() {
             vault::create_vault_note,
             vault::create_vault_folder,
             vault::delete_vault_note,
+            vault::get_vault_folders,
             devops::get_git_fleet_status,
             devops::get_skills_catalog,
             devops::read_skill_markdown,

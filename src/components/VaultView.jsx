@@ -230,16 +230,21 @@ export default function VaultView() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // Estructura de carpetas en disco
+  const [vaultFolders, setVaultFolders] = useState([]);
+
   // Modales de Creación
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteHub, setNewNoteHub] = useState('02 Proyectos de Software');
   const [newNoteTemplate, setNewNoteTemplate] = useState('basic');
-  const [newNoteSubfolder, setNewNoteSubfolder] = useState('');
+  const [newNoteSubfolderChoice, setNewNoteSubfolderChoice] = useState(''); // '' = raíz, string = existente, '__custom__' = nueva
+  const [customSubfolder, setCustomSubfolder] = useState('');
 
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderHub, setNewFolderHub] = useState('02 Proyectos de Software');
+  const [newFolderParent, setNewFolderParent] = useState('');
 
   // Atajo de teclado para alternar explorador de archivos (Ctrl + B / Cmd + B)
   useEffect(() => {
@@ -296,10 +301,12 @@ export default function VaultView() {
     try {
       setRefreshing(true);
       setError(null);
-      const [notesRes, statsRes] = await Promise.all([
+      const [foldersRes, notesRes, statsRes] = await Promise.all([
+        invoke('get_vault_folders').catch(() => []),
         invoke('get_vault_notes'),
         invoke('get_vault_stats')
       ]);
+      setVaultFolders(foldersRes || []);
       setNotes(notesRes || []);
       setStats(statsRes || null);
 
@@ -508,6 +515,56 @@ export default function VaultView() {
     setSearchTerm(tag);
   };
 
+  // Subcarpetas existentes bajo el Hub seleccionado para nueva nota
+  const availableSubfoldersForNewNote = useMemo(() => {
+    if (!newNoteHub) return [];
+    const prefix = `${newNoteHub}/`;
+    const folderSet = new Set();
+    vaultFolders.forEach((f) => {
+      if (f.startsWith(prefix)) {
+        folderSet.add(f.substring(prefix.length));
+      }
+    });
+    notes.forEach((n) => {
+      if (n.relative_path && n.relative_path.startsWith(prefix)) {
+        const parts = n.relative_path.substring(prefix.length).split('/');
+        if (parts.length > 1) {
+          let acc = '';
+          for (let i = 0; i < parts.length - 1; i++) {
+            acc = acc ? `${acc}/${parts[i]}` : parts[i];
+            folderSet.add(acc);
+          }
+        }
+      }
+    });
+    return Array.from(folderSet).sort();
+  }, [vaultFolders, notes, newNoteHub]);
+
+  // Subcarpetas existentes bajo el Hub seleccionado para nueva carpeta
+  const availableSubfoldersForNewFolder = useMemo(() => {
+    if (!newFolderHub) return [];
+    const prefix = `${newFolderHub}/`;
+    const folderSet = new Set();
+    vaultFolders.forEach((f) => {
+      if (f.startsWith(prefix)) {
+        folderSet.add(f.substring(prefix.length));
+      }
+    });
+    notes.forEach((n) => {
+      if (n.relative_path && n.relative_path.startsWith(prefix)) {
+        const parts = n.relative_path.substring(prefix.length).split('/');
+        if (parts.length > 1) {
+          let acc = '';
+          for (let i = 0; i < parts.length - 1; i++) {
+            acc = acc ? `${acc}/${parts[i]}` : parts[i];
+            folderSet.add(acc);
+          }
+        }
+      }
+    });
+    return Array.from(folderSet).sort();
+  }, [vaultFolders, notes, newFolderHub]);
+
   // Creación de nueva nota
   const handleCreateNoteSubmit = async (e) => {
     e.preventDefault();
@@ -516,9 +573,16 @@ export default function VaultView() {
     const templateConfig = NOTE_TEMPLATES[newNoteTemplate] || NOTE_TEMPLATES.basic;
     const content = templateConfig.getContent(newNoteTitle.trim());
 
+    let finalSubfolder = '';
+    if (newNoteSubfolderChoice === '__custom__') {
+      finalSubfolder = customSubfolder.trim().replace(/^\/+|\/+$/g, '');
+    } else if (newNoteSubfolderChoice) {
+      finalSubfolder = newNoteSubfolderChoice.trim().replace(/^\/+|\/+$/g, '');
+    }
+
     let targetRel = `${newNoteHub}`;
-    if (newNoteSubfolder.trim()) {
-      targetRel += `/${newNoteSubfolder.trim().replace(/^\/+|\/+$/g, '')}`;
+    if (finalSubfolder) {
+      targetRel += `/${finalSubfolder}`;
     }
     targetRel += `/${newNoteTitle.trim()}.md`;
 
@@ -530,13 +594,17 @@ export default function VaultView() {
 
       setShowNewNoteModal(false);
       setNewNoteTitle('');
-      setNewNoteSubfolder('');
+      setNewNoteSubfolderChoice('');
+      setCustomSubfolder('');
 
       // Recargar lista y seleccionar la nota creada en modo edición
       await loadVaultData();
       if (created) {
         loadNote(created);
         setIsEditing(true);
+        if (finalSubfolder) {
+          setExpandedFolders((prev) => new Set([...prev, newNoteHub, `${newNoteHub}/${finalSubfolder}`]));
+        }
       }
     } catch (err) {
       console.error('Error creando nota:', err);
@@ -549,13 +617,19 @@ export default function VaultView() {
     e.preventDefault();
     if (!newFolderName.trim()) return;
 
-    const targetRel = `${newFolderHub}/${newFolderName.trim().replace(/^\/+|\/+$/g, '')}`;
+    const cleanFolder = newFolderName.trim().replace(/^\/+|\/+$/g, '');
+    let targetRel = `${newFolderHub}`;
+    if (newFolderParent.trim()) {
+      targetRel += `/${newFolderParent.trim().replace(/^\/+|\/+$/g, '')}`;
+    }
+    targetRel += `/${cleanFolder}`;
 
     try {
       await invoke('create_vault_folder', { relativePath: targetRel });
       setShowNewFolderModal(false);
       setNewFolderName('');
-      loadVaultData();
+      setNewFolderParent('');
+      await loadVaultData();
       setExpandedFolders((prev) => new Set([...prev, targetRel, newFolderHub]));
     } catch (err) {
       console.error('Error creando carpeta:', err);
@@ -1344,17 +1418,53 @@ export default function VaultView() {
 
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Hub Destino
+                  Hub Destino (Carpeta Principal)
                 </label>
                 <select
                   value={newNoteHub}
-                  onChange={(e) => setNewNoteHub(e.target.value)}
+                  onChange={(e) => {
+                    setNewNoteHub(e.target.value);
+                    setNewNoteSubfolderChoice('');
+                    setCustomSubfolder('');
+                  }}
                 >
                   {VAULT_HUBS.map((h) => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Ubicación / Subcarpeta
+                </label>
+                <select
+                  value={newNoteSubfolderChoice}
+                  onChange={(e) => setNewNoteSubfolderChoice(e.target.value)}
+                >
+                  <option value="">📁 Raíz del Hub (sin subcarpeta)</option>
+                  {availableSubfoldersForNewNote.map((sub) => (
+                    <option key={sub} value={sub}>📂 {sub}</option>
+                  ))}
+                  <option value="__custom__">✨ + Crear nueva subcarpeta para esta nota...</option>
+                </select>
+              </div>
+
+              {newNoteSubfolderChoice === '__custom__' && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#10b981', display: 'block', marginBottom: '4px' }}>
+                    Nombre de la Nueva Subcarpeta
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ej. Arquitectura o Soporte"
+                    value={customSubfolder}
+                    onChange={(e) => setCustomSubfolder(e.target.value)}
+                    autoFocus
+                    required
+                  />
+                </div>
+              )}
 
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
@@ -1368,18 +1478,6 @@ export default function VaultView() {
                     <option key={key} value={key}>{t.label} — {t.desc}</option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Subcarpeta (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ej. Cerebro IA o Apps"
-                  value={newNoteSubfolder}
-                  onChange={(e) => setNewNoteSubfolder(e.target.value)}
-                />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '0.5rem' }}>
@@ -1448,7 +1546,39 @@ export default function VaultView() {
             <form onSubmit={handleCreateFolderSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Nombre de Carpeta
+                  Hub Contenedor (Principal)
+                </label>
+                <select
+                  value={newFolderHub}
+                  onChange={(e) => {
+                    setNewFolderHub(e.target.value);
+                    setNewFolderParent('');
+                  }}
+                >
+                  {VAULT_HUBS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Carpeta Padre (Opcional)
+                </label>
+                <select
+                  value={newFolderParent}
+                  onChange={(e) => setNewFolderParent(e.target.value)}
+                >
+                  <option value="">📁 Raíz del Hub</option>
+                  {availableSubfoldersForNewFolder.map((sub) => (
+                    <option key={sub} value={sub}>📂 {sub}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Nombre de la Nueva Carpeta
                 </label>
                 <input
                   type="text"
@@ -1458,20 +1588,6 @@ export default function VaultView() {
                   autoFocus
                   required
                 />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Hub Contenedor
-                </label>
-                <select
-                  value={newFolderHub}
-                  onChange={(e) => setNewFolderHub(e.target.value)}
-                >
-                  {VAULT_HUBS.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '0.5rem' }}>
