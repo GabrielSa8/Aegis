@@ -1,5 +1,6 @@
 mod agent;
 mod vault;
+mod devops;
 
 #[tauri::command]
 fn ping() -> String {
@@ -18,7 +19,10 @@ pub fn run() {
             vault::save_vault_note,
             vault::get_vault_tasks,
             vault::toggle_vault_task,
-            vault::get_vault_stats
+            vault::get_vault_stats,
+            devops::get_git_fleet_status,
+            devops::get_skills_catalog,
+            devops::read_skill_markdown
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
