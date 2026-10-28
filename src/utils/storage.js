@@ -441,6 +441,141 @@ export const getFinancialMonthRange = (dateStr) => {
   return { startDate, endDate, financialMonth, financialYear };
 };
 
+// --- MÉTODOS DE PAGO (V2.2.0) ---
+export const getPaymentMethods = async () => {
+  if (isTauri()) {
+    try {
+      const list = await invoke('sqlite_get_payment_methods');
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      console.error('[Storage SQLite] Error obteniendo métodos de pago:', e);
+    }
+  }
+  return [];
+};
+
+export const savePaymentMethod = async (method) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_save_payment_method', { method });
+      return await getPaymentMethods();
+    } catch (e) {
+      console.error('[Storage SQLite] Error guardando método de pago:', e);
+    }
+  }
+  return [];
+};
+
+export const deletePaymentMethod = async (id) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_delete_payment_method', { id: String(id) });
+      return await getPaymentMethods();
+    } catch (e) {
+      console.error('[Storage SQLite] Error eliminando método de pago:', e);
+    }
+  }
+  return [];
+};
+
+// --- PLANES MSI (V2.2.0) ---
+export const getMsiPlans = async () => {
+  if (isTauri()) {
+    try {
+      const list = await invoke('sqlite_get_msi_plans');
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      console.error('[Storage SQLite] Error obteniendo planes MSI:', e);
+    }
+  }
+  return [];
+};
+
+export const saveMsiPlan = async (plan) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_save_msi_plan', { plan });
+      return await getMsiPlans();
+    } catch (e) {
+      console.error('[Storage SQLite] Error guardando plan MSI:', e);
+    }
+  }
+  return [];
+};
+
+export const payMsiInstallment = async (id) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_pay_msi_installment', { id: String(id) });
+      return await getMsiPlans();
+    } catch (e) {
+      console.error('[Storage SQLite] Error pagando cuota MSI:', e);
+    }
+  }
+  return [];
+};
+
+export const deleteMsiPlan = async (id) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_delete_msi_plan', { id: String(id) });
+      return await getMsiPlans();
+    } catch (e) {
+      console.error('[Storage SQLite] Error eliminando plan MSI:', e);
+    }
+  }
+  return [];
+};
+
+// --- GASTOS RECURRENTES / FIJOS (V2.2.0) ---
+export const getRecurringExpenses = async () => {
+  if (isTauri()) {
+    try {
+      const list = await invoke('sqlite_get_recurring_expenses');
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      console.error('[Storage SQLite] Error obteniendo gastos recurrentes:', e);
+    }
+  }
+  return [];
+};
+
+export const saveRecurringExpense = async (item) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_save_recurring_expense', { item });
+      return await getRecurringExpenses();
+    } catch (e) {
+      console.error('[Storage SQLite] Error guardando gasto recurrente:', e);
+    }
+  }
+  return [];
+};
+
+export const approveRecurringExpense = async (id, date = '') => {
+  if (isTauri()) {
+    try {
+      const newTx = await invoke('sqlite_approve_recurring_expense', { id: String(id), date });
+      return newTx;
+    } catch (e) {
+      console.error('[Storage SQLite] Error aprobando gasto recurrente:', e);
+    }
+  }
+  return null;
+};
+
+export const deleteRecurringExpense = async (id) => {
+  if (isTauri()) {
+    try {
+      await invoke('sqlite_delete_recurring_expense', { id: String(id) });
+      return await getRecurringExpenses();
+    } catch (e) {
+      console.error('[Storage SQLite] Error eliminando gasto recurrente:', e);
+    }
+  }
+  return [];
+};
+
 export const isDateInRange = (dateStr, startDate, endDate) => {
   if (!dateStr || typeof dateStr !== 'string') return false;
   const parts = dateStr.split('-');

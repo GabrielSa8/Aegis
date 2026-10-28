@@ -47,6 +47,7 @@ import TransactionForm from './TransactionForm';
 import Dashboard from './Dashboard';
 import Analytics from './Analytics';
 import TimelineView from './TimelineView';
+import AccountsMsiView from './AccountsMsiView';
 
 export default function FinancesView() {
   const [subTab, setSubTab] = useState('operations'); // 'operations' | 'timeline' | 'calendar' | 'analytics' | 'budgets'
@@ -249,6 +250,7 @@ export default function FinancesView() {
 
   const subTabs = [
     { id: 'operations', label: 'Operaciones & Registro', icon: ReceiptText },
+    { id: 'accounts', label: 'Cuentas, MSI & Recurrentes', icon: CreditCard },
     { id: 'timeline', label: 'Timeline Maestro (MELI / TADÚ / Certs)', icon: CalendarRange },
     { id: 'calendar', label: 'Calendario Mensual', icon: CalendarIcon },
     { id: 'analytics', label: 'Métricas & Analítica', icon: PieChart },
@@ -413,6 +415,11 @@ export default function FinancesView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 💳 SUB-VISTA: CUENTAS, MSI Y GASTOS RECURRENTES (V2.2.0) */}
+      {subTab === 'accounts' && (
+        <AccountsMsiView onTransactionCreated={refreshTransactionsAndSnapshots} />
       )}
 
       {/* 🧭 SUB-VISTA 2: TIMELINE MAESTRO CRUZADO (MELI, TADÚ, CERTS, UNI) */}

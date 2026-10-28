@@ -39,6 +39,8 @@ export default function TimelineView({
 }) {
   const [domainFilter, setDomainFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'completed'
+  const [rangeFilter, setRangeFilter] = useState('all'); // 'all' | 'month' | 'q1' | 'q2'
+  const [detailEvent, setDetailEvent] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -60,13 +62,35 @@ export default function TimelineView({
         if (domainFilter !== 'all' && e.domain !== domainFilter) return false;
         if (statusFilter === 'pending' && e.status === 'completed') return false;
         if (statusFilter === 'completed' && e.status !== 'completed') return false;
+
+        // Filtro Quincenal / Mensual (v2.2.0)
+        if (rangeFilter !== 'all' && e.date) {
+          const parts = e.date.split('-');
+          const currentParts = todayStr.split('-');
+          const eventYear = parts[0];
+          const eventMonth = parts[1];
+          const currentYear = currentParts[0];
+          const currentMonth = currentParts[1];
+          const day = parseInt(parts[2], 10);
+
+          if (rangeFilter === 'month') {
+            if (eventYear !== currentYear || eventMonth !== currentMonth) return false;
+          } else if (rangeFilter === 'q1') {
+            if (eventYear !== currentYear || eventMonth !== currentMonth) return false;
+            if (day > 15) return false;
+          } else if (rangeFilter === 'q2') {
+            if (eventYear !== currentYear || eventMonth !== currentMonth) return false;
+            if (day < 16) return false;
+          }
+        }
+
         return true;
       })
       .sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
         return (a.time || '').localeCompare(b.time || '');
       });
-  }, [events, domainFilter, statusFilter]);
+  }, [events, domainFilter, statusFilter, rangeFilter, todayStr]);
 
   const stats = useMemo(() => {
     const list = events || [];
@@ -222,6 +246,66 @@ export default function TimelineView({
             </button>
           </div>
 
+          {/* Filtro Quincenal / Mensual (v2.2.0) */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => setRangeFilter('all')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '0.68rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                background: rangeFilter === 'all' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: rangeFilter === 'all' ? '#fff' : 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setRangeFilter('month')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '0.68rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                background: rangeFilter === 'month' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                color: rangeFilter === 'month' ? '#60a5fa' : 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              Mes
+            </button>
+            <button
+              onClick={() => setRangeFilter('q1')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '0.68rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                background: rangeFilter === 'q1' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                color: rangeFilter === 'q1' ? '#a7f3d0' : 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              1ª Qna
+            </button>
+            <button
+              onClick={() => setRangeFilter('q2')}
+              style={{
+                padding: '3px 7px',
+                fontSize: '0.68rem',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                background: rangeFilter === 'q2' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+                color: rangeFilter === 'q2' ? '#c084fc' : 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              2ª Qna
+            </button>
+          </div>
+
           <button
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
@@ -278,7 +362,11 @@ export default function TimelineView({
                 </button>
 
                 {/* Event Core Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div 
+                  onClick={() => setDetailEvent(evt)}
+                  style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+                  title="Haz clic para ver detalles del hito"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{
                       fontWeight: 700,
@@ -502,6 +590,97 @@ export default function TimelineView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🔍 Modal Detalle del Hito (v2.2.0) */}
+      {detailEvent && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content glass" style={{ maxWidth: '440px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: DOMAIN_CONFIG[detailEvent.domain]?.color || '#9ca3af'
+                }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  {DOMAIN_CONFIG[detailEvent.domain]?.label || detailEvent.domain}
+                </span>
+              </div>
+              <button
+                onClick={() => setDetailEvent(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: '0 0 6px 0', color: '#fff' }}>
+                {detailEvent.title}
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CalendarIcon size={12} color="#10b981" />
+                  {detailEvent.date}
+                </span>
+                {detailEvent.time && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={12} />
+                    {detailEvent.time}
+                  </span>
+                )}
+                {detailEvent.location && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={12} />
+                    {detailEvent.location}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {detailEvent.details && (
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 12px',
+                fontSize: '0.8rem',
+                color: 'var(--text-normal)',
+                lineHeight: '1.35rem'
+              }}>
+                {detailEvent.details}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+              <button
+                onClick={() => {
+                  onToggleEvent(detailEvent.id, detailEvent.status !== 'completed');
+                  setDetailEvent(null);
+                }}
+                className={detailEvent.status === 'completed' ? 'btn btn-secondary' : 'btn btn-primary'}
+                style={{ padding: '4px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <CheckCircle2 size={13} />
+                <span>{detailEvent.status === 'completed' ? 'Reabrir Hito' : 'Marcar Completado'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setDeletingId(detailEvent.id);
+                  setDetailEvent(null);
+                }}
+                className="btn btn-danger"
+                style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Trash2 size={12} />
+                <span>Eliminar</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

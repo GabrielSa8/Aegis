@@ -309,3 +309,175 @@ pub async fn execute_agent_prompt(
 
     Ok(format!("Stream iniciado ({})", stream_id))
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSession {
+    pub id: String,
+    pub title: String,
+    pub context_id: String,
+    pub effort: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessage {
+    pub id: String,
+    pub session_id: String,
+    pub role: String,
+    pub content: String,
+    pub context: Option<String>,
+    pub effort: Option<String>,
+    pub created_at: String,
+    pub duration_seconds: Option<f64>,
+    pub total_tokens: Option<u64>,
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+}
+
+#[tauri::command]
+pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
+    let conn = crate::db::get_db_connection()?;
+    let mut stmt = conn
+        .prepare("SELECT id, title, context_id, effort, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(ChatSession {
+                id: r.get(0)?,
+                title: r.get(1)?,
+                context_id: r.get(2)?,
+                effort: r.get(3)?,
+                created_at: r.get(4)?,
+                updated_at: r.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut sessions = Vec::new();
+    for item in rows {
+        if let Ok(s) = item {
+            sessions.push(s);
+        }
+    }
+    Ok(sessions)
+}
+
+#[tauri::command]
+pub fn sqlite_save_chat_session(session: ChatSession) -> Result<ChatSession, String> {
+    let conn = crate::db::get_db_connection()?;
+    conn.execute(
+        "INSERT INTO chat_sessions (id, title, context_id, effort, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(id) DO UPDATE SET
+            title = excluded.title,
+            context_id = excluded.context_id,
+            effort = excluded.effort,
+            updated_at = excluded.updated_at",
+        rusqlite::params![
+            session.id,
+            session.title,
+            session.context_id,
+            session.effort,
+            session.created_at,
+            session.updated_at
+        ],
+    )
+    .map_err(|e| format!("Error guardando sesión de chat: {}", e))?;
+
+    Ok(session)
+}
+
+#[tauri::command]
+pub fn sqlite_delete_chat_session(id: String) -> Result<(), String> {
+    let conn = crate::db::get_db_connection()?;
+    conn.execute("DELETE FROM chat_messages WHERE session_id = ?1", rusqlite::params![id])
+        .map_err(|e| format!("Error eliminando mensajes de sesión: {}", e))?;
+    conn.execute("DELETE FROM chat_sessions WHERE id = ?1", rusqlite::params![id])
+        .map_err(|e| format!("Error eliminando sesión de chat: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_get_chat_messages(session_id: String) -> Result<Vec<ChatMessage>, String> {
+    let conn = crate::db::get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, role, content, context, effort, created_at, duration_seconds, total_tokens, input_tokens, output_tokens
+             FROM chat_messages
+             WHERE session_id = ?1
+             ORDER BY created_at ASC"
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![session_id], |r| {
+            let total_tokens_i64: Option<i64> = r.get(8)?;
+            let input_tokens_i64: Option<i64> = r.get(9)?;
+            let output_tokens_i64: Option<i64> = r.get(10)?;
+            Ok(ChatMessage {
+                id: r.get(0)?,
+                session_id: r.get(1)?,
+                role: r.get(2)?,
+                content: r.get(3)?,
+                context: r.get(4)?,
+                effort: r.get(5)?,
+                created_at: r.get(6)?,
+                duration_seconds: r.get(7)?,
+                total_tokens: total_tokens_i64.map(|v| v as u64),
+                input_tokens: input_tokens_i64.map(|v| v as u64),
+                output_tokens: output_tokens_i64.map(|v| v as u64),
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut messages = Vec::new();
+    for item in rows {
+        if let Ok(m) = item {
+            messages.push(m);
+        }
+    }
+    Ok(messages)
+}
+
+#[tauri::command]
+pub fn sqlite_save_chat_message(message: ChatMessage) -> Result<(), String> {
+    let conn = crate::db::get_db_connection()?;
+    conn.execute(
+        "INSERT INTO chat_messages
+         (id, session_id, role, content, context, effort, created_at, duration_seconds, total_tokens, input_tokens, output_tokens)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+         ON CONFLICT(id) DO UPDATE SET
+            content = excluded.content,
+            duration_seconds = excluded.duration_seconds,
+            total_tokens = excluded.total_tokens,
+            input_tokens = excluded.input_tokens,
+            output_tokens = excluded.output_tokens",
+        rusqlite::params![
+            message.id,
+            message.session_id,
+            message.role,
+            message.content,
+            message.context,
+            message.effort,
+            message.created_at,
+            message.duration_seconds,
+            message.total_tokens.map(|v| v as i64),
+            message.input_tokens.map(|v| v as i64),
+            message.output_tokens.map(|v| v as i64)
+        ],
+    )
+    .map_err(|e| format!("Error guardando mensaje de chat: {}", e))?;
+
+    // Actualizar updated_at de la sesión
+    let _ = conn.execute(
+        "UPDATE chat_sessions SET updated_at = ?1 WHERE id = ?2",
+        rusqlite::params![message.created_at, message.session_id],
+    );
+
+    Ok(())
+}
+

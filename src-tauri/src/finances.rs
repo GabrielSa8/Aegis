@@ -1,25 +1,7 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-
-fn get_db_paths() -> (PathBuf, PathBuf) {
-    let dir = if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-        if !xdg.is_empty() {
-            PathBuf::from(xdg).join("aegis")
-        } else {
-            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            PathBuf::from(home).join(".local/share/aegis")
-        }
-    } else if let Ok(home) = std::env::var("HOME") {
-        PathBuf::from(home).join(".local/share/aegis")
-    } else {
-        PathBuf::from(".aegis_data")
-    };
-    let file = dir.join("aegis_lifeos.db");
-    (dir, file)
-}
+use crate::db::get_db_connection;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,6 +43,49 @@ pub struct SnapshotItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentMethod {
+    pub id: String,
+    pub name: String,
+    pub r#type: String,
+    pub color: Option<String>,
+    pub cutoff_day: Option<u32>,
+    pub payment_day: Option<u32>,
+    pub balance: f64,
+    pub credit_limit: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MsiPlan {
+    pub id: String,
+    pub description: String,
+    pub payment_method: String,
+    pub total_amount: f64,
+    pub total_installments: u32,
+    pub remaining_installments: u32,
+    pub monthly_amount: f64,
+    pub start_date: String,
+    pub next_due_date: String,
+    pub status: String,
+    pub category: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecurringExpense {
+    pub id: String,
+    pub description: String,
+    pub amount: f64,
+    pub category: String,
+    pub payment_method: String,
+    pub frequency: String,
+    pub due_day: u32,
+    pub auto_approve: bool,
+    pub last_paid_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct BackupPayload {
     pub transactions: Vec<Transaction>,
@@ -69,179 +94,6 @@ pub struct BackupPayload {
     pub timeline_events: Option<Vec<TimelineEvent>>,
     pub version: Option<String>,
     pub exported_at: Option<String>,
-}
-
-fn get_db_connection() -> Result<Connection, String> {
-    let (db_dir, db_path) = get_db_paths();
-    if !db_dir.exists() {
-        fs::create_dir_all(&db_dir).map_err(|e| format!("Error creando carpeta {}: {}", db_dir.display(), e))?;
-    }
-    let conn = Connection::open(&db_path).map_err(|e| format!("Error abriendo SQLite {}: {}", db_path.display(), e))?;
-    init_db_schema(&conn)?;
-    Ok(conn)
-}
-
-fn init_db_schema(conn: &Connection) -> Result<(), String> {
-    conn.execute_batch(
-        "
-        CREATE TABLE IF NOT EXISTS transactions (
-            id TEXT PRIMARY KEY,
-            amount REAL NOT NULL,
-            type TEXT NOT NULL,
-            category TEXT NOT NULL,
-            payment_method TEXT NOT NULL,
-            date TEXT NOT NULL,
-            description TEXT,
-            created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
-
-        CREATE TABLE IF NOT EXISTS budgets (
-            category TEXT PRIMARY KEY,
-            amount REAL NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS categories (
-            name TEXT PRIMARY KEY,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS snapshots (
-            id TEXT PRIMARY KEY,
-            timestamp INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            transactions_count INTEGER NOT NULL,
-            data_json TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS timeline_events (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            domain TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT,
-            location TEXT,
-            details TEXT,
-            status TEXT NOT NULL,
-            priority TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_timeline_events_date ON timeline_events(date);
-        ",
-    )
-    .map_err(|e| format!("Error inicializando tablas SQLite: {}", e))?;
-
-    // Seed categorías si está vacía
-    let cat_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM categories", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if cat_count == 0 {
-        let defaults = [
-            "Comida & Bebida",
-            "Vivienda & Renta",
-            "Servicios (Luz, Internet, etc.)",
-            "Transporte & Gasolina",
-            "Salud & Médico",
-            "Entretenimiento & Ocio",
-            "Suscripciones",
-            "Educación & Certs",
-            "Nómina MELI",
-            "Ingresos TADÚ",
-            "Otros",
-        ];
-        for cat in defaults {
-            let _ = conn.execute(
-                "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?1, datetime('now'))",
-                params![cat],
-            );
-        }
-    }
-
-    // Seed timeline maestro si está vacía
-    let event_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM timeline_events", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if event_count == 0 {
-        let seed_events = [
-            (
-                "evt_meli_cierre",
-                "Cierre de Ciclo Facturación MELI",
-                "meli",
-                "cierre_ciclo",
-                "2026-11-22",
-                Some("18:00"),
-                Some("Hub Last Mile MELI"),
-                Some("Corte financiero quincenal, exportación de horas extra y conciliación."),
-                "pending",
-                "high",
-            ),
-            (
-                "evt_meli_layout",
-                "Auditoría Layout & Ambulancias",
-                "meli",
-                "shift",
-                "2026-10-28",
-                Some("06:30"),
-                Some("Nave Operativa C1/C2"),
-                Some("Balanceo de 4 islas, control HandHeld/BPP y rescate de paquetes."),
-                "pending",
-                "medium",
-            ),
-            (
-                "evt_tadu_sprint",
-                "Sprint Review SAM Backend & DynamoDB",
-                "tadu",
-                "sprint",
-                "2026-10-29",
-                Some("10:00"),
-                Some("Localhost / AWS SAM"),
-                Some("Tests pytest de latencia en Lambdas Python 3.12 y validación Single-Table."),
-                "pending",
-                "high",
-            ),
-            (
-                "evt_aws_exam",
-                "Simulacro Certificación AWS Developer",
-                "certs",
-                "exam",
-                "2026-10-31",
-                Some("16:00"),
-                Some("Estudio Personal"),
-                Some("Simulacro cronometrado 65 preguntas y repaso de flashcards en Obsidian."),
-                "pending",
-                "high",
-            ),
-            (
-                "evt_uni_entrega",
-                "Entrega Proyecto Modular Ingeniería",
-                "uni",
-                "delivery",
-                "2026-11-03",
-                Some("23:59"),
-                Some("Portal Universidad"),
-                Some("Subida de memoria técnica, arquitectura C4 y manuales de usuario."),
-                "pending",
-                "medium",
-            ),
-        ];
-
-        for evt in seed_events {
-            let _ = conn.execute(
-                "INSERT OR IGNORE INTO timeline_events 
-                 (id, title, domain, event_type, date, time, location, details, status, priority, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))",
-                params![
-                    evt.0, evt.1, evt.2, evt.3, evt.4, evt.5, evt.6, evt.7, evt.8, evt.9
-                ],
-            );
-        }
-    }
-
-    Ok(())
 }
 
 // ================= TRANSACCIONES =================
@@ -692,6 +544,326 @@ pub fn sqlite_import_backup(json_str: String) -> Result<usize, String> {
 
     Ok(imported_count)
 }
+
+// ================= V2.2.0: MÉTODOS DE PAGO =================
+
+#[tauri::command]
+pub fn sqlite_get_payment_methods() -> Result<Vec<PaymentMethod>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare("SELECT id, name, type, color, cutoff_day, payment_day, balance, credit_limit FROM payment_methods ORDER BY type, name")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            let cutoff: Option<i64> = r.get(4)?;
+            let pay_day: Option<i64> = r.get(5)?;
+            Ok(PaymentMethod {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                r#type: r.get(2)?,
+                color: r.get(3)?,
+                cutoff_day: cutoff.map(|v| v as u32),
+                payment_day: pay_day.map(|v| v as u32),
+                balance: r.get(6)?,
+                credit_limit: r.get(7)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut list = Vec::new();
+    for item in rows {
+        if let Ok(m) = item {
+            list.push(m);
+        }
+    }
+    Ok(list)
+}
+
+#[tauri::command]
+pub fn sqlite_save_payment_method(method: PaymentMethod) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute(
+        "INSERT INTO payment_methods (id, name, type, color, cutoff_day, payment_day, balance, credit_limit)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+         ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            type = excluded.type,
+            color = excluded.color,
+            cutoff_day = excluded.cutoff_day,
+            payment_day = excluded.payment_day,
+            balance = excluded.balance,
+            credit_limit = excluded.credit_limit",
+        params![
+            method.id,
+            method.name,
+            method.r#type,
+            method.color,
+            method.cutoff_day.map(|v| v as i64),
+            method.payment_day.map(|v| v as i64),
+            method.balance,
+            method.credit_limit
+        ],
+    )
+    .map_err(|e| format!("Error guardando método de pago: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_delete_payment_method(id: String) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute("DELETE FROM payment_methods WHERE id = ?1", params![id])
+        .map_err(|e| format!("Error eliminando método de pago: {}", e))?;
+    Ok(())
+}
+
+// ================= V2.2.0: PLANES MSI =================
+
+#[tauri::command]
+pub fn sqlite_get_msi_plans() -> Result<Vec<MsiPlan>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare("SELECT id, description, payment_method, total_amount, total_installments, remaining_installments, monthly_amount, start_date, next_due_date, status, category FROM msi_plans ORDER BY next_due_date ASC")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            let total_inst: i64 = r.get(4)?;
+            let rem_inst: i64 = r.get(5)?;
+            Ok(MsiPlan {
+                id: r.get(0)?,
+                description: r.get(1)?,
+                payment_method: r.get(2)?,
+                total_amount: r.get(3)?,
+                total_installments: total_inst as u32,
+                remaining_installments: rem_inst as u32,
+                monthly_amount: r.get(6)?,
+                start_date: r.get(7)?,
+                next_due_date: r.get(8)?,
+                status: r.get(9)?,
+                category: r.get(10)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut list = Vec::new();
+    for item in rows {
+        if let Ok(p) = item {
+            list.push(p);
+        }
+    }
+    Ok(list)
+}
+
+#[tauri::command]
+pub fn sqlite_save_msi_plan(plan: MsiPlan) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute(
+        "INSERT INTO msi_plans (id, description, payment_method, total_amount, total_installments, remaining_installments, monthly_amount, start_date, next_due_date, status, category)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+         ON CONFLICT(id) DO UPDATE SET
+            description = excluded.description,
+            payment_method = excluded.payment_method,
+            total_amount = excluded.total_amount,
+            total_installments = excluded.total_installments,
+            remaining_installments = excluded.remaining_installments,
+            monthly_amount = excluded.monthly_amount,
+            start_date = excluded.start_date,
+            next_due_date = excluded.next_due_date,
+            status = excluded.status,
+            category = excluded.category",
+        params![
+            plan.id,
+            plan.description,
+            plan.payment_method,
+            plan.total_amount,
+            plan.total_installments as i64,
+            plan.remaining_installments as i64,
+            plan.monthly_amount,
+            plan.start_date,
+            plan.next_due_date,
+            plan.status,
+            plan.category
+        ],
+    )
+    .map_err(|e| format!("Error guardando plan MSI: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_pay_msi_installment(id: String) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    let plan = conn.query_row(
+        "SELECT id, description, payment_method, remaining_installments, monthly_amount, category FROM msi_plans WHERE id = ?1",
+        params![id],
+        |r| {
+            let rem: i64 = r.get(3)?;
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                rem,
+                r.get::<_, f64>(4)?,
+                r.get::<_, String>(5)?,
+            ))
+        },
+    ).map_err(|e| format!("Plan MSI no encontrado: {}", e))?;
+
+    let (plan_id, desc, pm, rem, amount, cat) = plan;
+    if rem <= 0 {
+        return Err("El plan ya está liquidado al 100%".to_string());
+    }
+
+    let new_rem = rem - 1;
+    let new_status = if new_rem == 0 { "completed" } else { "active" };
+
+    // Registrar transacción de gasto
+    let today = chrono_like_today();
+    let tx_id = format!("tx_msi_{}_{}", plan_id, fastrand_suffix());
+    let tx_desc = format!("Mensualidad MSI: {}", desc);
+
+    conn.execute(
+        "INSERT INTO transactions (id, amount, type, category, payment_method, date, description, created_at)
+         VALUES (?1, ?2, 'expense', ?3, ?4, ?5, ?6, ?7)",
+        params![tx_id, amount, cat, pm, today, tx_desc, chrono_like_now()],
+    ).map_err(|e| format!("Error creando transacción de mensualidad: {}", e))?;
+
+    conn.execute(
+        "UPDATE msi_plans SET remaining_installments = ?1, status = ?2 WHERE id = ?3",
+        params![new_rem, new_status, plan_id],
+    ).map_err(|e| format!("Error actualizando cuotas MSI: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_delete_msi_plan(id: String) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute("DELETE FROM msi_plans WHERE id = ?1", params![id])
+        .map_err(|e| format!("Error eliminando plan MSI: {}", e))?;
+    Ok(())
+}
+
+// ================= V2.2.0: GASTOS RECURRENTES =================
+
+#[tauri::command]
+pub fn sqlite_get_recurring_expenses() -> Result<Vec<RecurringExpense>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare("SELECT id, description, amount, category, payment_method, frequency, due_day, auto_approve, last_paid_date FROM recurring_expenses ORDER BY due_day ASC")
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |r| {
+            let due: i64 = r.get(6)?;
+            let auto: i64 = r.get(7)?;
+            Ok(RecurringExpense {
+                id: r.get(0)?,
+                description: r.get(1)?,
+                amount: r.get(2)?,
+                category: r.get(3)?,
+                payment_method: r.get(4)?,
+                frequency: r.get(5)?,
+                due_day: due as u32,
+                auto_approve: auto != 0,
+                last_paid_date: r.get(8)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut list = Vec::new();
+    for item in rows {
+        if let Ok(r) = item {
+            list.push(r);
+        }
+    }
+    Ok(list)
+}
+
+#[tauri::command]
+pub fn sqlite_save_recurring_expense(item: RecurringExpense) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute(
+        "INSERT INTO recurring_expenses (id, description, amount, category, payment_method, frequency, due_day, auto_approve, last_paid_date)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(id) DO UPDATE SET
+            description = excluded.description,
+            amount = excluded.amount,
+            category = excluded.category,
+            payment_method = excluded.payment_method,
+            frequency = excluded.frequency,
+            due_day = excluded.due_day,
+            auto_approve = excluded.auto_approve,
+            last_paid_date = excluded.last_paid_date",
+        params![
+            item.id,
+            item.description,
+            item.amount,
+            item.category,
+            item.payment_method,
+            item.frequency,
+            item.due_day as i64,
+            if item.auto_approve { 1 } else { 0 },
+            item.last_paid_date
+        ],
+    )
+    .map_err(|e| format!("Error guardando gasto recurrente: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_approve_recurring_expense(id: String, date: String) -> Result<Transaction, String> {
+    let conn = get_db_connection()?;
+    let item = conn.query_row(
+        "SELECT id, description, amount, category, payment_method FROM recurring_expenses WHERE id = ?1",
+        params![id],
+        |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, f64>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+            ))
+        },
+    ).map_err(|e| format!("Gasto recurrente no encontrado: {}", e))?;
+
+    let (item_id, desc, amount, cat, pm) = item;
+    let tx_id = format!("tx_rec_{}_{}", item_id, fastrand_suffix());
+    let tx_date = if date.trim().is_empty() { chrono_like_today() } else { date };
+    let now = chrono_like_now();
+
+    conn.execute(
+        "INSERT INTO transactions (id, amount, type, category, payment_method, date, description, created_at)
+         VALUES (?1, ?2, 'expense', ?3, ?4, ?5, ?6, ?7)",
+        params![tx_id, amount, cat, pm, tx_date, desc, now],
+    ).map_err(|e| format!("Error creando transacción para gasto recurrente: {}", e))?;
+
+    conn.execute(
+        "UPDATE recurring_expenses SET last_paid_date = ?1 WHERE id = ?2",
+        params![tx_date, item_id],
+    ).map_err(|e| format!("Error actualizando fecha de pago recurrente: {}", e))?;
+
+    Ok(Transaction {
+        id: tx_id,
+        amount,
+        r#type: "expense".to_string(),
+        category: cat,
+        payment_method: pm,
+        date: tx_date,
+        description: Some(desc),
+        created_at: Some(now),
+    })
+}
+
+#[tauri::command]
+pub fn sqlite_delete_recurring_expense(id: String) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    conn.execute("DELETE FROM recurring_expenses WHERE id = ?1", params![id])
+        .map_err(|e| format!("Error eliminando gasto recurrente: {}", e))?;
+    Ok(())
+}
+
 
 // Helpers
 fn fastrand_suffix() -> String {

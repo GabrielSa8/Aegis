@@ -1,4 +1,5 @@
 mod agent;
+mod db;
 mod vault;
 mod devops;
 mod finances;
@@ -21,6 +22,11 @@ pub fn run() {
             config::save_aegis_config,
             agent::execute_agent_prompt,
             agent::send_agent_input,
+            agent::sqlite_get_chat_sessions,
+            agent::sqlite_save_chat_session,
+            agent::sqlite_delete_chat_session,
+            agent::sqlite_get_chat_messages,
+            agent::sqlite_save_chat_message,
             vault::get_vault_notes,
             vault::read_vault_note,
             vault::save_vault_note,
@@ -49,6 +55,17 @@ pub fn run() {
             finances::sqlite_delete_timeline_event,
             finances::sqlite_export_backup,
             finances::sqlite_import_backup,
+            finances::sqlite_get_payment_methods,
+            finances::sqlite_save_payment_method,
+            finances::sqlite_delete_payment_method,
+            finances::sqlite_get_msi_plans,
+            finances::sqlite_save_msi_plan,
+            finances::sqlite_pay_msi_installment,
+            finances::sqlite_delete_msi_plan,
+            finances::sqlite_get_recurring_expenses,
+            finances::sqlite_save_recurring_expense,
+            finances::sqlite_approve_recurring_expense,
+            finances::sqlite_delete_recurring_expense,
             sentinel::get_system_telemetry,
             sentinel::get_system_alerts,
             sentinel::get_top_processes,

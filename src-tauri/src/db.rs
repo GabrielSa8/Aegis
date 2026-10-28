@@ -1,0 +1,333 @@
+use rusqlite::{params, Connection};
+use std::fs;
+use std::path::PathBuf;
+
+pub fn get_db_paths() -> (PathBuf, PathBuf) {
+    let dir = if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+        if !xdg.is_empty() {
+            PathBuf::from(xdg).join("aegis")
+        } else {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            PathBuf::from(home).join(".local/share/aegis")
+        }
+    } else if let Ok(home) = std::env::var("HOME") {
+        PathBuf::from(home).join(".local/share/aegis")
+    } else {
+        PathBuf::from(".aegis_data")
+    };
+    let file = dir.join("aegis_lifeos.db");
+    (dir, file)
+}
+
+pub fn get_db_connection() -> Result<Connection, String> {
+    let (db_dir, db_path) = get_db_paths();
+    if !db_dir.exists() {
+        fs::create_dir_all(&db_dir)
+            .map_err(|e| format!("Error creando carpeta {}: {}", db_dir.display(), e))?;
+    }
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Error abriendo SQLite {}: {}", db_path.display(), e))?;
+    init_db_schema(&conn)?;
+    Ok(conn)
+}
+
+pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
+    conn.execute_batch(
+        "
+        PRAGMA journal_mode = WAL;
+        PRAGMA foreign_keys = ON;
+
+        CREATE TABLE IF NOT EXISTS transactions (
+            id TEXT PRIMARY KEY,
+            amount REAL NOT NULL,
+            type TEXT NOT NULL,
+            category TEXT NOT NULL,
+            payment_method TEXT NOT NULL,
+            date TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+
+        CREATE TABLE IF NOT EXISTS budgets (
+            category TEXT PRIMARY KEY,
+            amount REAL NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS categories (
+            name TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS snapshots (
+            id TEXT PRIMARY KEY,
+            timestamp INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            transactions_count INTEGER NOT NULL,
+            data_json TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS timeline_events (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            domain TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT,
+            location TEXT,
+            details TEXT,
+            status TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_timeline_events_date ON timeline_events(date);
+
+        -- Tablas v2.1.0: Sesiones y Mensajes del Agente Táctico
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            context_id TEXT NOT NULL,
+            effort TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);
+
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            context TEXT,
+            effort TEXT,
+            created_at TEXT NOT NULL,
+            duration_seconds REAL,
+            total_tokens INTEGER,
+            input_tokens INTEGER,
+            output_tokens INTEGER,
+            FOREIGN KEY(session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, created_at ASC);
+
+        -- Tablas v2.2.0: Métodos de Pago, MSI y Gastos Recurrentes
+        CREATE TABLE IF NOT EXISTS payment_methods (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL, -- 'credit', 'debit', 'cash', 'crypto'
+            color TEXT,
+            cutoff_day INTEGER,
+            payment_day INTEGER,
+            balance REAL NOT NULL DEFAULT 0.0,
+            credit_limit REAL DEFAULT 0.0
+        );
+
+        CREATE TABLE IF NOT EXISTS msi_plans (
+            id TEXT PRIMARY KEY,
+            description TEXT NOT NULL,
+            payment_method TEXT NOT NULL,
+            total_amount REAL NOT NULL,
+            total_installments INTEGER NOT NULL,
+            remaining_installments INTEGER NOT NULL,
+            monthly_amount REAL NOT NULL,
+            start_date TEXT NOT NULL,
+            next_due_date TEXT NOT NULL,
+            status TEXT NOT NULL, -- 'active', 'completed', 'cancelled'
+            category TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS recurring_expenses (
+            id TEXT PRIMARY KEY,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL,
+            payment_method TEXT NOT NULL,
+            frequency TEXT NOT NULL, -- 'monthly', 'biweekly', 'weekly'
+            due_day INTEGER NOT NULL,
+            auto_approve INTEGER NOT NULL DEFAULT 0,
+            last_paid_date TEXT
+        );
+        ",
+    )
+    .map_err(|e| format!("Error inicializando tablas SQLite: {}", e))?;
+
+    // Seed categorías si está vacía
+    let cat_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM categories", [], |r| r.get(0))
+        .unwrap_or(0);
+
+    if cat_count == 0 {
+        let defaults = [
+            "Comida & Bebida",
+            "Vivienda & Renta",
+            "Servicios (Luz, Internet, etc.)",
+            "Transporte & Gasolina",
+            "Salud & Médico",
+            "Entretenimiento & Ocio",
+            "Suscripciones",
+            "Educación & Certs",
+            "Nómina MELI",
+            "Ingresos TADÚ",
+            "Otros",
+        ];
+        for cat in defaults {
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO categories (name, created_at) VALUES (?1, datetime('now'))",
+                params![cat],
+            );
+        }
+    }
+
+    // Seed timeline maestro si está vacía
+    let event_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM timeline_events", [], |r| r.get(0))
+        .unwrap_or(0);
+
+    if event_count == 0 {
+        let seed_events = [
+            (
+                "evt_meli_cierre",
+                "Cierre de Ciclo Facturación MELI",
+                "meli",
+                "cierre_ciclo",
+                "2026-11-22",
+                Some("18:00"),
+                Some("Hub Last Mile MELI"),
+                Some("Corte financiero quincenal, exportación de horas extra y conciliación."),
+                "pending",
+                "high",
+            ),
+            (
+                "evt_meli_layout",
+                "Auditoría Layout & Ambulancias",
+                "meli",
+                "shift",
+                "2026-10-28",
+                Some("06:30"),
+                Some("Nave Operativa C1/C2"),
+                Some("Balanceo de 4 islas, control HandHeld/BPP y rescate de paquetes."),
+                "pending",
+                "medium",
+            ),
+            (
+                "evt_tadu_sprint",
+                "Sprint Review SAM Backend & DynamoDB",
+                "tadu",
+                "sprint",
+                "2026-10-29",
+                Some("10:00"),
+                Some("Localhost / AWS SAM"),
+                Some("Tests pytest de latencia en Lambdas Python 3.12 y validación Single-Table."),
+                "pending",
+                "high",
+            ),
+            (
+                "evt_aws_exam",
+                "Simulacro Certificación AWS Developer",
+                "certs",
+                "exam",
+                "2026-10-31",
+                Some("16:00"),
+                Some("Estudio Personal"),
+                Some("Simulacro cronometrado 65 preguntas y repaso de flashcards en Obsidian."),
+                "pending",
+                "high",
+            ),
+            (
+                "evt_uni_entrega",
+                "Entrega Proyecto Modular Ingeniería",
+                "uni",
+                "exam",
+                "2026-11-05",
+                Some("23:59"),
+                Some("Portal Universidad"),
+                Some("Documentación de arquitectura, diagramas C4 y código fuente."),
+                "pending",
+                "high",
+            ),
+        ];
+
+        for ev in seed_events {
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO timeline_events 
+                (id, title, domain, event_type, date, time, location, details, status, priority, created_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'))",
+                params![ev.0, ev.1, ev.2, ev.3, ev.4, ev.5, ev.6, ev.7, ev.8, ev.9],
+            );
+        }
+    }
+
+    // Seed métodos de pago si está vacía
+    let pm_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM payment_methods", [], |r| r.get(0))
+        .unwrap_or(0);
+
+    if pm_count == 0 {
+        let default_methods = [
+            ("bbva_debito", "BBVA Débito", "debit", "#004481", None, None, 4850.0, 0.0),
+            ("bbva_oro", "BBVA Oro Crédito", "credit", "#10b981", Some(5), Some(25), 0.0, 25000.0),
+            ("nu_credito", "Nu Tarjeta Garantizada", "credit", "#820ad1", Some(12), Some(2), 0.0, 15000.0),
+            ("mp_wallet", "Mercado Pago Wallet", "debit", "#009ee3", None, None, 1250.0, 0.0),
+            ("cash", "Efectivo Físico", "cash", "#788882", None, None, 600.0, 0.0),
+        ];
+
+        for pm in default_methods {
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO payment_methods 
+                (id, name, type, color, cutoff_day, payment_day, balance, credit_limit)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![pm.0, pm.1, pm.2, pm.3, pm.4, pm.5, pm.6, pm.7],
+            );
+        }
+    }
+
+    // Seed gastos recurrentes si está vacía
+    let rec_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM recurring_expenses", [], |r| r.get(0))
+        .unwrap_or(0);
+
+    if rec_count == 0 {
+        let default_recurring = [
+            ("rec_internet", "Internet Fibra Óptica 300MB", 650.0, "Servicios (Luz, Internet, etc.)", "bbva_debito", "monthly", 10, 0),
+            ("rec_spotify", "Spotify Dúo", 199.0, "Suscripciones", "nu_credito", "monthly", 15, 1),
+            ("rec_renta", "Aportación Renta / Hogar", 4000.0, "Vivienda & Renta", "bbva_debito", "monthly", 1, 0),
+        ];
+
+        for rec in default_recurring {
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO recurring_expenses 
+                (id, description, amount, category, payment_method, frequency, due_day, auto_approve, last_paid_date)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL)",
+                params![rec.0, rec.1, rec.2, rec.3, rec.4, rec.5, rec.6, rec.7],
+            );
+        }
+    }
+
+    // Seed MSI si está vacía
+    let msi_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM msi_plans", [], |r| r.get(0))
+        .unwrap_or(0);
+
+    if msi_count == 0 {
+        let _ = conn.execute(
+            "INSERT OR IGNORE INTO msi_plans 
+            (id, description, payment_method, total_amount, total_installments, remaining_installments, monthly_amount, start_date, next_due_date, status, category)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                "msi_monitor",
+                "Monitor Portátil USB-C 1080p",
+                "nu_credito",
+                3600.0,
+                6,
+                4,
+                600.0,
+                "2026-08-15",
+                "2026-11-02",
+                "active",
+                "Educación & Certs"
+            ],
+        );
+    }
+
+    Ok(())
+}

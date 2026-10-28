@@ -15,7 +15,11 @@ import {
   Zap,
   Brain,
   ShieldAlert,
-  Minimize2
+  Minimize2,
+  History,
+  MessageSquare,
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -78,6 +82,17 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   const [expandThoughts, setExpandThoughts] = useState(false);
   const viewportRef = useRef(null);
 
+  // Historial de Sesiones Tácticas (v2.1.0)
+  const [sessions, setSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
+  const activeSessionIdRef = useRef(null);
+  const currentAccumulatorRef = useRef({});
+
+  useEffect(() => {
+    activeSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
+
   // Atajo global Ctrl + O para alternar acordeón de razonamiento
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -99,6 +114,129 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       timestamp: 'Ahora'
     }
   ]);
+
+  // Carga inicial de sesiones desde SQLite
+  useEffect(() => {
+    const initSessions = async () => {
+      try {
+        const list = await invoke('sqlite_get_chat_sessions');
+        if (Array.isArray(list) && list.length > 0) {
+          setSessions(list);
+          const first = list[0];
+          setCurrentSessionId(first.id);
+          const msgs = await invoke('sqlite_get_chat_messages', { sessionId: first.id });
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            setMessages(msgs.map(m => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              context: m.context || activeContext.label,
+              effort: m.effort || 'low',
+              timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              duration: m.durationSeconds,
+              totalTokens: m.totalTokens,
+              inputTokens: m.inputTokens,
+              outputTokens: m.outputTokens
+            })));
+          }
+        } else {
+          const initial = {
+            id: 'session_' + Date.now(),
+            title: 'Sesión Táctica General',
+            contextId: activeContext.id,
+            effort: effortMode,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          await invoke('sqlite_save_chat_session', { session: initial });
+          setSessions([initial]);
+          setCurrentSessionId(initial.id);
+        }
+      } catch (e) {
+        console.error('Error inicializando sesiones de chat en SQLite:', e);
+      }
+    };
+    initSessions();
+  }, []);
+
+  const selectSession = async (sessionId) => {
+    setCurrentSessionId(sessionId);
+    try {
+      const msgs = await invoke('sqlite_get_chat_messages', { sessionId });
+      if (Array.isArray(msgs) && msgs.length > 0) {
+        setMessages(msgs.map(m => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          context: m.context || activeContext.label,
+          effort: m.effort || 'low',
+          timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          duration: m.durationSeconds,
+          totalTokens: m.totalTokens,
+          inputTokens: m.inputTokens,
+          outputTokens: m.outputTokens
+        })));
+      } else {
+        const s = sessions.find(item => item.id === sessionId);
+        setMessages([
+          {
+            id: 'welcome_' + sessionId,
+            role: 'assistant',
+            content: `Sesión activa (${s?.title || 'Táctica'}). Conectado a ${activeContext.label}.`,
+            context: activeContext.label,
+            timestamp: 'Ahora'
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error('Error cargando mensajes de sesión:', e);
+    }
+  };
+
+  const handleNewSession = async () => {
+    const newSession = {
+      id: 'session_' + Date.now(),
+      title: `Sesión ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      contextId: activeContext.id,
+      effort: effortMode,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      await invoke('sqlite_save_chat_session', { session: newSession });
+      setSessions((prev) => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      setMessages([
+        {
+          id: 'welcome_' + newSession.id,
+          role: 'assistant',
+          content: `Nueva sesión táctica lista (${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}). ¿Qué ejecutamos?`,
+          context: activeContext.label,
+          timestamp: 'Ahora'
+        }
+      ]);
+    } catch (e) {
+      console.error('Error creando nueva sesión:', e);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId, e) => {
+    e.stopPropagation();
+    try {
+      await invoke('sqlite_delete_chat_session', { id: sessionId });
+      const remaining = sessions.filter(s => s.id !== sessionId);
+      setSessions(remaining);
+      if (currentSessionId === sessionId) {
+        if (remaining.length > 0) {
+          selectSession(remaining[0].id);
+        } else {
+          handleNewSession();
+        }
+      }
+    } catch (e) {
+      console.error('Error eliminando sesión:', e);
+    }
+  };
 
   const handlePermissionResponse = async (streamId, input) => {
     try {
@@ -162,6 +300,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                   loading: true
                 };
               } else if (chunk.event_type === 'delta') {
+                currentAccumulatorRef.current[chunk.stream_id] = (currentAccumulatorRef.current[chunk.stream_id] || '') + chunk.content;
                 let currentStatus = msg.statusText;
                 if (chunk.step_type === 'thinking' || chunk.content.includes('<thought>') || chunk.content.includes('<thinking>')) {
                   currentStatus = '🧠 Razonando proceso técnico...';
@@ -184,6 +323,26 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                   loading: true
                 };
               } else if (chunk.event_type === 'done') {
+                const finalContent = currentAccumulatorRef.current[chunk.stream_id] || msg.content || '';
+                if (activeSessionIdRef.current && finalContent) {
+                  invoke('sqlite_save_chat_message', {
+                    message: {
+                      id: chunk.stream_id,
+                      sessionId: activeSessionIdRef.current,
+                      role: 'assistant',
+                      content: finalContent,
+                      context: activeContext.label,
+                      effort: effortMode,
+                      createdAt: new Date().toISOString(),
+                      durationSeconds: chunk.duration_seconds || null,
+                      totalTokens: chunk.total_tokens || null,
+                      inputTokens: chunk.input_tokens || null,
+                      outputTokens: chunk.output_tokens || null
+                    }
+                  }).catch((err) => console.error('Error guardando mensaje en SQLite:', err));
+                }
+                delete currentAccumulatorRef.current[chunk.stream_id];
+
                 return {
                   ...msg,
                   loading: false,
@@ -233,6 +392,34 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
     const textToSend = customPrompt || prompt;
     if (!textToSend.trim() || loading) return;
 
+    let targetSessionId = currentSessionId;
+    if (!targetSessionId) {
+      const newSession = {
+        id: 'session_' + Date.now(),
+        title: textToSend.slice(0, 36) + (textToSend.length > 36 ? '...' : ''),
+        contextId: activeContext.id,
+        effort: effortMode,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      try {
+        await invoke('sqlite_save_chat_session', { session: newSession });
+        setSessions((prev) => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        targetSessionId = newSession.id;
+      } catch (e) {
+        console.error('Error auto-creando sesión:', e);
+      }
+    } else {
+      const curSess = sessions.find((s) => s.id === targetSessionId);
+      if (curSess && (curSess.title.startsWith('Sesión') || curSess.title === 'Sesión Táctica General')) {
+        const updatedTitle = textToSend.slice(0, 36) + (textToSend.length > 36 ? '...' : '');
+        const updated = { ...curSess, title: updatedTitle, updatedAt: new Date().toISOString() };
+        invoke('sqlite_save_chat_session', { session: updated }).catch(console.error);
+        setSessions((prev) => prev.map((s) => (s.id === targetSessionId ? updated : s)));
+      }
+    }
+
     const streamId = 'stream_' + Date.now();
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -244,6 +431,24 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       effort: effortMode,
       timestamp: timeStr
     };
+
+    if (targetSessionId) {
+      invoke('sqlite_save_chat_message', {
+        message: {
+          id: userMsg.id,
+          sessionId: targetSessionId,
+          role: 'user',
+          content: userMsg.content,
+          context: userMsg.context,
+          effort: userMsg.effort,
+          createdAt: new Date().toISOString(),
+          durationSeconds: null,
+          totalTokens: null,
+          inputTokens: null,
+          outputTokens: null
+        }
+      }).catch((e) => console.error('Error guardando mensaje user:', e));
+    }
 
     const assistantPlaceholder = {
       id: streamId,
@@ -446,6 +651,26 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
             <kbd style={{ fontSize: '0.58rem', opacity: 0.7 }}>Ctrl+O</kbd>
           </button>
 
+          {/* Historial de Sesiones Drawer Toggle */}
+          <button
+            onClick={() => setShowSessionsDrawer((prev) => !prev)}
+            className="btn btn-secondary"
+            style={{
+              padding: '3px 8px',
+              fontSize: '0.68rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: showSessionsDrawer ? '#10b981' : 'var(--text-muted)',
+              borderColor: showSessionsDrawer ? 'var(--primary)' : 'var(--border-color)',
+              background: showSessionsDrawer ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
+            }}
+            title="Abrir historial de sesiones tácticas"
+          >
+            <History size={12} color={showSessionsDrawer ? '#10b981' : '#888'} />
+            <span>Sesiones ({sessions.length})</span>
+          </button>
+
           {/* Limpiar Historial */}
           <button
             onClick={clearHistory}
@@ -458,9 +683,116 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         </div>
       </div>
 
-      {/* 💬 Message Viewport */}
-      <div 
-        ref={viewportRef}
+      {/* 💬 Central Workspace: Sessions Drawer + Message Viewport */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative' }}>
+        {showSessionsDrawer && (
+          <div style={{
+            width: '240px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            overflow: 'hidden'
+          }}>
+            {/* Header del Drawer */}
+            <div style={{
+              padding: '0.45rem 0.65rem',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(0, 0, 0, 0.2)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MessageSquare size={13} color="#10b981" />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-high)' }}>Sesiones</span>
+              </div>
+              <button
+                onClick={handleNewSession}
+                className="btn btn-primary"
+                style={{ padding: '2px 7px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                title="Iniciar nueva sesión táctica"
+              >
+                <Plus size={11} />
+                <span>Nueva</span>
+              </button>
+            </div>
+
+            {/* Lista de sesiones */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {sessions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                  Sin sesiones
+                </div>
+              ) : (
+                sessions.map((sess) => {
+                  const isActive = currentSessionId === sess.id;
+                  return (
+                    <div
+                      key={sess.id}
+                      onClick={() => selectSession(sess.id)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 0, 0, 0.15)',
+                        border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '3px',
+                        transition: 'var(--transition)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: isActive ? 700 : 500,
+                          color: isActive ? 'var(--text-high)' : 'var(--text-normal)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          flex: 1
+                        }}>
+                          {sess.title}
+                        </span>
+                        <button
+                          onClick={(e) => handleDeleteSession(sess.id, e)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            opacity: 0.6
+                          }}
+                          title="Eliminar sesión"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                        <span style={{ textTransform: 'uppercase', opacity: 0.8 }}>
+                          {sess.contextId} · {sess.effort === 'high' ? 'Profundo' : 'Flash'}
+                        </span>
+                        <span>
+                          {new Date(sess.updatedAt).toLocaleDateString([], { month: 'numeric', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 💬 Message Viewport */}
+        <div 
+          ref={viewportRef}
         style={{
           flex: 1,
           minHeight: 0,
@@ -702,6 +1034,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* ⚡ Quick Macros Row */}
