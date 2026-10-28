@@ -2,20 +2,60 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   BookOpen, 
   Folder, 
-  GitBranch, 
-  Shield, 
+  FolderOpen, 
+  ChevronRight, 
+  ChevronDown, 
   Search, 
   FileText, 
   CheckCircle2, 
   RefreshCw, 
   Save, 
-  ExternalLink,
   Edit3,
   Eye,
-  Calendar,
-  HardDrive
+  ChevronsDown,
+  ChevronsUp
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+
+// Construcción recursiva del árbol de carpetas estilo Obsidian
+function buildVaultTree(notesList) {
+  const root = { path: '', name: 'root', folders: {}, files: [] };
+
+  notesList.forEach((note) => {
+    const parts = note.relative_path.split('/');
+    if (parts.length === 1) {
+      root.files.push(note);
+    } else {
+      let current = root;
+      let accumulatedPath = '';
+      for (let i = 0; i < parts.length - 1; i++) {
+        const folderName = parts[i];
+        accumulatedPath = accumulatedPath ? `${accumulatedPath}/${folderName}` : folderName;
+        if (!current.folders[folderName]) {
+          current.folders[folderName] = {
+            path: accumulatedPath,
+            name: folderName,
+            folders: {},
+            files: []
+          };
+        }
+        current = current.folders[folderName];
+      }
+      current.files.push(note);
+    }
+  });
+
+  return root;
+}
+
+// Conteo total de notas dentro de una carpeta y sus subcarpetas
+function getFolderFileCount(node) {
+  let count = node.files.length;
+  Object.values(node.folders).forEach((sub) => {
+    count += getFolderFileCount(sub);
+  });
+  return count;
+}
 
 export default function VaultView() {
   const [notes, setNotes] = useState([]);
@@ -24,7 +64,6 @@ export default function VaultView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  const [selectedHub, setSelectedHub] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeNote, setActiveNote] = useState(null);
   const [noteContent, setNoteContent] = useState('');
@@ -33,13 +72,15 @@ export default function VaultView() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  const hubsConfig = [
-    { id: '00', code: '00 Sistema', title: 'Sistema y Cerebro IA', icon: Shield, color: '#10b981' },
-    { id: '01', code: '01 Operaciones MELI', title: 'Operaciones Mercado Libre', icon: Folder, color: '#d97706' },
-    { id: '02', code: '02 Proyectos de Software', title: 'Proyectos de Software', icon: GitBranch, color: '#10b981' },
-    { id: '03', code: '03 Personal y Ocio', title: 'Personal y Ocio', icon: Folder, color: '#8b5cf6' },
-    { id: '04', code: '04 Estudios y Certs', title: 'Estudios y Certificaciones', icon: BookOpen, color: '#06b6d4' }
-  ];
+  // Set de carpetas desplegadas (estilo Obsidian)
+  const [expandedFolders, setExpandedFolders] = useState(() => new Set([
+    '00 Sistema',
+    '01 Operaciones MELI',
+    '02 Proyectos de Software',
+    '03 Personal y Ocio',
+    '04 Estudios y Certificaciones',
+    '04 Estudios y Certs'
+  ]));
 
   const loadVaultData = useCallback(async () => {
     try {
@@ -52,9 +93,8 @@ export default function VaultView() {
       setNotes(notesRes || []);
       setStats(statsRes || null);
 
-      // Si no hay nota activa, seleccionar INICIO.md o la primera
       if (!activeNote && notesRes && notesRes.length > 0) {
-        const inicio = notesRes.find(n => n.title.toLowerCase() === 'inicio') || notesRes[0];
+        const inicio = notesRes.find((n) => n.title.toLowerCase() === 'inicio') || notesRes[0];
         loadNote(inicio);
       }
     } catch (err) {
@@ -100,20 +140,185 @@ export default function VaultView() {
     }
   };
 
-  const filteredNotes = useMemo(() => {
-    return notes.filter((n) => {
-      if (selectedHub !== 'Todos' && n.hub !== selectedHub) return false;
-      if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        return n.title.toLowerCase().includes(q) || n.relative_path.toLowerCase().includes(q);
+  const toggleFolder = (folderPath) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
       }
-      return true;
+      return next;
     });
-  }, [notes, selectedHub, searchTerm]);
+  };
+
+  const expandAll = () => {
+    const allPaths = new Set();
+    const collectPaths = (node) => {
+      Object.values(node.folders).forEach((sub) => {
+        allPaths.add(sub.path);
+        collectPaths(sub);
+      });
+    };
+    collectPaths(buildVaultTree(notes));
+    setExpandedFolders(allPaths);
+  };
+
+  const collapseAll = () => {
+    setExpandedFolders(new Set());
+  };
+
+  // Notas filtradas por término de búsqueda
+  const filteredNotes = useMemo(() => {
+    if (!searchTerm.trim()) return notes;
+    const q = searchTerm.toLowerCase();
+    return notes.filter((n) =>
+      n.title.toLowerCase().includes(q) || n.relative_path.toLowerCase().includes(q)
+    );
+  }, [notes, searchTerm]);
+
+  // Si hay búsqueda activa, expandir automáticamente carpetas con coincidencias
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const pathsToExpand = new Set();
+      filteredNotes.forEach((n) => {
+        const parts = n.relative_path.split('/');
+        let acc = '';
+        for (let i = 0; i < parts.length - 1; i++) {
+          acc = acc ? `${acc}/${parts[i]}` : parts[i];
+          pathsToExpand.add(acc);
+        }
+      });
+      setExpandedFolders(pathsToExpand);
+    }
+  }, [searchTerm, filteredNotes]);
+
+  const tree = useMemo(() => {
+    return buildVaultTree(filteredNotes);
+  }, [filteredNotes]);
+
+  // Renderizado recursivo de carpetas y notas estilo Obsidian
+  const renderFolderNode = (node, depth = 0) => {
+    const sortedFolderKeys = Object.keys(node.folders).sort();
+    const sortedFiles = [...node.files].sort((a, b) => a.title.localeCompare(b.title));
+
+    return (
+      <div key={node.path || 'root'} style={{ display: 'flex', flexDirection: 'column' }}>
+        {/* Subcarpetas */}
+        {sortedFolderKeys.map((key) => {
+          const sub = node.folders[key];
+          const isExpanded = expandedFolders.has(sub.path);
+          const totalFiles = getFolderFileCount(sub);
+          const isTopHub = depth === 0;
+
+          return (
+            <div key={sub.path} style={{ display: 'flex', flexDirection: 'column' }}>
+              {/* Fila de la Carpeta */}
+              <div
+                onClick={() => toggleFolder(sub.path)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '5px 8px',
+                  paddingLeft: `${depth * 14 + 8}px`,
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  transition: 'var(--transition)',
+                  background: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </span>
+                  <span style={{ color: isTopHub ? '#10b981' : '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                    {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
+                  </span>
+                  <span style={{
+                    fontSize: isTopHub ? '0.78rem' : '0.74rem',
+                    fontWeight: isTopHub ? 700 : 600,
+                    color: isTopHub ? 'var(--text-high)' : 'var(--text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {sub.name}
+                  </span>
+                </div>
+
+                <span style={{
+                  fontSize: '0.62rem',
+                  color: 'var(--text-muted)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  fontWeight: 600
+                }}>
+                  {totalFiles}
+                </span>
+              </div>
+
+              {/* Contenido desplegado de la carpeta */}
+              {isExpanded && renderFolderNode(sub, depth + 1)}
+            </div>
+          );
+        })}
+
+        {/* Archivos en el nivel actual */}
+        {sortedFiles.map((note) => {
+          const isSelected = activeNote?.path === note.path;
+          return (
+            <div
+              key={note.path}
+              onClick={() => loadNote(note)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '5px 8px',
+                paddingLeft: `${depth * 14 + 22}px`,
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                transition: 'var(--transition)',
+                background: isSelected ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                borderLeft: isSelected ? '2px solid #10b981' : '2px solid transparent'
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.025)';
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <FileText size={13} color={isSelected ? '#34d399' : 'var(--text-muted)'} />
+              <span style={{
+                fontSize: '0.76rem',
+                fontWeight: isSelected ? 700 : 400,
+                color: isSelected ? '#34d399' : 'var(--text-high)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {note.title}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', overflow: 'hidden' }}>
-      {/* 📡 Barra Superior de Control de la Bóveda */}
+      {/* 📡 Barra Superior de Control */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -142,30 +347,28 @@ export default function VaultView() {
               Bóveda Obsidian (BrainIA)
             </h2>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-              Memoria central: <code>/home/zabrielsa/Documentos/Obsidian Vault/</code>
+              Árbol de carpetas y Hubs de Obsidian
             </p>
           </div>
         </div>
 
-        {/* Telemetría de la Bóveda */}
+        {/* Telemetría y Acciones */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {stats && (
-            <>
-              <div style={{
-                fontSize: '0.72rem',
-                color: 'var(--text-muted)',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--border-color)',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-md)',
-                display: 'flex',
-                gap: '8px'
-              }}>
-                <span><strong>{stats.total_notes}</strong> notas</span>
-                <span>•</span>
-                <span><strong>{stats.pending_tasks}</strong> tareas</span>
-              </div>
-            </>
+            <div style={{
+              fontSize: '0.72rem',
+              color: 'var(--text-muted)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid var(--border-color)',
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              gap: '8px'
+            }}>
+              <span><strong>{stats.total_notes}</strong> notas</span>
+              <span>•</span>
+              <span><strong>{stats.pending_tasks}</strong> tareas</span>
+            </div>
           )}
 
           <div style={{
@@ -181,7 +384,7 @@ export default function VaultView() {
             fontWeight: 600
           }}>
             <CheckCircle2 size={13} />
-            <span>Sincronizada con disco</span>
+            <span>Sincronizada</span>
           </div>
 
           <button
@@ -207,7 +410,7 @@ export default function VaultView() {
         </div>
       </div>
 
-      {/* 🧭 Lienzo Dividido: Explorador (Izquierda) + Lector / Editor (Derecha) */}
+      {/* 🧭 Lienzo Dividido: Explorador de Carpetas Desplegable (Izquierda) + Editor (Derecha) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '320px 1fr',
@@ -215,7 +418,7 @@ export default function VaultView() {
         flex: 1,
         minHeight: 0
       }}>
-        {/* PANEL IZQUIERDO: Hubs y Archivos */}
+        {/* PANEL IZQUIERDO: Árbol de Carpetas Desplegables */}
         <div style={{
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -225,8 +428,14 @@ export default function VaultView() {
           minHeight: 0,
           overflow: 'hidden'
         }}>
-          {/* Buscador */}
-          <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+          {/* Barra de Búsqueda y Controles de Plegado */}
+          <div style={{
+            padding: '0.65rem',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
+          }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -234,7 +443,7 @@ export default function VaultView() {
               background: 'rgba(0, 0, 0, 0.25)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-md)',
-              padding: '6px 10px'
+              padding: '5px 9px'
             }}>
               <Search size={14} color="var(--text-muted)" />
               <input
@@ -253,80 +462,67 @@ export default function VaultView() {
               />
             </div>
 
-            {/* Filtros de Hub en píldoras */}
-            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginTop: '8px' }}>
-              {['Todos', ...hubsConfig.map(h => h.code)].map((hub) => (
+            {/* Controles de Colapsar / Expandir Todo */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                EXPLORADOR DE ARCHIVOS
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
                 <button
-                  key={hub}
-                  onClick={() => setSelectedHub(hub)}
+                  onClick={expandAll}
+                  title="Expandir todas las carpetas"
                   style={{
-                    background: selectedHub === hub ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                    border: selectedHub === hub ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
-                    color: selectedHub === hub ? '#34d399' : 'var(--text-muted)',
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    padding: '3px 7px',
-                    borderRadius: 'var(--radius-md)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap'
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '0.62rem'
                   }}
                 >
-                  {hub === 'Todos' ? 'Todos' : hub.replace(/^\d+\s*/, '')}
+                  <ChevronsDown size={12} />
+                  <span>Expandir</span>
                 </button>
-              ))}
+                <button
+                  onClick={collapseAll}
+                  title="Colapsar todas las carpetas"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    fontSize: '0.62rem'
+                  }}
+                >
+                  <ChevronsUp size={12} />
+                  <span>Colapsar</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Lista de Notas */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+          {/* Vista en Árbol de Carpetas */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.35rem' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                 <RefreshCw size={16} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
-                <span>Cargando notas...</span>
+                <span>Cargando carpetas...</span>
               </div>
             ) : filteredNotes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 No se encontraron notas
               </div>
             ) : (
-              filteredNotes.map((note) => {
-                const isSelected = activeNote?.path === note.path;
-                return (
-                  <div
-                    key={note.path}
-                    onClick={() => loadNote(note)}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: 'var(--radius-md)',
-                      background: isSelected ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                      border: isSelected ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px',
-                      marginBottom: '3px',
-                      transition: 'var(--transition)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <FileText size={13} color={isSelected ? '#34d399' : 'var(--text-muted)'} />
-                      <span style={{
-                        fontSize: '0.8rem',
-                        fontWeight: isSelected ? 700 : 500,
-                        color: isSelected ? 'var(--text-high)' : 'var(--text-muted)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {note.title}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', paddingLeft: '19px' }}>
-                      {note.hub}
-                    </span>
-                  </div>
-                );
-              })
+              renderFolderNode(tree)
             )}
           </div>
         </div>
