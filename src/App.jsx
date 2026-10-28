@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { Minimize2 } from 'lucide-react';
 
 import TopHeader from './components/TopHeader';
 import AgentView from './components/AgentView';
@@ -45,9 +46,15 @@ export default function App() {
         return;
       }
 
-      if (e.key === 'Escape' && showSettings) {
-        setShowSettings(false);
-        return;
+      if (e.key === 'Escape') {
+        if (showSettings) {
+          setShowSettings(false);
+          return;
+        }
+        if (zenMode) {
+          setZenMode(false);
+          return;
+        }
       }
 
       if (e.altKey) {
@@ -74,7 +81,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings]);
+  }, [showSettings, zenMode]);
 
   // Ping al núcleo Rust local
   useEffect(() => {
@@ -95,7 +102,7 @@ export default function App() {
       position: 'relative'
     }}>
       {/* 🧭 Barra Superior Unificada (Navegación + Telemetría en 38px) */}
-      {!zenMode && (
+      {!zenMode ? (
         <TopHeader 
           coreStatus={coreStatus} 
           activeTab={activeTab === 'leisure' ? 'gaming' : activeTab} 
@@ -104,6 +111,46 @@ export default function App() {
           onToggleZenMode={() => setZenMode(!zenMode)}
           onOpenSettings={() => setShowSettings(true)}
         />
+      ) : (
+        /* 🪟 Botón Flotante para Salir de Modo Zen */
+        <button
+          onClick={() => setZenMode(false)}
+          title="Restaurar barra y menús (Escape o Alt + Z)"
+          style={{
+            position: 'fixed',
+            top: '8px',
+            right: '12px',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--bg-surface)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-muted)',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-full)',
+            cursor: 'pointer',
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--text-high)';
+            e.currentTarget.style.borderColor = 'var(--accent)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-muted)';
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.transform = 'none';
+          }}
+        >
+          <Minimize2 size={13} color="var(--accent)" />
+          <span>Restaurar Barra</span>
+          <kbd style={{ fontSize: '0.62rem', opacity: 0.65, background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '3px' }}>Esc</kbd>
+        </button>
       )}
 
       {/* 🚀 Lienzo de Contenido Ultra-Limpio (95% Viewport Disponible) */}
