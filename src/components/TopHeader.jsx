@@ -20,7 +20,8 @@ export default function TopHeader({
   onSelectTab,
   zenMode,
   onToggleZenMode,
-  onOpenSettings
+  onOpenSettings,
+  onOpenCommandPalette
 }) {
   const tabs = [
     { id: 'agent', label: 'Agente', icon: Bot, shortcut: '1' },
@@ -186,17 +187,31 @@ export default function TopHeader({
         </span>
 
         {/* Command shortcut */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '2px 6px',
-          fontSize: '0.62rem',
-          color: 'var(--text-muted)'
-        }}>
+        <div 
+          onClick={onOpenCommandPalette}
+          title="Abrir Paleta de Comandos (Ctrl + K)"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '2px 6px',
+            fontSize: '0.62rem',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--accent)';
+            e.currentTarget.style.color = 'var(--text-high)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-color)';
+            e.currentTarget.style.color = 'var(--text-muted)';
+          }}
+        >
           <Search size={10} />
           <kbd style={{ fontFamily: 'inherit', color: 'var(--text-high)' }}>Ctrl+K</kbd>
         </div>

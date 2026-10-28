@@ -11,6 +11,7 @@ import TasksView from './components/TasksView';
 import SentinelView from './components/SentinelView';
 import LeisureView from './components/LeisureView';
 import SettingsView from './components/SettingsView';
+import CommandPaletteModal from './components/CommandPaletteModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent');
@@ -18,6 +19,7 @@ export default function App() {
   const [zenMode, setZenMode] = useState(false);
   const [currentTheme, setCurrentTheme] = useState('nordic-moss');
   const [showSettings, setShowSettings] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   // Cargar tema desde configuración en arranque
   useEffect(() => {
@@ -36,9 +38,16 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Atajos de teclado globales (Alt + 1..7, Alt + Z y Ctrl + ,)
+  // Atajos de teclado globales (Ctrl + K, Alt + 1..7, Alt + Z y Ctrl + ,)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Ctrl + K para abrir Paleta de Comandos Omnibar
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+        return;
+      }
+
       // Ctrl + , para abrir Ajustes
       if ((e.ctrlKey || e.metaKey) && e.key === ',') {
         e.preventDefault();
@@ -47,6 +56,10 @@ export default function App() {
       }
 
       if (e.key === 'Escape') {
+        if (showCommandPalette) {
+          setShowCommandPalette(false);
+          return;
+        }
         if (showSettings) {
           setShowSettings(false);
           return;
@@ -81,7 +94,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings, zenMode]);
+  }, [showCommandPalette, showSettings, zenMode]);
 
   // Ping al núcleo Rust local
   useEffect(() => {
@@ -110,6 +123,7 @@ export default function App() {
           zenMode={zenMode}
           onToggleZenMode={() => setZenMode(!zenMode)}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenCommandPalette={() => setShowCommandPalette(true)}
         />
       ) : activeTab !== 'agent' ? (
         /* 🪟 Botón de restauración para vistas sin barra de macros */
@@ -179,6 +193,16 @@ export default function App() {
           onThemeChange={handleThemeChange}
         />
       )}
+
+      {/* 🧭 Paleta de Comandos Omnibar (Ctrl + K) */}
+      <CommandPaletteModal
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onSelectTab={setActiveTab}
+        onToggleZenMode={() => setZenMode((prev) => !prev)}
+        onOpenSettings={() => setShowSettings(true)}
+        onThemeChange={handleThemeChange}
+      />
     </div>
   );
 }
