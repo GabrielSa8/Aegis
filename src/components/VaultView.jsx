@@ -13,7 +13,9 @@ import {
   Edit3, 
   Eye,
   ChevronsDown,
-  ChevronsUp
+  ChevronsUp,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import MarkdownViewer from './MarkdownViewer';
@@ -72,6 +74,19 @@ export default function VaultView() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+
+  // Atajo de teclado para alternar explorador de archivos (Ctrl + B / Cmd + B)
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setShowSidebar((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   // Referencias para persistir posición exacta de lectura/edición
   const viewerContainerRef = useRef(null);
@@ -405,146 +420,166 @@ export default function VaultView() {
       {/* 🧭 Lienzo Dividido: Explorador de Carpetas Desplegable (Izquierda) + Editor (Derecha) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '300px 1fr',
-        gap: '0.75rem',
+        gridTemplateColumns: showSidebar ? '280px 1fr' : '1fr',
+        gap: showSidebar ? '0.75rem' : '0',
         flex: 1,
         minHeight: 0
       }}>
         {/* PANEL IZQUIERDO: Árbol de Carpetas Desplegables */}
-        <div style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          overflow: 'hidden'
-        }}>
-          {/* Barra de Búsqueda y Controles de Plegado */}
+        {showSidebar && (
           <div style={{
-            padding: '0.5rem 0.65rem',
-            borderBottom: '1px solid var(--border-color)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-lg)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px'
+            minHeight: 0,
+            overflow: 'hidden'
           }}>
+            {/* Barra de Búsqueda y Controles de Plegado */}
             <div style={{
+              padding: '0.5rem 0.65rem',
+              borderBottom: '1px solid var(--border-color)',
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'rgba(0, 0, 0, 0.25)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              padding: '4px 8px'
+              flexDirection: 'column',
+              gap: '6px'
             }}>
-              <Search size={13} color="var(--text-muted)" />
-              <input
-                type="text"
-                placeholder="Buscar nota en Bóveda..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--text-high)',
-                  fontSize: '0.75rem',
-                  width: '100%'
-                }}
-              />
-              {stats && (
-                <span style={{ 
-                  fontSize: '0.62rem', 
-                  color: '#a7f3d0', 
-                  background: 'rgba(16, 185, 129, 0.1)', 
-                  padding: '1px 5px', 
-                  borderRadius: '4px',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap'
-                }}>
-                  {stats.total_notes}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                padding: '4px 8px'
+              }}>
+                <Search size={13} color="var(--text-muted)" />
+                <input
+                  type="text"
+                  placeholder="Buscar nota en Bóveda..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--text-high)',
+                    fontSize: '0.75rem',
+                    width: '100%'
+                  }}
+                />
+                {stats && (
+                  <span style={{ 
+                    fontSize: '0.62rem', 
+                    color: '#a7f3d0', 
+                    background: 'rgba(16, 185, 129, 0.1)', 
+                    padding: '1px 5px', 
+                    borderRadius: '4px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {stats.total_notes}
+                  </span>
+                )}
+              </div>
+
+              {/* Controles de Colapsar / Expandir Todo */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>
+                  ARCHIVOS
                 </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <button
+                    onClick={expandAll}
+                    title="Expandir todas las carpetas"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '0.62rem'
+                    }}
+                  >
+                    <ChevronsDown size={12} />
+                  </button>
+                  <button
+                    onClick={collapseAll}
+                    title="Colapsar todas las carpetas"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '0.62rem'
+                    }}
+                  >
+                    <ChevronsUp size={12} />
+                  </button>
+                  <button
+                    onClick={loadVaultData}
+                    disabled={refreshing}
+                    title="Recargar notas de la Bóveda"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: refreshing ? 'not-allowed' : 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '0.62rem'
+                    }}
+                  >
+                    <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+                  </button>
+                  <div style={{ width: '1px', height: '10px', background: 'var(--border-color)', margin: '0 2px' }} />
+                  <button
+                    onClick={() => setShowSidebar(false)}
+                    title="Ocultar explorador de carpetas (Ctrl + B)"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '0.62rem'
+                    }}
+                  >
+                    <PanelLeftClose size={12} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Vista en Árbol de Carpetas */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.35rem' }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  <RefreshCw size={16} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
+                  <span>Cargando carpetas...</span>
+                </div>
+              ) : filteredNotes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                  No se encontraron notas
+                </div>
+              ) : (
+                renderFolderNode(tree)
               )}
             </div>
-
-            {/* Controles de Colapsar / Expandir Todo */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>
-                ARCHIVOS
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <button
-                  onClick={expandAll}
-                  title="Expandir todas las carpetas"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.62rem'
-                  }}
-                >
-                  <ChevronsDown size={12} />
-                </button>
-                <button
-                  onClick={collapseAll}
-                  title="Colapsar todas las carpetas"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.62rem'
-                  }}
-                >
-                  <ChevronsUp size={12} />
-                </button>
-                <button
-                  onClick={loadVaultData}
-                  disabled={refreshing}
-                  title="Recargar notas de la Bóveda"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: refreshing ? 'not-allowed' : 'pointer',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.62rem'
-                  }}
-                >
-                  <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
-                </button>
-              </div>
-            </div>
           </div>
-
-          {/* Vista en Árbol de Carpetas */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.35rem' }}>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                <RefreshCw size={16} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
-                <span>Cargando carpetas...</span>
-              </div>
-            ) : filteredNotes.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                No se encontraron notas
-              </div>
-            ) : (
-              renderFolderNode(tree)
-            )}
-          </div>
-        </div>
+        )}
 
         {/* PANEL DERECHO: Visor y Editor de la Nota Activa */}
         <div style={{
@@ -563,19 +598,44 @@ export default function VaultView() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0.75rem 1.25rem',
+                padding: '0.6rem 1rem',
                 borderBottom: '1px solid var(--border-color)',
                 background: 'rgba(0, 0, 0, 0.15)',
-                flexShrink: 0
+                flexShrink: 0,
+                gap: '8px'
               }}>
-                <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-high)', margin: 0 }}>
-                    {activeNote.title}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    <span>{activeNote.hub}</span>
-                    <span>•</span>
-                    <code>{activeNote.relative_path}</code>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Botón para alternar panel lateral de carpetas */}
+                  <button
+                    onClick={() => setShowSidebar((prev) => !prev)}
+                    title={showSidebar ? "Ocultar explorador de carpetas (Ctrl + B)" : "Mostrar explorador de carpetas (Ctrl + B)"}
+                    style={{
+                      background: !showSidebar ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                      border: !showSidebar ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color)',
+                      color: !showSidebar ? '#34d399' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '3px 5px',
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'var(--transition)'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-high)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = !showSidebar ? '#34d399' : 'var(--text-muted)'; }}
+                  >
+                    {showSidebar ? <PanelLeftClose size={13} /> : <PanelLeftOpen size={13} />}
+                  </button>
+
+                  <div>
+                    <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-high)', margin: 0 }}>
+                      {activeNote.title}
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      <span>{activeNote.hub}</span>
+                      <span>•</span>
+                      <code>{activeNote.relative_path}</code>
+                    </div>
                   </div>
                 </div>
 
@@ -683,8 +743,29 @@ export default function VaultView() {
               </div>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
-              Selecciona una nota para leer o editar
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', gap: '10px' }}>
+              {!showSidebar && (
+                <button
+                  onClick={() => setShowSidebar(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: '#34d399',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <PanelLeftOpen size={14} />
+                  <span>Mostrar Explorador de Notas</span>
+                </button>
+              )}
+              <span>Selecciona una nota para leer o editar</span>
             </div>
           )}
         </div>
