@@ -174,7 +174,9 @@ export default function AgentView() {
     try {
       await invoke('execute_agent_prompt', {
         prompt: textToSend,
+        contextId: activeContext.id,
         contextPath: activeContext.path,
+        skills: activeContext.skills || [],
         streamId,
         effort: effortMode
       });

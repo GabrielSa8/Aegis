@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -21,7 +21,9 @@ pub struct AgentStreamChunk {
 pub async fn execute_agent_prompt(
     app: AppHandle,
     prompt: String,
+    context_id: Option<String>,
     context_path: Option<String>,
+    skills: Option<Vec<String>>,
     stream_id: String,
     effort: Option<String>,
 ) -> Result<String, String> {
@@ -30,6 +32,45 @@ pub async fn execute_agent_prompt(
     } else {
         "agy"
     };
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let ctx_name = context_id.unwrap_or_else(|| "general".to_string());
+
+    // Crear workspace aislado para el contexto de Aegis (~/.local/share/aegis/contexts/<id>)
+    let ctx_workspace = Path::new(&home)
+        .join(".local/share/aegis/contexts")
+        .join(&ctx_name);
+    let skills_dir = ctx_workspace.join(".agents/skills");
+
+    if let Err(e) = std::fs::create_dir_all(&skills_dir) {
+        eprintln!("Aegis Context Warning: no se pudo crear skills_dir: {}", e);
+    } else {
+        // Limpiar symlinks previos en el contexto
+        if let Ok(entries) = std::fs::read_dir(&skills_dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                let _ = std::fs::remove_file(&p);
+                let _ = std::fs::remove_dir_all(&p);
+            }
+        }
+
+        // Crear symlinks únicamente para las skills seleccionadas en Aegis
+        if let Some(ref selected_skills) = skills {
+            let global_skills_dir = Path::new(&home).join(".agents/skills");
+            for skill in selected_skills {
+                let clean = skill.trim();
+                if clean.is_empty() {
+                    continue;
+                }
+                let src = global_skills_dir.join(clean);
+                let dst = skills_dir.join(clean);
+                if src.exists() {
+                    #[cfg(unix)]
+                    let _ = std::os::unix::fs::symlink(&src, &dst);
+                }
+            }
+        }
+    }
 
     let mut cmd = Command::new(agy_path);
     cmd.arg("-p")
@@ -44,11 +85,16 @@ pub async fn execute_agent_prompt(
         }
     }
 
-    if let Some(ref path) = context_path {
-        if Path::new(path).exists() {
-            cmd.current_dir(path);
+    // Determinar directorio de ejecución:
+    // Si context_path es HOME (/home/zabrielsa) o vacío, usamos ctx_workspace
+    // para evitar que agy cargue los 41 skills globales de ~/.agents/skills.
+    let target_dir = match context_path.as_deref() {
+        Some(p) if !p.trim().is_empty() && Path::new(p).exists() && p != home.as_str() => {
+            PathBuf::from(p)
         }
-    }
+        _ => ctx_workspace,
+    };
+    cmd.current_dir(&target_dir);
 
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());

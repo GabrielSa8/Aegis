@@ -28,9 +28,9 @@ export const DEFAULT_CONTEXTS = [
   {
     id: 'general',
     label: 'General',
-    path: '/home/zabrielsa',
+    path: '/home/zabrielsa/.local/share/aegis/contexts/general',
     effort: 'low',
-    skills: []
+    skills: ['obsidian-vault-architect', 'caveman']
   },
   {
     id: 'tadu',
