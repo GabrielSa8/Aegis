@@ -1,4 +1,5 @@
 mod agent;
+mod vault;
 
 #[tauri::command]
 fn ping() -> String {
@@ -11,7 +12,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             ping,
-            agent::execute_agent_prompt
+            agent::execute_agent_prompt,
+            vault::get_vault_notes,
+            vault::read_vault_note,
+            vault::save_vault_note,
+            vault::get_vault_tasks,
+            vault::toggle_vault_task,
+            vault::get_vault_stats
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
