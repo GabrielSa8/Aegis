@@ -2,6 +2,8 @@ mod agent;
 mod vault;
 mod devops;
 mod finances;
+mod sentinel;
+mod leisure;
 
 #[tauri::command]
 fn ping() -> String {
@@ -42,7 +44,14 @@ pub fn run() {
             finances::sqlite_toggle_timeline_event,
             finances::sqlite_delete_timeline_event,
             finances::sqlite_export_backup,
-            finances::sqlite_import_backup
+            finances::sqlite_import_backup,
+            sentinel::get_system_telemetry,
+            sentinel::get_system_alerts,
+            leisure::get_gaming_status,
+            leisure::launch_game,
+            leisure::get_knol_sheet,
+            leisure::update_knol_sheet,
+            leisure::roll_dice
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

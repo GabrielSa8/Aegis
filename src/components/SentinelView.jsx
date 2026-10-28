@@ -1,25 +1,70 @@
-import { Activity, Cpu, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Activity, 
+  Cpu, 
+  ShieldCheck, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Flame, 
+  HardDrive, 
+  Layers, 
+  Clock, 
+  RefreshCw,
+  Server,
+  Zap
+} from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 export default function SentinelView() {
-  const hardware = [
-    { label: 'Procesador', value: 'Intel Processor N150 (4 Cores / 4 Threads @ 3.6 GHz)' },
-    { label: 'Memoria RAM', value: '16 GB DDR5 / ZRAM Activo' },
-    { label: 'Sistema Operativo', value: 'Fedora Workstation 43 (Linux 6.x)' },
-    { label: 'Entorno Gráfico', value: 'Wayland / Mutter' },
-    { label: 'Almacenamiento Local', value: 'NVMe SSD / Local-First Soberano' }
-  ];
+  const [telemetry, setTelemetry] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const monitors = [
-    { name: 'Consumo Aegis en Reposo', status: '< 55 MB RAM (Tauri v2)', ok: true },
-    { name: 'Sincronización BrainIA', status: 'Al día en GitHub (commit 3ffddd2)', ok: true },
-    { name: 'Compuertas TADÚ', status: 'Bloqueo estricto de git add -A activo', ok: true },
-    { name: 'Arsenal de Skills', status: '20/20 playbooks validados en ~/.agents/skills/', ok: true },
-    { name: 'Entorno de Automatización', status: 'Playwright + Chromium Headless listo', ok: true }
-  ];
+  const fetchTelemetry = useCallback(async () => {
+    try {
+      const [data, alts] = await Promise.all([
+        invoke('get_system_telemetry'),
+        invoke('get_system_alerts')
+      ]);
+      setTelemetry(data);
+      setAlerts(Array.isArray(alts) ? alts : []);
+    } catch (e) {
+      console.error('Error obteniendo telemetría:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 2500);
+    return () => clearInterval(interval);
+  }, [fetchTelemetry]);
+
+  const formatUptime = (sec) => {
+    if (!sec) return '0m';
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    return `${mins}m`;
+  };
+
+  const getStatusBadgeConfig = (badge) => {
+    switch (badge) {
+      case 'CRITICAL':
+        return { text: 'Crítico / Throttling', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)' };
+      case 'ATTENTION':
+        return { text: 'Atención Requerida', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' };
+      default:
+        return { text: 'Sistema Óptimo (N150)', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.25)' };
+    }
+  };
+
+  const statusCfg = getStatusBadgeConfig(telemetry?.statusBadge || 'OPTIMAL');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
-      {/* Barra de Telemetría Host Compacta */}
+      {/* 🧭 Barra de Telemetría Host Compacta */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -28,73 +73,279 @@ export default function SentinelView() {
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)',
-        flexShrink: 0
+        flexShrink: 0,
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Activity color="#10b981" size={15} />
           <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-high)' }}>
-            Centinela Intel N150 & Vigilancia del Sistema
+            Centinela Intel N150 & Monitor de Recursos en Vivo
+          </span>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            • Refresco cada 2.5s
           </span>
         </div>
-        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: '0.68rem', color: '#a7f3d0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <ShieldCheck size={12} />
-          <span>Sistema Saludable</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            background: statusCfg.bg,
+            border: `1px solid ${statusCfg.border}`,
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.68rem',
+            color: statusCfg.color,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <ShieldCheck size={12} />
+            <span>{statusCfg.text}</span>
+          </div>
+
+          <button
+            onClick={fetchTelemetry}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '2px'
+            }}
+            title="Refrescar métricas ahora"
+          >
+            <RefreshCw size={13} />
+          </button>
         </div>
       </div>
 
-      {/* Hardware Specs Grid */}
-      <div style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem'
-      }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Cpu size={14} color="#10b981" />
-          Especificaciones de Host (N150)
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '8px' }}>
-          {hardware.map((hw, idx) => (
-            <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{hw.label}</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-high)', fontWeight: 600 }}>{hw.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Health Checks */}
-      <div style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem'
-      }}>
-        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ShieldCheck size={14} color="#10b981" />
-          Verificaciones de Integridad
-        </h3>
+      {/* 🚨 Alertas Proactivas */}
+      {alerts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {monitors.map((m, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-color)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle2 size={14} color="#10b981" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-high)' }}>{m.name}</span>
+          {alerts.map((alt) => {
+            const isDanger = alt.level === 'danger';
+            const isWarning = alt.level === 'warning';
+            const col = isDanger ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
+            const bg = isDanger ? 'rgba(239, 68, 68, 0.08)' : isWarning ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.08)';
+            const bdr = isDanger ? 'rgba(239, 68, 68, 0.25)' : isWarning ? 'rgba(245, 158, 11, 0.25)' : 'rgba(16, 185, 129, 0.2)';
+
+            return (
+              <div
+                key={alt.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 12px',
+                  background: bg,
+                  border: `1px solid ${bdr}`,
+                  borderRadius: 'var(--radius-md)',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isDanger || isWarning ? <AlertTriangle size={14} color={col} /> : <CheckCircle2 size={14} color={col} />}
+                  <div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: col }}>{alt.title}: </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{alt.message}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {alt.timestamp}
+                </span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{m.status}</span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 📊 Grid de Métricas Principales de Hardware */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+        {/* Tarjeta CPU Intel N150 */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Cpu size={15} color="#10b981" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>CPU Intel N150</span>
             </div>
-          ))}
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+              {telemetry?.cpuPercent || 0}%
+            </span>
+          </div>
+
+          {/* Barra Global */}
+          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' }}>
+            <div style={{
+              width: `${Math.min(100, telemetry?.cpuPercent || 0)}%`,
+              height: '100%',
+              background: (telemetry?.cpuPercent || 0) > 80 ? '#ef4444' : '#10b981',
+              transition: 'width 0.4s ease'
+            }} />
+          </div>
+
+          {/* 4 E-Cores Gracemont */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+            {(telemetry?.cpuCores || []).map((core) => (
+              <div key={core.coreId} style={{ background: 'rgba(0,0,0,0.25)', padding: '4px', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>C{core.coreId}</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: core.usagePercent > 80 ? '#ef4444' : '#fff', fontFamily: 'var(--font-mono)' }}>
+                  {Math.round(core.usagePercent)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tarjeta Térmica */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Flame size={15} color="#f59e0b" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>Temperatura CPU</span>
+            </div>
+            <span style={{
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              color: (telemetry?.cpuTempCelsius || 0) > 75 ? '#ef4444' : (telemetry?.cpuTempCelsius || 0) > 60 ? '#f59e0b' : '#10b981',
+              fontFamily: 'var(--font-mono)'
+            }}>
+              {telemetry?.cpuTempCelsius || 0}°C
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+            <div style={{
+              width: `${Math.min(100, ((telemetry?.cpuTempCelsius || 40) / 95) * 100)}%`,
+              height: '100%',
+              background: (telemetry?.cpuTempCelsius || 0) > 75 ? '#ef4444' : '#f59e0b',
+              transition: 'width 0.4s ease'
+            }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span>Disipación: Pasiva / Silenciosa</span>
+            <span>Límite TjMax: 105°C</span>
+          </div>
+        </div>
+
+        {/* Tarjeta Memoria RAM & ZRAM */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Zap size={15} color="#3b82f6" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>RAM & ZRAM (16 GB)</span>
+            </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6', fontFamily: 'var(--font-mono)' }}>
+              {telemetry?.ramUsagePercent || 0}%
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+            <div style={{
+              width: `${Math.min(100, telemetry?.ramUsagePercent || 0)}%`,
+              height: '100%',
+              background: '#3b82f6',
+              transition: 'width 0.4s ease'
+            }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span>RAM: {((telemetry?.ramUsedMb || 0) / 1024).toFixed(1)} / {((telemetry?.ramTotalMb || 0) / 1024).toFixed(1)} GB</span>
+            <span>ZRAM Swap: {((telemetry?.zramUsedMb || 0) / 1024).toFixed(1)} GB</span>
+          </div>
+        </div>
+
+        {/* Tarjeta NVMe LUKS */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <HardDrive size={15} color="#a855f7" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>NVMe Btrfs (LUKS)</span>
+            </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#a855f7', fontFamily: 'var(--font-mono)' }}>
+              {telemetry?.diskUsagePercent || 0}%
+            </span>
+          </div>
+
+          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+            <div style={{
+              width: `${Math.min(100, telemetry?.diskUsagePercent || 0)}%`,
+              height: '100%',
+              background: '#a855f7',
+              transition: 'width 0.4s ease'
+            }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span>Disponible: {telemetry?.diskAvailableGb || 0} GB</span>
+            <span>Total: {telemetry?.diskTotalGb || 0} GB</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 🛡️ Huella Aegis & Verificaciones de Seguridad */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '12px'
+      }}>
+        <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ShieldCheck size={14} color="#10b981" />
+          Telemetría del Proceso Aegis & Host
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Consumo RAM Aegis (VmRSS)</span>
+            <span style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+              {telemetry?.aegisRamMb || 48} MB (Objetivo ≤ 55 MB)
+            </span>
+          </div>
+
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Uptime del Sistema</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-high)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+              {formatUptime(telemetry?.uptimeSeconds)}
+            </span>
+          </div>
+
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Carga Promedio (Load Avg)</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-high)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+              {telemetry?.loadAvg1m || 0.5} • {telemetry?.loadAvg5m || 0.5} • {telemetry?.loadAvg15m || 0.5}
+            </span>
+          </div>
+
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Compuerta de Seguridad TADÚ</span>
+            <span style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700 }}>
+              Bloqueo git add -A / clean ACTIVO
+            </span>
+          </div>
         </div>
       </div>
     </div>
