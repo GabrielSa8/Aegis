@@ -78,6 +78,46 @@ export default function VaultView() {
   const textareaRef = useRef(null);
   const scrollPosRef = useRef({ ratio: 0, px: 0 });
 
+  // Ref sincronizada para evitar cierres obsoletos en clics rápidos sobre tareas
+  const noteContentRef = useRef(noteContent);
+  useEffect(() => {
+    noteContentRef.current = noteContent;
+  }, [noteContent]);
+
+  // Conmutación interactiva de tareas directamente en la nota (estilo Obsidian)
+  const handleToggleTaskInNote = async (lineNumber, currentCompleted) => {
+    if (!activeNote) return;
+    const targetCompleted = !currentCompleted;
+
+    const currentText = noteContentRef.current || noteContent;
+    const lines = currentText.split('\n');
+    const idx = lineNumber - 1;
+    if (idx < 0 || idx >= lines.length) return;
+
+    const oldLine = lines[idx];
+    if (targetCompleted) {
+      lines[idx] = oldLine.replace(/- \[\s\]/, '- [x]');
+    } else {
+      lines[idx] = oldLine.replace(/- \[[xX]\]/, '- [ ]');
+    }
+    const updatedContent = lines.join('\n');
+    noteContentRef.current = updatedContent;
+    setNoteContent(updatedContent);
+
+    try {
+      await invoke('save_vault_note', {
+        path: activeNote.path,
+        content: updatedContent
+      });
+      // Actualizar estadísticas de la bóveda silenciosamente en segundo plano
+      invoke('get_vault_stats').then((s) => setStats(s)).catch(() => {});
+    } catch (err) {
+      console.error('Error al guardar tarea en Obsidian:', err);
+      noteContentRef.current = currentText;
+      setNoteContent(currentText);
+    }
+  };
+
   // Set de carpetas desplegadas (estilo Obsidian)
   const [expandedFolders, setExpandedFolders] = useState(() => new Set([
     '00 Sistema',
@@ -695,6 +735,7 @@ export default function VaultView() {
                 ) : (
                   <MarkdownViewer
                     content={noteContent}
+                    onToggleTask={handleToggleTaskInNote}
                     onNavigateNote={(targetName) => {
                       const clean = targetName.trim().replace(/\.md$/, '').toLowerCase();
                       const found = notes.find((n) => n.title.toLowerCase() === clean);

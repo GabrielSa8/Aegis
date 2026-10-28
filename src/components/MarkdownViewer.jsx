@@ -13,7 +13,9 @@ import {
   Bug, 
   CheckCircle2, 
   HelpCircle, 
-  ListTree 
+  ListTree,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 // Configuraciones visuales para Callouts / Admonitions de Obsidian
@@ -239,7 +241,7 @@ function CalloutCard({ type, customTitle, bodyLines, onNavigateNote }) {
   );
 }
 
-export default function MarkdownViewer({ content, onNavigateNote }) {
+export default function MarkdownViewer({ content, onNavigateNote, onToggleTask }) {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
   const handleCopy = (text, index) => {
@@ -261,7 +263,8 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
       if (match.index > lastIndex) {
         result.push({
           type: 'text',
-          content: content.slice(lastIndex, match.index)
+          content: content.slice(lastIndex, match.index),
+          startIndex: lastIndex
         });
       }
 
@@ -271,13 +274,15 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
       if (lang === 'mermaid') {
         result.push({
           type: 'mermaid',
-          code
+          code,
+          startIndex: match.index
         });
       } else {
         result.push({
           type: 'code',
           lang,
-          code
+          code,
+          startIndex: match.index
         });
       }
 
@@ -287,7 +292,8 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
     if (lastIndex < content.length) {
       result.push({
         type: 'text',
-        content: content.slice(lastIndex)
+        content: content.slice(lastIndex),
+        startIndex: lastIndex
       });
     }
 
@@ -295,7 +301,9 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
   }, [content]);
 
   // Formateador de texto Markdown que agrupa Callouts y bloques multilínea
-  const renderTextSegment = (textBlock, blockIdx) => {
+  const renderTextSegment = (seg, blockIdx) => {
+    const textBlock = seg.content;
+    const segStartLine = content.slice(0, seg.startIndex || 0).split('\n').length;
     const lines = textBlock.split('\n');
     const elements = [];
     let i = 0;
@@ -411,16 +419,75 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
         continue;
       }
 
-      // Checkboxes de Obsidian
-      if (trimmed.startsWith('- [ ] ') || trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ')) {
-        const isDone = trimmed.startsWith('- [x] ') || trimmed.startsWith('- [X] ');
-        const taskText = trimmed.replace(/^-\s*\[[ xX]\]\s*/, '');
+      // Checkboxes de Obsidian interactivos
+      const taskMatch = line.match(/^(\s*)-\s*\[([ xX])\](?:\s+(.*)|\s*)$/);
+      if (taskMatch) {
+        const indentSpaces = taskMatch[1].length;
+        const indentLevel = Math.floor(indentSpaces / 2);
+        const isDone = taskMatch[2].toLowerCase() === 'x';
+        const taskText = taskMatch[3] || '';
+        const lineNum = segStartLine + i;
+
         elements.push(
-          <div key={`task-${blockIdx}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', margin: '2px 0' }}>
-            <span style={{ color: isDone ? '#10b981' : 'var(--text-muted)', fontWeight: 700 }}>
-              {isDone ? '☑' : '☐'}
-            </span>
-            <span style={{ textDecoration: isDone ? 'line-through' : 'none', color: isDone ? 'var(--text-muted)' : 'var(--text-high)' }}>
+          <div
+            key={`task-${blockIdx}-${i}`}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              fontSize: '0.84rem',
+              margin: '3px 0',
+              paddingLeft: indentLevel > 0 ? `${indentLevel * 1.25}rem` : 0,
+              lineHeight: '1.5'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onToggleTask && onToggleTask(lineNum, isDone)}
+              disabled={!onToggleTask}
+              title={onToggleTask ? (isDone ? 'Desmarcar tarea' : 'Marcar tarea como completada') : undefined}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: '2px',
+                margin: 0,
+                borderRadius: '4px',
+                cursor: onToggleTask ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isDone ? '#10b981' : 'var(--text-muted)',
+                transition: 'color 0.15s ease, transform 0.1s ease, background 0.15s ease',
+                outline: 'none',
+                flexShrink: 0,
+                marginTop: '1px'
+              }}
+              onMouseEnter={(e) => {
+                if (onToggleTask) {
+                  e.currentTarget.style.color = '#34d399';
+                  e.currentTarget.style.transform = 'scale(1.15)';
+                  e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (onToggleTask) {
+                  e.currentTarget.style.color = isDone ? '#10b981' : 'var(--text-muted)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              {isDone ? <CheckSquare size={16} /> : <Square size={16} />}
+            </button>
+            <span
+              style={{
+                flex: 1,
+                textDecoration: isDone ? 'line-through' : 'none',
+                color: isDone ? 'var(--text-muted)' : 'var(--text-high)',
+                opacity: isDone ? 0.65 : 1,
+                transition: 'color 0.15s ease, opacity 0.15s ease'
+              }}
+            >
               {formatInline(taskText, onNavigateNote)}
             </span>
           </div>
@@ -530,7 +597,7 @@ export default function MarkdownViewer({ content, onNavigateNote }) {
           );
         }
 
-        return renderTextSegment(seg.content, idx);
+        return renderTextSegment(seg, idx);
       })}
     </div>
   );
