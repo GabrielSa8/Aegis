@@ -22,6 +22,34 @@ import { listen } from '@tauri-apps/api/event';
 import ContextManagerModal, { DEFAULT_CONTEXTS } from './ContextManagerModal';
 import MarkdownViewer from './MarkdownViewer';
 
+function parseThoughtBlocks(rawContent) {
+  if (!rawContent) return { thoughts: '', cleanContent: '' };
+
+  const thoughtRegex = /<(?:thought|thinking)>([\s\S]*?)<\/(?:thought|thinking)>/gi;
+  const thoughts = [];
+  let match;
+  while ((match = thoughtRegex.exec(rawContent)) !== null) {
+    thoughts.push(match[1].trim());
+  }
+
+  // Si el stream sigue abierto dentro de un bloque de pensamiento
+  const openThoughtRegex = /<(?:thought|thinking)>([\s\S]*)$/i;
+  const openMatch = openThoughtRegex.exec(rawContent);
+  if (openMatch && !rawContent.includes('</thought>') && !rawContent.includes('</thinking>')) {
+    thoughts.push(openMatch[1].trim());
+  }
+
+  const cleanContent = rawContent
+    .replace(thoughtRegex, '')
+    .replace(openThoughtRegex, '')
+    .trim();
+
+  return {
+    thoughts: thoughts.join('\n\n'),
+    cleanContent
+  };
+}
+
 export default function AgentView({ zenMode, onToggleZenMode }) {
   // Carga de contextos desde localStorage con fallback
   const [contexts, setContexts] = useState(() => {
@@ -47,7 +75,20 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [expandThoughts, setExpandThoughts] = useState(false);
   const viewportRef = useRef(null);
+
+  // Atajo global Ctrl + O para alternar acordeón de razonamiento
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setExpandThoughts((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const [messages, setMessages] = useState([
     {
@@ -58,6 +99,25 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       timestamp: 'Ahora'
     }
   ]);
+
+  const handlePermissionResponse = async (streamId, input) => {
+    try {
+      await invoke('send_agent_input', { streamId, input });
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === streamId
+            ? {
+                ...msg,
+                permissionPrompt: null,
+                statusText: input === 'y' ? '✅ Permiso concedido. Continuando...' : '❌ Permiso denegado por el usuario.'
+              }
+            : msg
+        )
+      );
+    } catch (e) {
+      console.error('Error enviando respuesta a stdin:', e);
+    }
+  };
 
   // Al conmutar de contexto, adoptar su esfuerzo por defecto
   const handleSelectContext = (id) => {
@@ -95,16 +155,40 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         setMessages((prev) => {
           return prev.map((msg) => {
             if (msg.id === chunk.stream_id) {
-              if (chunk.event_type === 'delta') {
+              if (chunk.event_type === 'init') {
+                return {
+                  ...msg,
+                  statusText: chunk.content || 'Montando contexto y preparando modelo...',
+                  loading: true
+                };
+              } else if (chunk.event_type === 'delta') {
+                let currentStatus = msg.statusText;
+                if (chunk.step_type === 'thinking' || chunk.content.includes('<thought>') || chunk.content.includes('<thinking>')) {
+                  currentStatus = '🧠 Razonando proceso técnico...';
+                } else if (chunk.step_type === 'tool_call') {
+                  currentStatus = '⚙️ Ejecutando herramienta de sistema...';
+                } else if (msg.content && msg.content.length > 30) {
+                  currentStatus = '⚡ Transmitiendo respuesta...';
+                }
                 return {
                   ...msg,
                   content: (msg.content || '') + chunk.content,
+                  statusText: currentStatus,
+                  loading: true
+                };
+              } else if (chunk.event_type === 'permission') {
+                return {
+                  ...msg,
+                  permissionPrompt: chunk.content,
+                  statusText: '⚠️ Esperando confirmación de permiso...',
                   loading: true
                 };
               } else if (chunk.event_type === 'done') {
                 return {
                   ...msg,
                   loading: false,
+                  permissionPrompt: null,
+                  statusText: null,
                   duration: chunk.duration_seconds,
                   totalTokens: chunk.total_tokens,
                   inputTokens: chunk.input_tokens,
@@ -115,6 +199,8 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                   ...msg,
                   content: (msg.content ? msg.content + '\n\n' : '') + `⚠️ [Error agy]: ${chunk.content}`,
                   loading: false,
+                  permissionPrompt: null,
+                  statusText: null,
                   isError: true
                 };
               }
@@ -166,7 +252,8 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       context: activeContext.label,
       effort: effortMode,
       timestamp: timeStr,
-      loading: true
+      loading: true,
+      statusText: 'Iniciando agente y montando contexto...'
     };
 
     setMessages((prev) => [...prev, userMsg, assistantPlaceholder]);
@@ -338,6 +425,27 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
             </button>
           </div>
 
+          {/* Toggle Acordeón de Pensamiento */}
+          <button
+            onClick={() => setExpandThoughts((prev) => !prev)}
+            className="btn btn-secondary"
+            style={{
+              padding: '3px 8px',
+              fontSize: '0.68rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: expandThoughts ? '#c084fc' : 'var(--text-muted)',
+              borderColor: expandThoughts ? 'rgba(168, 85, 247, 0.4)' : 'var(--border-color)',
+              background: expandThoughts ? 'rgba(168, 85, 247, 0.12)' : 'transparent'
+            }}
+            title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
+          >
+            <Brain size={12} color={expandThoughts ? '#c084fc' : '#888'} />
+            <span>{expandThoughts ? 'Ocultar Razonamiento' : 'Ver Razonamiento'}</span>
+            <kbd style={{ fontSize: '0.58rem', opacity: 0.7 }}>Ctrl+O</kbd>
+          </button>
+
           {/* Limpiar Historial */}
           <button
             onClick={clearHistory}
@@ -368,6 +476,8 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       >
         {messages.map((m) => {
           const isUser = m.role === 'user';
+          const { thoughts, cleanContent } = !isUser ? parseThoughtBlocks(m.content) : { thoughts: '', cleanContent: m.content };
+
           return (
             <div
               key={m.id}
@@ -402,7 +512,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                   <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{m.timestamp}</span>
                   {!isUser && m.content && (
                     <button
-                      onClick={() => copyToClipboard(m.content, m.id)}
+                      onClick={() => copyToClipboard(cleanContent || m.content, m.id)}
                       style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
                       title="Copiar respuesta"
                     >
@@ -412,19 +522,117 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                 </div>
               </div>
 
-              {/* Contenido */}
+              {/* 🧠 Acordeón Colapsable de Razonamiento / Pensamiento */}
+              {!isUser && thoughts ? (
+                <details
+                  open={expandThoughts}
+                  style={{
+                    marginBottom: '8px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(168, 85, 247, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <summary
+                    style={{
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.72rem',
+                      color: '#c084fc',
+                      userSelect: 'none',
+                      background: 'rgba(168, 85, 247, 0.06)'
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                      <Brain size={12} color="#c084fc" />
+                      <span>Proceso de Razonamiento Técnico</span>
+                    </span>
+                    <kbd style={{ fontSize: '0.6rem', padding: '1px 5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', color: 'var(--text-muted)' }}>
+                      Ctrl + O
+                    </kbd>
+                  </summary>
+                  <div style={{
+                    padding: '8px 12px',
+                    borderTop: '1px solid rgba(168, 85, 247, 0.15)',
+                    color: 'var(--text-muted)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.72rem',
+                    lineHeight: '1.45',
+                    whiteSpace: 'pre-wrap',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    {thoughts}
+                  </div>
+                </details>
+              ) : null}
+
+              {/* ⚠️ Tarjeta de Permiso Interactivo CLI (Human-in-the-loop) */}
+              {!isUser && m.permissionPrompt && (
+                <div style={{
+                  margin: '8px 0',
+                  padding: '10px 12px',
+                  background: 'rgba(234, 179, 8, 0.1)',
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#facc15', fontWeight: 700, fontSize: '0.74rem' }}>
+                    <ShieldAlert size={13} color="#facc15" />
+                    <span>Permiso de Ejecución Solicitado</span>
+                  </div>
+                  <p style={{ margin: '6px 0', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', color: 'var(--text-high)', whiteSpace: 'pre-wrap' }}>
+                    {m.permissionPrompt}
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    <button
+                      onClick={() => handlePermissionResponse(m.id, 'y')}
+                      style={{
+                        padding: '3px 10px',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        background: '#10b981',
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✅ Permitir
+                    </button>
+                    <button
+                      onClick={() => handlePermissionResponse(m.id, 'n')}
+                      style={{
+                        padding: '3px 10px',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        color: 'var(--text-high)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ❌ Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Contenido / Markdown */}
               <div style={{
                 fontSize: '0.86rem',
                 lineHeight: '1.5',
-                whiteSpace: 'pre-wrap',
-                color: 'var(--text-high)',
-                fontFamily: isUser ? 'inherit' : 'var(--font-mono)'
+                color: 'var(--text-high)'
               }}>
-                {!isUser && !m.loading && m.content.includes('```mermaid') ? (
-                  <MarkdownViewer content={m.content} />
-                ) : (
+                {isUser ? (
+                  <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{m.content}</div>
+                ) : cleanContent ? (
                   <>
-                    {m.content}
+                    <MarkdownViewer content={cleanContent} />
                     {m.loading && (
                       <span style={{
                         display: 'inline-block',
@@ -437,7 +645,31 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                       }} />
                     )}
                   </>
-                )}
+                ) : m.loading ? (
+                  /* ⚡ Píldora de Carga Animada */
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    background: 'rgba(16, 185, 129, 0.08)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#a7f3d0',
+                    fontSize: '0.78rem'
+                  }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      border: '2px solid #10b981',
+                      borderTopColor: 'transparent',
+                      animation: 'spin 0.8s linear infinite'
+                    }} />
+                    <span>{m.statusText || 'Iniciando agente y montando contexto...'}</span>
+                  </div>
+                ) : null}
               </div>
 
               {/* Telemetría y Tokens al finalizar */}

@@ -20,6 +20,7 @@ pub fn run() {
             config::get_aegis_config,
             config::save_aegis_config,
             agent::execute_agent_prompt,
+            agent::send_agent_input,
             vault::get_vault_notes,
             vault::read_vault_note,
             vault::save_vault_note,

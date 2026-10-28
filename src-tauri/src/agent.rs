@@ -1,20 +1,49 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Emitter};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
+use tokio::sync::Mutex;
+
+static AGENT_STDIN_MAP: OnceLock<Arc<Mutex<HashMap<String, tokio::process::ChildStdin>>>> = OnceLock::new();
+
+fn get_stdin_map() -> &'static Arc<Mutex<HashMap<String, tokio::process::ChildStdin>>> {
+    AGENT_STDIN_MAP.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AgentStreamChunk {
     pub stream_id: String,
-    pub event_type: String, // "init", "delta", "step", "done", "error"
+    pub event_type: String, // "init", "delta", "step", "permission", "done", "error"
     pub content: String,
     pub step_type: Option<String>,
     pub duration_seconds: Option<f64>,
     pub input_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
     pub total_tokens: Option<u64>,
+}
+
+#[tauri::command]
+pub async fn send_agent_input(stream_id: String, input: String) -> Result<(), String> {
+    let map = get_stdin_map();
+    let mut lock = map.lock().await;
+    if let Some(stdin) = lock.get_mut(&stream_id) {
+        let payload = format!("{}\n", input.trim());
+        stdin
+            .write_all(payload.as_bytes())
+            .await
+            .map_err(|e| format!("Error escribiendo a stdin: {}", e))?;
+        stdin
+            .flush()
+            .await
+            .map_err(|e| format!("Error vaciando stdin: {}", e))?;
+        Ok(())
+    } else {
+        Err(format!("No hay proceso de agente activo para el stream {}", stream_id))
+    }
 }
 
 #[tauri::command]
@@ -119,6 +148,7 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
@@ -126,8 +156,26 @@ pub async fn execute_agent_prompt(
         .spawn()
         .map_err(|e| format!("Error iniciando agente ({:?}): {}", agent_binary, e))?;
 
+    if let Some(stdin) = child.stdin.take() {
+        let map = get_stdin_map();
+        map.lock().await.insert(stream_id.clone(), stdin);
+    }
+
     let stdout = child.stdout.take().ok_or("Fallo al capturar stdout")?;
     let stderr = child.stderr.take().ok_or("Fallo al capturar stderr")?;
+
+    // Emitir evento "init" inmediato para confirmar que el agente está trabajando
+    let init_chunk = AgentStreamChunk {
+        stream_id: stream_id.clone(),
+        event_type: "init".into(),
+        content: "Iniciando motor de razonamiento y montando contexto...".into(),
+        step_type: Some("init".into()),
+        duration_seconds: None,
+        input_tokens: None,
+        output_tokens: None,
+        total_tokens: None,
+    };
+    let _ = app.emit("agent-stream", init_chunk);
 
     // Streaming de stdout
     let app_stdout = app.clone();
@@ -189,18 +237,32 @@ pub async fn execute_agent_prompt(
                                     total_tokens,
                                 };
                                 let _ = app_stdout.emit("agent-stream", chunk);
+                                let map = get_stdin_map();
+                                map.lock().await.remove(&stream_id_stdout);
                             }
                         }
                         _ => {}
                     }
                 }
             } else {
-                // Si agy devuelve texto plano o advertencia
+                // Detectar si el CLI está solicitando confirmación interactiva (Human-in-the-loop)
+                let is_permission_prompt = line.contains("[y/N]")
+                    || line.contains("[Y/n]")
+                    || line.contains("Allow execution")
+                    || line.contains("Do you want to proceed")
+                    || line.contains("Permitir ejecuci");
+
+                let event_type = if is_permission_prompt {
+                    "permission".to_string()
+                } else {
+                    "delta".to_string()
+                };
+
                 let chunk = AgentStreamChunk {
                     stream_id: stream_id_stdout.clone(),
-                    event_type: "delta".into(),
+                    event_type,
                     content: format!("{}\n", line),
-                    step_type: None,
+                    step_type: if is_permission_prompt { Some("permission_request".into()) } else { None },
                     duration_seconds: None,
                     input_tokens: None,
                     output_tokens: None,
@@ -209,6 +271,8 @@ pub async fn execute_agent_prompt(
                 let _ = app_stdout.emit("agent-stream", chunk);
             }
         }
+        let map = get_stdin_map();
+        map.lock().await.remove(&stream_id_stdout);
     });
 
     // Monitoreo de stderr y terminación
@@ -221,6 +285,9 @@ pub async fn execute_agent_prompt(
             err_buffer.push_str(&line);
             err_buffer.push('\n');
         }
+
+        let map = get_stdin_map();
+        map.lock().await.remove(&stream_id_stderr);
 
         let status = child.wait().await;
         if let Ok(exit_status) = status {
