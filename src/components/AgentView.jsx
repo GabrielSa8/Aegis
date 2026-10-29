@@ -171,12 +171,24 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   // Nivel de esfuerzo / modelo activo ('low' = Flash, 'high' = Profundo)
   const [effortMode, setEffortMode] = useState(activeContext.effort || 'low');
   const [showContextModal, setShowContextModal] = useState(false);
+  const [operatorName, setOperatorName] = useState('Operador');
 
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [expandThoughts, setExpandThoughts] = useState(false);
   const viewportRef = useRef(null);
+
+  // Carga reactiva de perfil soberano
+  useEffect(() => {
+    invoke('load_app_config')
+      .then((cfg) => {
+        if (cfg?.profile?.name) {
+          setOperatorName(cfg.profile.name);
+        }
+      })
+      .catch((e) => console.error('Error cargando perfil en AgentView:', e));
+  }, []);
 
   // Historial de Sesiones Tácticas (v2.1.0)
   const [sessions, setSessions] = useState([]);
@@ -372,9 +384,9 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   };
 
   const quickMacros = [
-    { label: 'Auditar Git', text: 'Revisa status de git y ramas locales sin usar git add -A.' },
-    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del Hito actual.' },
-    { label: 'Flashcards AWS', text: 'Analiza la última nota de estudio de AWS y genera 3 flashcards atómicas.' },
+    { label: 'Auditar Git', text: 'Revisa status de git y ramas locales de los repositorios vigilados.' },
+    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' },
+    { label: 'Generar Flashcards', text: 'Analiza la última nota de estudio o certificación y genera 3 flashcards atómicas.' },
     { label: 'Revisar Pendientes', text: 'Inspecciona las tareas pendientes del proyecto activo y prioriza las 3 más críticas.' }
   ];
 
@@ -923,7 +935,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               {/* Header del Mensaje */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isUser ? '#a7f3d0' : '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isUser ? 'Gabriel' : 'Aegis Copilot'}
+                  {isUser ? (operatorName || 'Operador') : 'Aegis Copilot'}
                   {m.context && (
                     <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
                       {m.context}
