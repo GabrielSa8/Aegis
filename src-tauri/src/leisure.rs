@@ -69,20 +69,56 @@ fn to_base64(bytes: &[u8]) -> String {
 
 fn get_local_steam_cover(app_id: &str) -> Option<String> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let candidates = [
-        format!("{}/.local/share/Steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
-        format!("{}/.steam/steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
-        format!("{}/.local/share/Steam/appcache/librarycache/{}/header.jpg", home, app_id),
-        format!("{}/.steam/steam/appcache/librarycache/{}/header.jpg", home, app_id),
-        format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
+    let base_dirs = [
+        format!("{}/.local/share/Steam/appcache/librarycache/{}", home, app_id),
+        format!("{}/.steam/steam/appcache/librarycache/{}", home, app_id),
+        format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/appcache/librarycache/{}", home, app_id),
     ];
 
-    for path in &candidates {
-        if Path::new(path).exists() {
-            if let Ok(bytes) = fs::read(path) {
-                if !bytes.is_empty() {
-                    let b64 = to_base64(&bytes);
-                    return Some(format!("data:image/jpeg;base64,{}", b64));
+    for base in &base_dirs {
+        let p = Path::new(base);
+        if !p.exists() {
+            continue;
+        }
+
+        // Búsqueda directa en la raíz de la carpeta del appid
+        let direct_checks = [
+            p.join("library_600x900.jpg"),
+            p.join("library_capsule.jpg"),
+            p.join("header.jpg"),
+            p.join("library_header.jpg"),
+        ];
+
+        for candidate in &direct_checks {
+            if candidate.exists() {
+                if let Ok(bytes) = fs::read(candidate) {
+                    if !bytes.is_empty() {
+                        return Some(format!("data:image/jpeg;base64,{}", to_base64(&bytes)));
+                    }
+                }
+            }
+        }
+
+        // Búsqueda en subdirectorios con hash de Steam (ej. bbc6faab.../library_capsule.jpg)
+        if let Ok(entries) = fs::read_dir(p) {
+            for entry in entries.flatten() {
+                let sub = entry.path();
+                if sub.is_dir() {
+                    let sub_candidates = [
+                        sub.join("library_600x900.jpg"),
+                        sub.join("library_capsule.jpg"),
+                        sub.join("library_header.jpg"),
+                        sub.join("header.jpg"),
+                    ];
+                    for candidate in &sub_candidates {
+                        if candidate.exists() {
+                            if let Ok(bytes) = fs::read(candidate) {
+                                if !bytes.is_empty() {
+                                    return Some(format!("data:image/jpeg;base64,{}", to_base64(&bytes)));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
