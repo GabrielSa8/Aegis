@@ -17,12 +17,33 @@ import {
 } from 'lucide-react';
 import { getTodayLocalDateStr } from '../utils/storage';
 
-const DOMAIN_CONFIG = {
-  meli: { label: 'MELI Operaciones', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)' },
-  tadu: { label: 'TADÚ Software', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)' },
-  certs: { label: 'AWS & Certs', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' },
-  uni: { label: 'Universidad', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.3)' },
-  personal: { label: 'Personal & Ocio', color: '#f97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)' }
+const NORDIC_PALETTE = [
+  '#34d399', '#38bdf8', '#818cf8', '#a78bfa', '#f472b6',
+  '#fbbf24', '#fb923c', '#4ade80', '#2dd4bf', '#a3e635'
+];
+
+const DEFAULT_DOMAINS = {
+  work: { label: 'Trabajo & Operaciones', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)' },
+  software: { label: 'Software & Dev', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)' },
+  certs: { label: 'Estudios & Certs', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)' },
+  personal: { label: 'Personal & Ocio', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.12)', border: 'rgba(168, 85, 247, 0.3)' }
+};
+
+export const resolveDomainConfig = (domain) => {
+  if (DEFAULT_DOMAINS[domain]) return DEFAULT_DOMAINS[domain];
+  if (!domain) return { label: 'General', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.12)', border: 'rgba(148, 163, 184, 0.3)' };
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = (hash << 5) - hash + domain.charCodeAt(i);
+    hash |= 0;
+  }
+  const color = NORDIC_PALETTE[Math.abs(hash) % NORDIC_PALETTE.length];
+  return {
+    label: domain.charAt(0).toUpperCase() + domain.slice(1),
+    color,
+    bg: `${color}1f`,
+    border: `${color}4d`
+  };
 };
 
 const PRIORITY_BADGES = {
@@ -46,7 +67,7 @@ export default function TimelineView({
 
   // Form State
   const [title, setTitle] = useState('');
-  const [domain, setDomain] = useState('meli');
+  const [domain, setDomain] = useState('work');
   const [eventType, setEventType] = useState('shift');
   const [date, setDate] = useState(getTodayLocalDateStr());
   const [time, setTime] = useState('');
@@ -92,16 +113,28 @@ export default function TimelineView({
       });
   }, [events, domainFilter, statusFilter, rangeFilter, todayStr]);
 
+  // Descubrimiento dinámico de dominios operativos (Cero Hardcode)
+  const availableDomains = useMemo(() => {
+    const map = new Map();
+    Object.entries(DEFAULT_DOMAINS).forEach(([k, cfg]) => {
+      map.set(k, { key: k, count: 0, ...cfg });
+    });
+    (events || []).forEach(e => {
+      const d = e.domain || 'general';
+      if (!map.has(d)) {
+        map.set(d, { key: d, count: 0, ...resolveDomainConfig(d) });
+      }
+      map.get(d).count++;
+    });
+    return Array.from(map.values());
+  }, [events]);
+
   const stats = useMemo(() => {
     const list = events || [];
     return {
       total: list.length,
       pending: list.filter(e => e.status !== 'completed').length,
-      completed: list.filter(e => e.status === 'completed').length,
-      meli: list.filter(e => e.domain === 'meli').length,
-      tadu: list.filter(e => e.domain === 'tadu').length,
-      certs: list.filter(e => e.domain === 'certs').length,
-      uni: list.filter(e => e.domain === 'uni').length
+      completed: list.filter(e => e.status === 'completed').length
     };
   }, [events]);
 
@@ -169,30 +202,30 @@ export default function TimelineView({
           >
             Todos ({stats.total})
           </button>
-          {Object.entries(DOMAIN_CONFIG).map(([key, cfg]) => {
-            const count = stats[key] || 0;
-            const isActive = domainFilter === key;
+          {availableDomains.map((dom) => {
+            const count = dom.count;
+            const isActive = domainFilter === dom.key;
             return (
               <button
-                key={key}
-                onClick={() => setDomainFilter(key)}
+                key={dom.key}
+                onClick={() => setDomainFilter(dom.key)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px',
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-md)',
-                  background: isActive ? cfg.bg : 'transparent',
-                  border: isActive ? `1px solid ${cfg.color}` : '1px solid transparent',
-                  color: isActive ? cfg.color : 'var(--text-muted)',
+                  background: isActive ? dom.bg : 'transparent',
+                  border: isActive ? `1px solid ${dom.color}` : '1px solid transparent',
+                  color: isActive ? dom.color : 'var(--text-muted)',
                   fontSize: '0.74rem',
                   fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
                   transition: 'var(--transition)'
                 }}
               >
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cfg.color }} />
-                <span>{cfg.label}</span>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dom.color }} />
+                <span>{dom.label}</span>
                 <span style={{ opacity: 0.65, fontSize: '0.68rem' }}>({count})</span>
               </button>
             );
@@ -321,7 +354,7 @@ export default function TimelineView({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {filteredEvents.length > 0 ? (
           filteredEvents.map((evt) => {
-            const domainCfg = DOMAIN_CONFIG[evt.domain] || { label: evt.domain, color: '#9ca3af', bg: 'rgba(255,255,255,0.05)', border: 'var(--border-color)' };
+            const domainCfg = resolveDomainConfig(evt.domain);
             const priorityCfg = PRIORITY_BADGES[evt.priority] || PRIORITY_BADGES.medium;
             const relDay = getRelativeDaysLabel(evt.date);
             const isCompleted = evt.status === 'completed';
@@ -506,7 +539,7 @@ export default function TimelineView({
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="ej. Balanceo 4 islas C1/C2 o Sprint Review Backend"
+                  placeholder="ej. Lanzamiento de Versión, Cierre Mensual o Sprint Review"
                   required
                   autoFocus
                 />
@@ -516,11 +549,13 @@ export default function TimelineView({
                 <div className="form-group">
                   <label>Dominio</label>
                   <select value={domain} onChange={(e) => setDomain(e.target.value)}>
-                    <option value="meli">🟡 MELI Operaciones</option>
-                    <option value="tadu">🔵 TADÚ Software</option>
-                    <option value="certs">🟢 AWS & Certs</option>
-                    <option value="uni">🟣 Universidad</option>
-                    <option value="personal">🟠 Personal</option>
+                    <option value="work">💼 Trabajo & Operaciones</option>
+                    <option value="software">💻 Software & Dev</option>
+                    <option value="certs">📚 Estudios & Certs</option>
+                    <option value="personal">🌟 Personal & Ocio</option>
+                    {availableDomains.filter(d => !['work', 'software', 'certs', 'personal'].includes(d.key)).map(d => (
+                      <option key={d.key} value={d.key}>{d.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -559,7 +594,7 @@ export default function TimelineView({
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="ej. Hub Last Mile MELI, Localhost SAM, etc."
+                  placeholder="ej. Oficina Central, Sala Remota, Localhost, etc."
                 />
               </div>
 
@@ -604,10 +639,10 @@ export default function TimelineView({
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  background: DOMAIN_CONFIG[detailEvent.domain]?.color || '#9ca3af'
+                  background: resolveDomainConfig(detailEvent.domain).color
                 }} />
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  {DOMAIN_CONFIG[detailEvent.domain]?.label || detailEvent.domain}
+                  {resolveDomainConfig(detailEvent.domain).label}
                 </span>
               </div>
               <button

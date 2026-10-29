@@ -42,6 +42,58 @@ pub struct AegisConfig {
 
 pub fn default_config() -> AegisConfig {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let candidate_repos = vec![
+        GitRepoConfig {
+            id: "aegis".to_string(),
+            name: "Aegis Cockpit".to_string(),
+            path: format!("{}/Proyects/projects/Aegis", home),
+            role: "Cockpit Soberano (Tauri v2)".to_string(),
+            warning: None,
+        },
+        GitRepoConfig {
+            id: "tadu".to_string(),
+            name: "TADÚ Backend".to_string(),
+            path: format!("{}/Proyects/projects/TADU", home),
+            role: "Movilidad (AWS SAM / Lambda)".to_string(),
+            warning: Some("NUNCA usar git add -A ni git clean -fdx".to_string()),
+        },
+        GitRepoConfig {
+            id: "brainia".to_string(),
+            name: "BrainIA (Obsidian)".to_string(),
+            path: format!("{}/Documentos/Obsidian Vault", home),
+            role: "Bóveda Central de Conocimiento".to_string(),
+            warning: None,
+        },
+        GitRepoConfig {
+            id: "granja".to_string(),
+            name: "Granja Android".to_string(),
+            path: format!("{}/AndroidStudioProjects/granja", home),
+            role: "App Móvil (Kotlin/Compose)".to_string(),
+            warning: None,
+        },
+        GitRepoConfig {
+            id: "aegisTrack".to_string(),
+            name: "AegisTrack".to_string(),
+            path: format!("{}/Proyects/projects/AegisTrack", home),
+            role: "Tracker de Actividades".to_string(),
+            warning: None,
+        },
+        GitRepoConfig {
+            id: "booklet".to_string(),
+            name: "Booklet V2".to_string(),
+            path: format!("{}/Proyects/projects/Booklet_V2", home),
+            role: "Lector de Libros y Apuntes".to_string(),
+            warning: None,
+        },
+    ];
+
+    let mut git_repos = Vec::new();
+    for repo in candidate_repos {
+        if std::path::Path::new(&repo.path).exists() {
+            git_repos.push(repo);
+        }
+    }
+
     AegisConfig {
         vault_path: format!("{}/Documentos/Obsidian Vault", home),
         agent_type: "agy".to_string(),
@@ -49,50 +101,7 @@ pub fn default_config() -> AegisConfig {
         theme: "nordic-moss".to_string(),
         enable_gamemode: true,
         enable_gamescope_fsr: false,
-        git_repos: vec![
-            GitRepoConfig {
-                id: "tadu".to_string(),
-                name: "TADÚ Backend".to_string(),
-                path: format!("{}/Proyects/projects/TADU", home),
-                role: "Movilidad (AWS SAM / Lambda)".to_string(),
-                warning: Some("NUNCA usar git add -A ni git clean -fdx".to_string()),
-            },
-            GitRepoConfig {
-                id: "aegis".to_string(),
-                name: "Aegis".to_string(),
-                path: format!("{}/Proyects/projects/Aegis", home),
-                role: "Cockpit Soberano (Tauri v2)".to_string(),
-                warning: None,
-            },
-            GitRepoConfig {
-                id: "brainia".to_string(),
-                name: "BrainIA (Obsidian)".to_string(),
-                path: format!("{}/Documentos/Obsidian Vault", home),
-                role: "Bóveda Central de Conocimiento".to_string(),
-                warning: None,
-            },
-            GitRepoConfig {
-                id: "granja".to_string(),
-                name: "Granja Android".to_string(),
-                path: format!("{}/AndroidStudioProjects/granja", home),
-                role: "App Móvil (Kotlin/Compose)".to_string(),
-                warning: None,
-            },
-            GitRepoConfig {
-                id: "aegisTrack".to_string(),
-                name: "AegisTrack".to_string(),
-                path: format!("{}/Proyects/projects/AegisTrack", home),
-                role: "Tracker de Actividades".to_string(),
-                warning: None,
-            },
-            GitRepoConfig {
-                id: "booklet".to_string(),
-                name: "Booklet V2".to_string(),
-                path: format!("{}/Proyects/projects/Booklet_V2", home),
-                role: "Lector de Libros y Apuntes".to_string(),
-                warning: None,
-            },
-        ],
+        git_repos,
     }
 }
 

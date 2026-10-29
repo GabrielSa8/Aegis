@@ -10,13 +10,20 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-const DOMAIN_COLORS = {
-  meli: '#f59e0b',
-  tadu: '#3b82f6',
-  certs: '#10b981',
-  uni: '#a855f7',
-  personal: '#f97316'
-};
+const NORDIC_PALETTE = [
+  '#34d399', '#38bdf8', '#818cf8', '#a78bfa', '#f472b6',
+  '#fbbf24', '#fb923c', '#4ade80', '#2dd4bf', '#a3e635'
+];
+
+function getDomainColor(domain) {
+  if (!domain) return '#94a3b8';
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = (hash << 5) - hash + domain.charCodeAt(i);
+    hash |= 0;
+  }
+  return NORDIC_PALETTE[Math.abs(hash) % NORDIC_PALETTE.length];
+}
 
 function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelect }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -153,8 +160,8 @@ function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelec
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: DOMAIN_COLORS[e.domain] || '#9ca3af',
-                      boxShadow: `0 0 5px ${DOMAIN_COLORS[e.domain] || '#9ca3af'}`
+                      background: getDomainColor(e.domain),
+                      boxShadow: `0 0 5px ${getDomainColor(e.domain)}`
                     }}
                   />
                 ))}

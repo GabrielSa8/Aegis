@@ -65,19 +65,9 @@ const CURATED_EMOJIS = [
 const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
 const STORAGE_MATRIX_KEY = 'aegis_matrix_quadrant_config';
 
-// Presets iniciales inteligentes (fallback solo si no hay personalización explícita del usuario)
+// Presets base (fallback si no hay personalización explícita del usuario)
 const DEFAULT_PRESETS = {
   'Aegis': { icon: '🛡️', colorId: 'emerald' },
-  'TADU - Plataforma de Movilidad': { icon: '🚕', colorId: 'amber' },
-  'TADÚ': { icon: '🚕', colorId: 'amber' },
-  'Granja - App Android': { icon: '📱', colorId: 'sky' },
-  'Granja Android': { icon: '📱', colorId: 'sky' },
-  'AegisTrack': { icon: '📡', colorId: 'purple' },
-  'Booklet V2': { icon: '📖', colorId: 'pink' },
-  'MOC - Operaciones Mercado Libre': { icon: '📦', colorId: 'yellow' },
-  'Ambulancias': { icon: '🚑', colorId: 'yellow' },
-  'Bitacora_Proyectos': { icon: '🧠', colorId: 'indigo' },
-  'Bitácora & Cerebro': { icon: '🧠', colorId: 'indigo' },
 };
 
 // Generador determinista de color basado en hash de texto para CUALQUIER proyecto desconocido

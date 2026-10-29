@@ -27,45 +27,31 @@ export const AVAILABLE_SKILLS = [
 export const DEFAULT_CONTEXTS = [
   {
     id: 'general',
-    label: 'General',
+    label: 'General & Bóveda',
     path: '',
     effort: 'low',
     skills: ['obsidian-vault-architect', 'caveman']
   },
   {
-    id: 'tadu',
-    label: 'TADÚ (SAM)',
+    id: 'backend',
+    label: 'Backend & APIs',
     path: '',
     effort: 'high',
-    skills: ['tadu-backend', 'clean-code-security', 'tdd-practitioner']
+    skills: ['clean-code-security', 'tdd-practitioner', 'superpowers']
   },
   {
-    id: 'meli',
-    label: 'MELI Hub',
+    id: 'frontend',
+    label: 'Frontend & UI/UX',
+    path: '',
+    effort: 'high',
+    skills: ['frontend-design', 'impeccable', 'react-ts-performance']
+  },
+  {
+    id: 'research',
+    label: 'Investigación & Estudio',
     path: '',
     effort: 'low',
-    skills: ['obsidian-vault-architect']
-  },
-  {
-    id: 'granja',
-    label: 'Granja (Kotlin)',
-    path: '',
-    effort: 'high',
-    skills: ['jetpack-compose-patterns', 'clean-code-security']
-  },
-  {
-    id: 'vault',
-    label: 'BrainIA (Bóveda)',
-    path: '',
-    effort: 'low',
-    skills: ['obsidian-vault-architect', 'feynman-technique-mentor']
-  },
-  {
-    id: 'aegis',
-    label: 'Aegis Core',
-    path: '',
-    effort: 'high',
-    skills: ['react-ts-performance', 'impeccable', 'frontend-design']
+    skills: ['obsidian-vault-architect', 'feynman-technique-mentor', 'spaced-repetition-generator']
   }
 ];
 

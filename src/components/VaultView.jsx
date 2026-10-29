@@ -32,14 +32,6 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import MarkdownViewer from './MarkdownViewer';
 
-const VAULT_HUBS = [
-  '00 Sistema',
-  '01 Operaciones MELI',
-  '02 Proyectos de Software',
-  '03 Personal y Ocio',
-  '04 Estudios y Certificaciones'
-];
-
 const NOTE_TEMPLATES = {
   basic: {
     label: 'Nota General',
@@ -114,7 +106,7 @@ fecha_actualizacion: ${new Date().toISOString().split('T')[0]}
 - [ ] Fase 2: Implementación de componentes core
 
 ---
-*Navegación:* [[INICIO]] | [[MOC - Proyectos de Software]]
+*Navegación:* [[INICIO]]
 `
   },
   study: {
@@ -142,7 +134,7 @@ Q:: ¿Concepto 1?
 A:: Explicación atómica.
 
 ---
-*Navegación:* [[INICIO]] | [[MOC - Estudios y Certificaciones]]
+*Navegación:* [[INICIO]]
 `
   }
 };
@@ -233,18 +225,50 @@ export default function VaultView() {
   // Estructura de carpetas en disco
   const [vaultFolders, setVaultFolders] = useState([]);
 
+  // Hubs descubiertos 100% dinámicamente de carpetas y notas de la bóveda (Cero Hardcode)
+  const vaultHubs = useMemo(() => {
+    const hubSet = new Set();
+    if (Array.isArray(vaultFolders)) {
+      vaultFolders.forEach((f) => {
+        const top = f.split('/')[0];
+        if (top) hubSet.add(top);
+      });
+    }
+    if (Array.isArray(notes)) {
+      notes.forEach((n) => {
+        if (n.hub && n.hub !== 'General' && n.hub !== 'Raíz') hubSet.add(n.hub);
+      });
+    }
+    return Array.from(hubSet).sort();
+  }, [vaultFolders, notes]);
+
   // Modales de Creación
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
-  const [newNoteHub, setNewNoteHub] = useState('02 Proyectos de Software');
+  const [newNoteHub, setNewNoteHub] = useState('');
   const [newNoteTemplate, setNewNoteTemplate] = useState('basic');
   const [newNoteSubfolderChoice, setNewNoteSubfolderChoice] = useState(''); // '' = raíz, string = existente, '__custom__' = nueva
   const [customSubfolder, setCustomSubfolder] = useState('');
 
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderHub, setNewFolderHub] = useState('02 Proyectos de Software');
+  const [newFolderHub, setNewFolderHub] = useState('');
   const [newFolderParent, setNewFolderParent] = useState('');
+
+  // Sincronizar selección inicial de Hubs cuando se cargue la bóveda
+  useEffect(() => {
+    if (vaultHubs.length > 0) {
+      if (!newNoteHub || !vaultHubs.includes(newNoteHub)) {
+        setNewNoteHub(vaultHubs[0]);
+      }
+      if (!newFolderHub || !vaultHubs.includes(newFolderHub)) {
+        setNewFolderHub(vaultHubs[0]);
+      }
+      if (expandedFolders.size === 0) {
+        setExpandedFolders(new Set(vaultHubs));
+      }
+    }
+  }, [vaultHubs]);
 
   // Atajo de teclado para alternar explorador de archivos (Ctrl + B / Cmd + B)
   useEffect(() => {
@@ -270,14 +294,7 @@ export default function VaultView() {
   }, [noteContent]);
 
   // Set de carpetas desplegadas (estilo Obsidian)
-  const [expandedFolders, setExpandedFolders] = useState(() => new Set([
-    '00 Sistema',
-    '01 Operaciones MELI',
-    '02 Proyectos de Software',
-    '03 Personal y Ocio',
-    '04 Estudios y Certificaciones',
-    '04 Estudios y Certs'
-  ]));
+  const [expandedFolders, setExpandedFolders] = useState(() => new Set());
 
   const loadNote = useCallback(async (note) => {
     setActiveNote(note);
@@ -941,7 +958,7 @@ export default function VaultView() {
                   style={{ fontSize: '0.68rem', padding: '3px 20px 3px 6px', width: '100%' }}
                 >
                   <option value="Todos">Todos los Hubs</option>
-                  {VAULT_HUBS.map((h) => (
+                  {vaultHubs.map((h) => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
@@ -1428,7 +1445,7 @@ export default function VaultView() {
                     setCustomSubfolder('');
                   }}
                 >
-                  {VAULT_HUBS.map((h) => (
+                  {vaultHubs.map((h) => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>
@@ -1555,7 +1572,7 @@ export default function VaultView() {
                     setNewFolderParent('');
                   }}
                 >
-                  {VAULT_HUBS.map((h) => (
+                  {vaultHubs.map((h) => (
                     <option key={h} value={h}>{h}</option>
                   ))}
                 </select>

@@ -166,8 +166,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             "Entretenimiento & Ocio",
             "Suscripciones",
             "Educación & Certs",
-            "Nómina MELI",
-            "Ingresos TADÚ",
+            "Nómina & Sueldos",
+            "Ingresos Profesionales",
             "Otros",
         ];
         for cat in defaults {
@@ -186,64 +186,52 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
     if event_count == 0 {
         let seed_events = [
             (
-                "evt_meli_cierre",
-                "Cierre de Ciclo Facturación MELI",
-                "meli",
+                "evt_demo_cierre",
+                "Cierre Mensual & Conciliación",
+                "work",
                 "cierre_ciclo",
                 "2026-11-22",
                 Some("18:00"),
-                Some("Hub Last Mile MELI"),
-                Some("Corte financiero quincenal, exportación de horas extra y conciliación."),
+                Some("Oficina / Entorno Principal"),
+                Some("Corte de ciclo mensual, conciliación financiera y balance."),
                 "pending",
                 "high",
             ),
             (
-                "evt_meli_layout",
-                "Auditoría Layout & Ambulancias",
-                "meli",
-                "shift",
-                "2026-10-28",
-                Some("06:30"),
-                Some("Nave Operativa C1/C2"),
-                Some("Balanceo de 4 islas, control HandHeld/BPP y rescate de paquetes."),
-                "pending",
-                "medium",
-            ),
-            (
-                "evt_tadu_sprint",
-                "Sprint Review SAM Backend & DynamoDB",
-                "tadu",
+                "evt_demo_sprint",
+                "Sprint Review & Release",
+                "software",
                 "sprint",
                 "2026-10-29",
                 Some("10:00"),
-                Some("Localhost / AWS SAM"),
-                Some("Tests pytest de latencia en Lambdas Python 3.12 y validación Single-Table."),
+                Some("Entorno de Desarrollo"),
+                Some("Revisión de arquitectura, validación de tests y despliegue."),
                 "pending",
                 "high",
             ),
             (
-                "evt_aws_exam",
-                "Simulacro Certificación AWS Developer",
+                "evt_demo_exam",
+                "Sesión de Estudio & Certificación",
                 "certs",
                 "exam",
                 "2026-10-31",
                 Some("16:00"),
-                Some("Estudio Personal"),
-                Some("Simulacro cronometrado 65 preguntas y repaso de flashcards en Obsidian."),
+                Some("Bóveda de Conocimiento"),
+                Some("Repaso de flashcards y simulación de prueba técnica."),
                 "pending",
                 "high",
             ),
             (
-                "evt_uni_entrega",
-                "Entrega Proyecto Modular Ingeniería",
-                "uni",
-                "exam",
+                "evt_demo_personal",
+                "Revisión de Objetivos Personales",
+                "personal",
+                "review",
                 "2026-11-05",
-                Some("23:59"),
-                Some("Portal Universidad"),
-                Some("Documentación de arquitectura, diagramas C4 y código fuente."),
+                Some("20:00"),
+                Some("Personal"),
+                Some("Planificación quincenal y auditoría de hábitos."),
                 "pending",
-                "high",
+                "medium",
             ),
         ];
 
@@ -264,11 +252,10 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
 
     if pm_count == 0 {
         let default_methods = [
-            ("bbva_debito", "BBVA Débito", "debit", "#004481", None, None, 4850.0, 0.0),
-            ("bbva_oro", "BBVA Oro Crédito", "credit", "#10b981", Some(5), Some(25), 0.0, 25000.0),
-            ("nu_credito", "Nu Tarjeta Garantizada", "credit", "#820ad1", Some(12), Some(2), 0.0, 15000.0),
-            ("mp_wallet", "Mercado Pago Wallet", "debit", "#009ee3", None, None, 1250.0, 0.0),
-            ("cash", "Efectivo Físico", "cash", "#788882", None, None, 600.0, 0.0),
+            ("debito_principal", "Tarjeta Débito Principal", "debit", "#004481", None, None, 0.0, 0.0),
+            ("credito_principal", "Tarjeta Crédito Principal", "credit", "#10b981", Some(5), Some(25), 0.0, 20000.0),
+            ("billetera_digital", "Billetera Digital", "debit", "#009ee3", None, None, 0.0, 0.0),
+            ("cash", "Efectivo", "cash", "#788882", None, None, 0.0, 0.0),
         ];
 
         for pm in default_methods {
@@ -288,9 +275,9 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
 
     if rec_count == 0 {
         let default_recurring = [
-            ("rec_internet", "Internet Fibra Óptica 300MB", 650.0, "Servicios (Luz, Internet, etc.)", "bbva_debito", "monthly", 10, 0),
-            ("rec_spotify", "Spotify Dúo", 199.0, "Suscripciones", "nu_credito", "monthly", 15, 1),
-            ("rec_renta", "Aportación Renta / Hogar", 4000.0, "Vivienda & Renta", "bbva_debito", "monthly", 1, 0),
+            ("rec_internet", "Internet & Conectividad", 500.0, "Servicios (Luz, Internet, etc.)", "debito_principal", "monthly", 10, 0),
+            ("rec_servicios", "Suscripción Digital", 150.0, "Suscripciones", "credito_principal", "monthly", 15, 1),
+            ("rec_renta", "Vivienda / Renta", 3000.0, "Vivienda & Renta", "debito_principal", "monthly", 1, 0),
         ];
 
         for rec in default_recurring {
@@ -314,15 +301,15 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             (id, description, payment_method, total_amount, total_installments, remaining_installments, monthly_amount, start_date, next_due_date, status, category)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
-                "msi_monitor",
-                "Monitor Portátil USB-C 1080p",
-                "nu_credito",
-                3600.0,
+                "msi_equipo",
+                "Equipo de Trabajo",
+                "credito_principal",
+                3000.0,
                 6,
-                4,
-                600.0,
+                3,
+                500.0,
                 "2026-08-15",
-                "2026-11-02",
+                "2026-11-05",
                 "active",
                 "Educación & Certs"
             ],
