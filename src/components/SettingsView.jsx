@@ -135,12 +135,15 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     }
   };
 
-  // Cambio de escala de interfaz (Zoom DPI)
+  // Cambio de escala de interfaz (Escalado DPI armónico y proporcional)
   const handleScaleChange = (scale) => {
     if (!config) return;
-    const updated = { ...config, uiScale: scale };
+    const s = Number(scale) || 1.0;
+    const updated = { ...config, uiScale: s };
     setConfig(updated);
-    document.documentElement.style.zoom = String(scale);
+    document.documentElement.style.zoom = '';
+    document.documentElement.style.fontSize = `${16 * s}px`;
+    document.documentElement.style.setProperty('--ui-scale', String(s));
     invoke('save_aegis_config', { config: updated }).catch(console.error);
   };
 
@@ -226,26 +229,33 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      width: '100%',
       height: '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
       background: 'var(--bg-main)',
       color: 'var(--text-high)',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      boxSizing: 'border-box'
     }}>
       {/* 🛡️ Header de Configuración */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 16px',
+        padding: '0.65rem 1.25rem',
         borderBottom: '1px solid var(--border-color)',
         background: 'rgba(0,0,0,0.25)',
-        flexShrink: 0
+        flexShrink: 0,
+        width: '100%',
+        boxSizing: 'border-box',
+        gap: '0.75rem'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sliders size={18} color="var(--primary)" />
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#fff' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+          <Sliders size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#fff', whiteSpace: 'nowrap' }}>
                 Centro de Configuración & Soberanía del Sistema
               </h2>
               <span style={{
@@ -253,38 +263,39 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
                 fontWeight: 700,
                 color: 'var(--primary)',
                 background: 'var(--primary-glow)',
-                padding: '1px 6px',
+                padding: '0.1rem 0.4rem',
                 borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--primary)'
+                border: '1px solid var(--primary)',
+                whiteSpace: 'nowrap'
               }}>
                 v2.8.0
               </span>
             </div>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', whiteSpace: 'nowrap' }}>
               Ajustes globales, identidad, rutas de datos soberanas y presupuesto de recursos.
             </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           {saveStatus && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
               {saveStatus}
             </span>
           )}
           <button
             onClick={handleSaveConfig}
             className="btn btn-primary"
-            style={{ padding: '4px 12px', fontSize: '0.72rem' }}
+            style={{ padding: '0.35rem 0.85rem', fontSize: '0.74rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
           >
-            <Save size={12} />
+            <Save size={13} />
             <span>Guardar Todo</span>
           </button>
           {onClose && (
             <button
               onClick={onClose}
               className="btn btn-secondary btn-icon"
-              style={{ width: '28px', height: '28px' }}
+              style={{ width: '1.75rem', height: '1.75rem' }}
               title="Cerrar (Esc)"
             >
               <X size={14} />
@@ -294,16 +305,16 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
       </div>
 
       {/* 🧭 Panel Dividido: Subnavegación Lateral + Contenido */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
         {/* Barra Lateral de Secciones */}
         <div style={{
-          width: '210px',
+          width: '13.5rem',
           borderRight: '1px solid var(--border-color)',
           background: 'rgba(0,0,0,0.15)',
-          padding: '8px',
+          padding: '0.5rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '3px',
+          gap: '0.25rem',
           flexShrink: 0
         }}>
           {sections.map(sec => {
@@ -570,36 +581,41 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
               </div>
 
               {/* Escala de Interfaz / Zoom DPI */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '4px' }}>
-                  Escala de Interfaz (Zoom DPI)
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '0.25rem' }}>
+                  Escala de Interfaz (Zoom DPI Proporcional)
                 </span>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 10px 0' }}>
-                  Ajusta la densidad visual de toda la aplicación sin distorsionar la tipografía nativa.
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 0.65rem 0' }}>
+                  Ajusta la densidad visual y tipográfica sin desbordar los límites de la ventana.
                 </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {[
                     { label: '90% Compacto', val: 0.9 },
                     { label: '100% Estándar', val: 1.0 },
-                    { label: '110% Cómodo', val: 1.1 }
+                    { label: '110% Cómodo', val: 1.1 },
+                    { label: '120% Amplio', val: 1.2 }
                   ].map(scale => {
-                    const isSelected = (config.uiScale || 1.0) === scale.val;
+                    const isSelected = Math.abs((config.uiScale || 1.0) - scale.val) < 0.02;
                     return (
                       <button
                         key={scale.val}
                         onClick={() => handleScaleChange(scale.val)}
                         style={{
-                          padding: '6px 14px',
+                          padding: '0.45rem 0.85rem',
                           borderRadius: 'var(--radius-sm)',
                           background: isSelected ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
                           border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
                           color: isSelected ? 'var(--text-high)' : 'var(--text-muted)',
                           fontSize: '0.74rem',
                           fontWeight: isSelected ? 700 : 500,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
                         }}
                       >
-                        {scale.label}
+                        {isSelected && <Check size={12} color="var(--primary)" />}
+                        <span>{scale.label}</span>
                       </button>
                     );
                   })}

@@ -21,6 +21,13 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
 
+  const applyUiScale = (scale) => {
+    const s = Number(scale) || 1.0;
+    document.documentElement.style.zoom = '';
+    document.documentElement.style.fontSize = `${16 * s}px`;
+    document.documentElement.style.setProperty('--ui-scale', String(s));
+  };
+
   // Cargar tema y escala desde configuración en arranque
   useEffect(() => {
     invoke('get_aegis_config')
@@ -29,9 +36,7 @@ export default function App() {
           setCurrentTheme(cfg.theme);
           document.documentElement.setAttribute('data-theme', cfg.theme);
         }
-        if (cfg?.uiScale) {
-          document.documentElement.style.zoom = String(cfg.uiScale);
-        }
+        applyUiScale(cfg?.uiScale);
       })
       .catch(() => {});
   }, []);
@@ -111,8 +116,10 @@ export default function App() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      width: '100vw',
-      height: '100vh',
+      width: '100%',
+      height: '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
       background: 'var(--bg-main)',
       color: 'var(--text-high)',
       overflow: 'hidden',
@@ -173,10 +180,13 @@ export default function App() {
       <main style={{
         flex: 1,
         minHeight: 0,
-        overflowY: activeTab === 'agent' ? 'hidden' : 'auto',
+        overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault') ? 'hidden' : 'auto',
+        overflowX: 'hidden',
         padding: zenMode 
           ? '0.5rem 0.75rem' 
-          : (activeTab === 'agent' ? '0.5rem 0.85rem' : '0.65rem 1rem'),
+          : (activeTab === 'settings' 
+              ? '0' 
+              : (activeTab === 'agent' ? '0.5rem 0.85rem' : '0.65rem 1rem')),
         display: 'flex',
         flexDirection: 'column'
       }}>
