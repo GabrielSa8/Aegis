@@ -1,5 +1,15 @@
 import React from 'react';
 
+const renderIcon = (iconItem, size = 11) => {
+  if (!iconItem) return null;
+  if (React.isValidElement(iconItem)) return iconItem;
+  if (typeof iconItem === 'function' || (typeof iconItem === 'object' && iconItem !== null && iconItem.$$typeof)) {
+    const IconComp = iconItem;
+    return <IconComp size={size} />;
+  }
+  return iconItem;
+};
+
 /**
  * TacticalBadge — Badge táctico con soporte de pulso reactivo y variantes de estado.
  * Diseñado bajo la Doctrina Aegis: 100% tokens temáticos.
@@ -19,6 +29,12 @@ export function TacticalBadge({
     xs: { padding: '1px 5px', fontSize: '10px', height: '18px', gap: '3px' },
     sm: { padding: '2px 7px', fontSize: '11px', height: '22px', gap: '5px' },
     md: { padding: '4px 9px', fontSize: '12px', height: '26px', gap: '6px' }
+  };
+
+  const iconSizes = {
+    xs: 10,
+    sm: 11,
+    md: 13
   };
 
   const getVariantStyles = () => {
@@ -65,6 +81,7 @@ export function TacticalBadge({
   };
 
   const currentSize = sizeStyles[size] || sizeStyles.sm;
+  const currentIconSize = iconSizes[size] || 11;
   const currentVariant = getVariantStyles();
 
   return (
@@ -100,7 +117,7 @@ export function TacticalBadge({
           }}
         />
       )}
-      {icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>}
+      {icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{renderIcon(icon, currentIconSize)}</span>}
       {children && <span>{children}</span>}
     </span>
   );

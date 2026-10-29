@@ -1,11 +1,22 @@
 import React from 'react';
 
+const renderIcon = (iconItem, size = 12) => {
+  if (!iconItem) return null;
+  if (React.isValidElement(iconItem)) return iconItem;
+  if (typeof iconItem === 'function' || (typeof iconItem === 'object' && iconItem !== null && iconItem.$$typeof)) {
+    const IconComp = iconItem;
+    return <IconComp size={size} />;
+  }
+  return iconItem;
+};
+
 /**
  * TabsBar — Selector táctico horizontal de pestañas y filtros.
  * Evita duplicar decenas de líneas de navegación en cada vista.
  */
 export function TabsBar({
   tabs = [],
+  items,
   activeTab,
   onChange,
   variant = 'pills',
@@ -20,6 +31,8 @@ export function TabsBar({
   };
 
   const currentSize = sizeStyles[size] || sizeStyles.sm;
+  const iconSize = size === 'xs' ? 11 : 13;
+  const allTabs = Array.isArray(tabs) && tabs.length > 0 ? tabs : (Array.isArray(items) ? items : []);
 
   return (
     <div
@@ -36,7 +49,7 @@ export function TabsBar({
         ...style
       }}
     >
-      {tabs.map((tab) => {
+      {allTabs.map((tab) => {
         const isActive = activeTab === tab.id;
         const isDisabled = tab.disabled;
 
@@ -67,7 +80,7 @@ export function TabsBar({
             background: isActive ? 'var(--primary)' : 'transparent',
             border: 'none',
             color: isActive ? '#000000' : 'var(--text-dim)',
-            fontWeight: isActive ? 700 : 500,
+            fontWeight: 700,
             boxShadow: isActive ? '0 1px 4px rgba(0, 0, 0, 0.4)' : 'none'
           };
         };
@@ -92,7 +105,11 @@ export function TabsBar({
               ...buttonStyles()
             }}
           >
-            {tab.icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{tab.icon}</span>}
+            {tab.icon && (
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                {renderIcon(tab.icon, iconSize)}
+              </span>
+            )}
             <span>{tab.label}</span>
             {tab.badge !== undefined && tab.badge !== null && (
               <span

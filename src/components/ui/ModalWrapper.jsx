@@ -1,6 +1,16 @@
 import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
+const renderIcon = (iconItem, size = 16) => {
+  if (!iconItem) return null;
+  if (React.isValidElement(iconItem)) return iconItem;
+  if (typeof iconItem === 'function' || (typeof iconItem === 'object' && iconItem !== null && iconItem.$$typeof)) {
+    const IconComp = iconItem;
+    return <IconComp size={size} />;
+  }
+  return iconItem;
+};
+
 /**
  * ModalWrapper — Contenedor modal táctico universal para Aegis.
  * Soporta cierre con ESC, clic en backdrop, portal seguro y animación nativa.
@@ -86,7 +96,7 @@ export function ModalWrapper({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {icon && <span style={{ color: 'var(--primary)', fontSize: '15px' }}>{icon}</span>}
+              {icon && <span style={{ color: 'var(--primary)', fontSize: '15px', display: 'inline-flex', alignItems: 'center' }}>{renderIcon(icon, 16)}</span>}
               <h3
                 style={{
                   margin: 0,

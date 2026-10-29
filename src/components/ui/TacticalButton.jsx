@@ -1,5 +1,15 @@
 import React from 'react';
 
+const renderIcon = (iconItem, size = 13) => {
+  if (!iconItem) return null;
+  if (React.isValidElement(iconItem)) return iconItem;
+  if (typeof iconItem === 'function' || (typeof iconItem === 'object' && iconItem !== null && iconItem.$$typeof)) {
+    const IconComp = iconItem;
+    return <IconComp size={size} />;
+  }
+  return iconItem;
+};
+
 /**
  * TacticalButton — Botón táctico unificado para el ecosistema Aegis.
  * Respeta 100% la Doctrina Aegis: cero hardcode, 100% variables temáticas.
@@ -25,6 +35,13 @@ export function TacticalButton({
     sm: { padding: '4px 8px', fontSize: '12px', height: '28px', gap: '6px' },
     md: { padding: '6px 12px', fontSize: '13px', height: '34px', gap: '8px' },
     lg: { padding: '8px 16px', fontSize: '14px', height: '40px', gap: '10px' }
+  };
+
+  const iconSizes = {
+    xs: 11,
+    sm: 13,
+    md: 14,
+    lg: 16
   };
 
   const getVariantStyles = () => {
@@ -67,6 +84,7 @@ export function TacticalButton({
   };
 
   const currentSize = sizeStyles[size] || sizeStyles.sm;
+  const currentIconSize = iconSizes[size] || 13;
   const currentVariant = getVariantStyles();
 
   return (
@@ -98,7 +116,7 @@ export function TacticalButton({
       {loading ? (
         <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
       ) : (
-        icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
+        icon && <span style={{ display: 'inline-flex', alignItems: 'center' }}>{renderIcon(icon, currentIconSize)}</span>
       )}
       {children && <span>{children}</span>}
       {kbd && (

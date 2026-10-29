@@ -22,6 +22,10 @@ export function useVault() {
 
   // Estados de Nota Activa y Edición
   const [activeNote, setActiveNote] = useState(null);
+  const activeNoteRef = useRef(activeNote);
+  useEffect(() => {
+    activeNoteRef.current = activeNote;
+  }, [activeNote]);
   const [noteContent, setNoteContent] = useState('');
   const [loadingNote, setLoadingNote] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -135,7 +139,7 @@ export function useVault() {
       setNotes(notesRes || []);
       setStats(statsRes || null);
 
-      if (!activeNote && notesRes && notesRes.length > 0) {
+      if (!activeNoteRef.current && notesRes && notesRes.length > 0) {
         const inicio = notesRes.find((n) => n.title.toLowerCase() === 'inicio') || notesRes[0];
         loadNote(inicio);
       }
@@ -146,7 +150,7 @@ export function useVault() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeNote, loadNote]);
+  }, [loadNote]);
 
   useEffect(() => {
     loadVaultData();

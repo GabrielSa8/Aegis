@@ -12,6 +12,7 @@ import SentinelView from './components/SentinelView';
 import LeisureView from './components/LeisureView';
 import SettingsView from './components/SettingsView';
 import CommandPaletteModal from './components/CommandPaletteModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent');
@@ -188,20 +189,22 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {activeTab === 'agent' && <AgentView zenMode={zenMode} onToggleZenMode={() => setZenMode(false)} />}
-        {activeTab === 'finances' && <FinancesView />}
-        {activeTab === 'vault' && <VaultView />}
-        {activeTab === 'devops' && <DevOpsView />}
-        {activeTab === 'tasks' && <TasksView />}
-        {activeTab === 'sentinel' && <SentinelView />}
-        {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
-        {activeTab === 'settings' && (
-          <SettingsView 
-            currentTheme={currentTheme} 
-            onThemeChange={handleThemeChange} 
-            isFullView={true} 
-          />
-        )}
+        <ErrorBoundary key={activeTab} name={activeTab}>
+          {activeTab === 'agent' && <AgentView zenMode={zenMode} onToggleZenMode={() => setZenMode(false)} />}
+          {activeTab === 'finances' && <FinancesView />}
+          {activeTab === 'vault' && <VaultView />}
+          {activeTab === 'devops' && <DevOpsView />}
+          {activeTab === 'tasks' && <TasksView />}
+          {activeTab === 'sentinel' && <SentinelView />}
+          {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
+          {activeTab === 'settings' && (
+            <SettingsView 
+              currentTheme={currentTheme} 
+              onThemeChange={handleThemeChange} 
+              isFullView={true} 
+            />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* ⚙️ Modal Global de Ajustes y Temas (Fallback si se abre como popup) */}
