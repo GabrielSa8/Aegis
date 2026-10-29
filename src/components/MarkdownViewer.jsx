@@ -131,7 +131,7 @@ function FrontmatterCard({ frontmatter, onTagClick }) {
             padding: '2px 8px',
             borderRadius: '4px',
             background: 'rgba(16, 185, 129, 0.12)',
-            color: '#10b981',
+            color: 'var(--primary)',
             fontWeight: 700,
             textTransform: 'uppercase',
             fontSize: '0.65rem'
@@ -271,7 +271,7 @@ const CALLOUT_CONFIGS = {
   },
   important: {
     title: 'IMPORTANTE',
-    color: '#10b981',
+    color: 'var(--primary)',
     bg: 'rgba(16, 185, 129, 0.1)',
     border: 'rgba(16, 185, 129, 0.4)',
     icon: Sparkles
@@ -380,7 +380,7 @@ function CalloutCard({ type, customTitle, bodyLines, onNavigateNote }) {
   const normalizedType = (type || 'note').toLowerCase();
   const config = CALLOUT_CONFIGS[normalizedType] || {
     title: normalizedType.toUpperCase(),
-    color: '#10b981',
+    color: 'var(--primary)',
     bg: 'rgba(16, 185, 129, 0.08)',
     border: 'rgba(16, 185, 129, 0.35)',
     icon: Info
@@ -577,8 +577,8 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
           <blockquote key={`quote-${blockIdx}-${i}`} style={{
             margin: '6px 0',
             padding: '8px 14px',
-            borderLeft: '3px solid #10b981',
-            background: 'rgba(16, 185, 129, 0.05)',
+            borderLeft: '3px solid var(--primary)',
+            background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
             borderRadius: '0 8px 8px 0',
             color: 'var(--text-high)',
             fontSize: '0.82rem',
@@ -661,7 +661,7 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: isDone ? '#10b981' : 'var(--text-muted)',
+                color: isDone ? 'var(--primary)' : 'var(--text-muted)',
                 transition: 'color 0.15s ease, transform 0.1s ease, background 0.15s ease',
                 outline: 'none',
                 flexShrink: 0,
@@ -676,7 +676,7 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
               }}
               onMouseLeave={(e) => {
                 if (onToggleTask) {
-                  e.currentTarget.style.color = isDone ? '#10b981' : 'var(--text-muted)';
+                  e.currentTarget.style.color = isDone ? 'var(--primary)' : 'var(--text-muted)';
                   e.currentTarget.style.transform = 'scale(1)';
                   e.currentTarget.style.background = 'transparent';
                 }

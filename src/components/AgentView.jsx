@@ -20,12 +20,21 @@ import {
   MessageSquare,
   X,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ContextManagerModal, { DEFAULT_CONTEXTS } from './ContextManagerModal';
+import MacroManagerModal, { DEFAULT_MACROS } from './MacroManagerModal';
 import MarkdownViewer from './MarkdownViewer';
+
+function renderAsciiProgress(percent, length = 18) {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  const filled = Math.round((clamped / 100) * length);
+  const empty = length - filled;
+  return '█'.repeat(filled) + '░'.repeat(empty);
+}
 
 function parseThoughtBlocks(rawContent) {
   if (!rawContent) return { thoughts: '', cleanContent: '' };
@@ -88,35 +97,35 @@ function ThoughtAccordion({ thoughts, defaultOpen }) {
   return (
     <div style={{
       marginBottom: '8px',
-      background: 'rgba(0, 0, 0, 0.35)',
-      border: '1px solid rgba(168, 85, 247, 0.3)',
-      borderRadius: 'var(--radius-md)',
+      background: 'rgba(0, 0, 0, 0.4)',
+      border: '1px solid color-mix(in srgb, var(--primary) 30%, var(--border-color))',
+      borderRadius: 'var(--radius-sm)',
       overflow: 'hidden'
     }}>
       <div
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
-          padding: '6px 10px',
+          padding: '5px 10px',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           fontSize: '0.72rem',
-          color: '#c084fc',
+          color: 'var(--primary)',
           userSelect: 'none',
-          background: 'rgba(168, 85, 247, 0.08)',
-          borderBottom: isOpen ? '1px solid rgba(168, 85, 247, 0.2)' : 'none'
+          background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
+          borderBottom: isOpen ? '1px solid color-mix(in srgb, var(--primary) 20%, var(--border-color))' : 'none'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-          <Brain size={13} color="#c084fc" />
-          <span>Proceso Técnico & Herramientas</span>
+          <Brain size={13} color="var(--primary)" />
+          <span>[ PROCESO TÉCNICO & HERRAMIENTAS ]</span>
           <span style={{
             fontSize: '0.62rem',
             padding: '1px 6px',
             borderRadius: '3px',
-            background: 'rgba(168, 85, 247, 0.18)',
-            color: '#e9d5ff',
+            background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+            color: 'var(--text-high)',
             fontFamily: 'var(--font-mono)'
           }}>
             {badgeText}
@@ -124,10 +133,10 @@ function ThoughtAccordion({ thoughts, defaultOpen }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <kbd className="tactical-kbd" style={{ color: '#e9d5ff' }}>
+          <kbd className="tactical-kbd">
             Ctrl + O
           </kbd>
-          {isOpen ? <ChevronDown size={14} color="#c084fc" /> : <ChevronRight size={14} color="#c084fc" />}
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </div>
       </div>
 
@@ -141,7 +150,7 @@ function ThoughtAccordion({ thoughts, defaultOpen }) {
           whiteSpace: 'pre-wrap',
           maxHeight: '260px',
           overflowY: 'auto',
-          background: 'rgba(10, 12, 11, 0.6)'
+          background: 'rgba(6, 8, 7, 0.8)'
         }}>
           {thoughts}
         </div>
@@ -403,12 +412,26 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
     }
   };
 
-  const quickMacros = [
-    { label: 'Auditar Git', text: 'Revisa status de git y ramas locales de los repositorios vigilados.' },
-    { label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' },
-    { label: 'Generar Flashcards', text: 'Analiza la última nota de estudio o certificación y genera 3 flashcards atómicas.' },
-    { label: 'Revisar Pendientes', text: 'Inspecciona las tareas pendientes del proyecto activo y prioriza las 3 más críticas.' }
-  ];
+  const [macros, setMacros] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aegis_quick_macros');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error cargando macros:', e);
+    }
+    return DEFAULT_MACROS;
+  });
+
+  const [showMacroModal, setShowMacroModal] = useState(false);
+
+  const handleSaveMacros = (updatedList) => {
+    setMacros(updatedList);
+    try {
+      localStorage.setItem('aegis_quick_macros', JSON.stringify(updatedList));
+    } catch (e) {
+      console.error('Error guardando macros:', e);
+    }
+  };
 
   // Escuchar chunks de streaming emitidos desde Rust
   useEffect(() => {
@@ -638,28 +661,16 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: '0.5rem' }}>
-      {/* 🧭 Context Router & Effort Bar */}
-      <div 
-        className="crystal-surface"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0.4rem 0.85rem',
-          borderRadius: 'var(--radius-lg)',
-          flexShrink: 0,
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}
-      >
+    <div className="terminal-stream-container">
+      {/* 🧭 Terminal Context & Effort Strip */}
+      <div className="terminal-strip">
         {/* Selector de perfiles dinámicos con scrollbar invisible */}
         <div 
           className="no-scrollbar"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '260px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '240px' }}
         >
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
             CONTEXTO:
           </span>
           {contexts.map((ctx) => {
@@ -668,28 +679,12 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               <button
                 key={ctx.id}
                 onClick={() => handleSelectContext(ctx.id)}
-                className={isSelected ? "crystal-card" : ""}
-                style={{
-                  fontSize: '0.72rem',
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-md)',
-                  background: isSelected ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)' : 'rgba(255, 255, 255, 0.02)',
-                  border: isSelected ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
-                  color: isSelected ? '#a7f3d0' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  fontWeight: isSelected ? 700 : 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                  boxShadow: isSelected ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none',
-                  transition: 'var(--transition)'
-                }}
+                className={`terminal-btn ${isSelected ? 'active' : ''}`}
               >
-                <FolderGit2 size={12} color={isSelected ? '#10b981' : '#788882'} />
+                <FolderGit2 size={12} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
                 <span>{ctx.label}</span>
                 {ctx.skills?.length > 0 && (
-                  <span style={{ fontSize: '0.58rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.08)', color: '#a7f3d0', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: '0.58rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.06)', fontFamily: 'var(--font-mono)' }}>
                     {ctx.skills.length} skills
                   </span>
                 )}
@@ -700,18 +695,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           {/* Botón Gestión de Contextos */}
           <button
             onClick={() => setShowContextModal(true)}
-            className="crystal-card"
-            style={{ 
-              padding: '4px 9px', 
-              fontSize: '0.7rem', 
-              borderRadius: 'var(--radius-md)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
+            className="terminal-btn"
             title="Administrar carpetas, skills y modelos de contextos"
           >
             <Settings size={12} />
@@ -719,58 +703,34 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           </button>
         </div>
 
-        {/* Toggle de Esfuerzo (Flash vs Profundo) y Limpieza */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Toggle de Esfuerzo (Flash vs Profundo) y Controles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Toggle Flash / Profundo */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: 'var(--radius-md)',
+            background: 'rgba(0, 0, 0, 0.35)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
             padding: '2px'
           }}>
             <button
               onClick={() => setEffortMode('low')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: 'var(--radius-sm)',
-                background: effortMode === 'low' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                border: effortMode === 'low' ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
-                color: effortMode === 'low' ? '#a7f3d0' : 'var(--text-muted)',
-                fontSize: '0.68rem',
-                fontWeight: effortMode === 'low' ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'var(--transition)'
-              }}
-              title="Modo Rápido: ~1.9s de respuesta, bajo consumo de tokens de pensamiento"
+              className={`terminal-btn ${effortMode === 'low' ? 'active' : ''}`}
+              style={{ border: 'none' }}
+              title="Modo Rápido: ~1.9s de respuesta, bajo consumo de tokens"
             >
-              <Zap size={11} color={effortMode === 'low' ? '#10b981' : '#788882'} />
+              <Zap size={11} color={effortMode === 'low' ? 'var(--primary)' : 'var(--text-muted)'} />
               <span>Flash (1.9s)</span>
             </button>
 
             <button
               onClick={() => setEffortMode('high')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: 'var(--radius-sm)',
-                background: effortMode === 'high' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
-                border: effortMode === 'high' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
-                color: effortMode === 'high' ? '#e9d5ff' : 'var(--text-muted)',
-                fontSize: '0.68rem',
-                fontWeight: effortMode === 'high' ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'var(--transition)'
-              }}
+              className={`terminal-btn ${effortMode === 'high' ? 'active' : ''}`}
+              style={{ border: 'none' }}
               title="Modo Profundo: Razonamiento exhaustivo para refactorización y lógica compleja"
             >
-              <Brain size={11} color={effortMode === 'high' ? '#c084fc' : '#788882'} />
+              <Brain size={11} color={effortMode === 'high' ? 'var(--primary)' : 'var(--text-muted)'} />
               <span>Profundo</span>
             </button>
           </div>
@@ -778,49 +738,29 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           {/* Toggle Acordeón de Pensamiento */}
           <button
             onClick={() => setExpandThoughts((prev) => !prev)}
-            className="btn btn-secondary"
-            style={{
-              padding: '3px 8px',
-              fontSize: '0.68rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: expandThoughts ? '#c084fc' : 'var(--text-muted)',
-              borderColor: expandThoughts ? 'rgba(168, 85, 247, 0.4)' : 'var(--border-color)',
-              background: expandThoughts ? 'rgba(168, 85, 247, 0.12)' : 'transparent'
-            }}
+            className={`terminal-btn ${expandThoughts ? 'active' : ''}`}
             title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
           >
-            <Brain size={12} color={expandThoughts ? '#c084fc' : '#888'} />
+            <Brain size={12} color={expandThoughts ? 'var(--primary)' : 'var(--text-muted)'} />
             <span>{expandThoughts ? 'Ocultar Razonamiento' : 'Ver Razonamiento'}</span>
-            <kbd style={{ fontSize: '0.58rem', opacity: 0.7 }}>Ctrl+O</kbd>
+            <kbd className="tactical-kbd" style={{ fontSize: '0.56rem' }}>Ctrl+O</kbd>
           </button>
 
           {/* Historial de Sesiones Drawer Toggle */}
           <button
             onClick={() => setShowSessionsDrawer((prev) => !prev)}
-            className="btn btn-secondary"
-            style={{
-              padding: '3px 8px',
-              fontSize: '0.68rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: showSessionsDrawer ? '#10b981' : 'var(--text-muted)',
-              borderColor: showSessionsDrawer ? 'var(--primary)' : 'var(--border-color)',
-              background: showSessionsDrawer ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
-            }}
+            className={`terminal-btn ${showSessionsDrawer ? 'active' : ''}`}
             title="Abrir historial de sesiones tácticas"
           >
-            <History size={12} color={showSessionsDrawer ? '#10b981' : '#888'} />
+            <History size={12} color={showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)'} />
             <span>Sesiones ({sessions.length})</span>
           </button>
 
           {/* Limpiar Historial */}
           <button
             onClick={clearHistory}
-            className="btn btn-secondary"
-            style={{ width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            className="terminal-btn"
+            style={{ width: '28px', height: '28px', padding: 0, justifyContent: 'center' }}
             title="Limpiar conversación"
           >
             <Trash2 size={13} />
@@ -828,14 +768,14 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         </div>
       </div>
 
-      {/* 💬 Central Workspace: Sessions Drawer + Message Viewport */}
+      {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative' }}>
         {showSessionsDrawer && (
           <div style={{
             width: '240px',
             background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-lg)',
+            borderRadius: 'var(--radius-md)',
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
@@ -848,10 +788,10 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(0, 0, 0, 0.2)'
+              background: 'rgba(0, 0, 0, 0.25)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MessageSquare size={13} color="#10b981" />
+                <MessageSquare size={13} color="var(--primary)" />
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-high)' }}>Sesiones</span>
               </div>
               <button
@@ -881,7 +821,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                       style={{
                         padding: '6px 8px',
                         borderRadius: 'var(--radius-sm)',
-                        background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(0, 0, 0, 0.15)',
+                        background: isActive ? 'color-mix(in srgb, var(--primary) 12%, transparent)' : 'rgba(0, 0, 0, 0.15)',
                         border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
                         cursor: 'pointer',
                         display: 'flex',
@@ -935,352 +875,275 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           </div>
         )}
 
-        {/* 💬 Message Viewport */}
+        {/* 📟 Terminal Message Log (ZERO Card Bubbles, Pure Stream) */}
         <div 
           ref={viewportRef}
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          background: 'var(--bg-main)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.25rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem'
-        }}
-      >
-        {messages.map((m) => {
-          const isUser = m.role === 'user';
-          const { thoughts, cleanContent } = !isUser ? parseThoughtBlocks(m.content) : { thoughts: '', cleanContent: m.content };
+          className="terminal-log-viewport"
+        >
+          {messages.map((m) => {
+            const isUser = m.role === 'user';
+            const { thoughts, cleanContent } = !isUser ? parseThoughtBlocks(m.content) : { thoughts: '', cleanContent: m.content };
 
-          return (
-            <div
-              key={m.id}
-              className={isUser ? "crystal-card" : "crystal-surface"}
-              style={{
-                width: '100%',
-                padding: isUser ? '0.75rem 1rem' : '1rem 1.25rem',
-                borderRadius: 'var(--radius-md)',
-                background: isUser 
-                  ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(22, 26, 25, 0.6) 100%)' 
-                  : 'linear-gradient(135deg, rgba(22, 26, 25, 0.75) 0%, rgba(15, 18, 17, 0.9) 100%)',
-                border: isUser ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(255, 255, 255, 0.08)',
-                borderLeft: isUser ? '3px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: isUser 
-                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.06)' 
-                  : 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.35)',
-                position: 'relative'
-              }}
-            >
-              {/* Terminal Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ 
-                    fontFamily: 'var(--font-mono)', 
-                    fontSize: '0.74rem', 
-                    fontWeight: 700, 
-                    color: isUser ? '#a7f3d0' : '#10b981', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '6px' 
-                  }}>
-                    <span style={{ color: isUser ? '#10b981' : '#34d399', opacity: 0.8 }}>❯</span>
-                    {isUser ? (operatorName || 'OPERADOR') : 'AEGIS COPILOT'}
-                  </span>
-                  
-                  {m.context && (
-                    <span className="tactical-kbd" style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>
-                      {m.context}
+            return (
+              <div key={m.id} className="terminal-stream-entry">
+                {/* Terminal Stream Header */}
+                <div className="terminal-stream-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontWeight: 700,
+                      color: isUser ? 'var(--text-high)' : 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span style={{ color: 'var(--primary)', fontWeight: 800 }}>&gt;</span>
+                      <span>[{isUser ? `OPERADOR · ${(operatorName || 'DEFAULT').toUpperCase()}` : 'AEGIS COPILOT'}]</span>
                     </span>
-                  )}
-                  {m.effort && (
-                    <span style={{ 
-                      fontSize: '0.58rem', 
-                      padding: '1px 5px', 
-                      borderRadius: '4px', 
-                      background: m.effort === 'high' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(16, 185, 129, 0.12)', 
-                      color: m.effort === 'high' ? '#c084fc' : '#34d399',
-                      border: m.effort === 'high' ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)',
+
+                    {m.context && (
+                      <span style={{
+                        fontSize: '0.62rem',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-muted)',
+                        background: 'rgba(255, 255, 255, 0.02)'
+                      }}>
+                        📂 {m.context}
+                      </span>
+                    )}
+
+                    {!isUser && (
+                      <span style={{
+                        fontSize: '0.62rem',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        background: m.effort === 'high' ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid var(--border-color)',
+                        color: m.effort === 'high' ? 'var(--primary)' : 'var(--text-muted)'
+                      }}>
+                        {m.effort === 'high' ? '🧠 PROFUNDO' : '⚡ FLASH'}
+                      </span>
+                    )}
+
+                    {!isUser && (
+                      <span style={{
+                        fontSize: '0.62rem',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        background: m.isError 
+                          ? 'rgba(239, 68, 68, 0.15)' 
+                          : m.loading 
+                            ? 'color-mix(in srgb, var(--primary) 15%, transparent)' 
+                            : 'rgba(255, 255, 255, 0.04)',
+                        border: `1px solid ${m.isError ? 'var(--danger)' : m.loading ? 'var(--primary)' : 'var(--border-color)'}`,
+                        color: m.isError ? 'var(--danger)' : m.loading ? 'var(--primary)' : 'var(--text-muted)'
+                      }}>
+                        {m.isError ? '[ ERROR ]' : m.loading ? '[ RUNNING ]' : '[  OK  ]'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{m.timestamp}</span>
+                    {!isUser && m.content && (
+                      <button
+                        onClick={() => copyToClipboard(cleanContent || m.content, m.id)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Copiar respuesta"
+                      >
+                        {copiedId === m.id ? <Check size={12} color="var(--primary)" /> : <Copy size={12} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Terminal Stream Body */}
+                <div className={`terminal-stream-body ${isUser ? 'user-body' : 'assistant-body'}`}>
+                  {/* Pensamiento si existe */}
+                  {!isUser && thoughts ? (
+                    <ThoughtAccordion thoughts={thoughts} defaultOpen={expandThoughts} />
+                  ) : null}
+
+                  {/* Tarjeta de Permiso Interactivo CLI (Human-in-the-loop) */}
+                  {!isUser && m.permissionPrompt && (
+                    <div style={{
+                      margin: '6px 0',
+                      padding: '8px 12px',
+                      background: 'rgba(234, 179, 8, 0.08)',
+                      border: '1px solid rgba(234, 179, 8, 0.35)',
+                      borderRadius: 'var(--radius-sm)',
                       fontFamily: 'var(--font-mono)'
                     }}>
-                      {m.effort === 'high' ? '🧠 PROFUNDO' : '⚡ FLASH'}
-                    </span>
-                  )}
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{m.timestamp}</span>
-                  {!isUser && m.content && (
-                    <button
-                      onClick={() => copyToClipboard(cleanContent || m.content, m.id)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
-                      title="Copiar respuesta"
-                    >
-                      {copiedId === m.id ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 🧠 Acordeón Colapsable de Razonamiento & Herramientas */}
-              {!isUser && thoughts ? (
-                <ThoughtAccordion thoughts={thoughts} defaultOpen={expandThoughts} />
-              ) : null}
-
-              {/* ⚠️ Tarjeta de Permiso Interactivo CLI (Human-in-the-loop) */}
-              {!isUser && m.permissionPrompt && (
-                <div style={{
-                  margin: '8px 0',
-                  padding: '10px 14px',
-                  background: 'rgba(234, 179, 8, 0.08)',
-                  border: '1px solid rgba(234, 179, 8, 0.35)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#facc15', fontWeight: 700, fontSize: '0.74rem' }}>
-                    <ShieldAlert size={14} color="#facc15" />
-                    <span>Permiso de Ejecución Solicitado</span>
-                  </div>
-                  <p style={{ margin: '6px 0', fontSize: '0.74rem', fontFamily: 'var(--font-mono)', color: 'var(--text-high)', whiteSpace: 'pre-wrap' }}>
-                    {m.permissionPrompt}
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <button
-                      onClick={() => handlePermissionResponse(m.id, 'y')}
-                      style={{
-                        padding: '4px 12px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        background: '#10b981',
-                        color: '#000',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <span>Permitir</span>
-                      <kbd className="tactical-kbd" style={{ background: '#000', color: '#10b981', border: 'none' }}>↵</kbd>
-                    </button>
-                    <button
-                      onClick={() => handlePermissionResponse(m.id, 'n')}
-                      style={{
-                        padding: '4px 12px',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        color: 'var(--text-high)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <span>Cancelar</span>
-                      <kbd className="tactical-kbd">Esc</kbd>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Contenido / Markdown */}
-              <div style={{
-                fontSize: '0.86rem',
-                lineHeight: '1.55',
-                color: 'var(--text-high)'
-              }}>
-                {isUser ? (
-                  <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#f3f4f6' }}>{m.content}</div>
-                ) : cleanContent ? (
-                  <>
-                    <MarkdownViewer content={cleanContent} />
-                    {m.loading && (
-                      <span style={{
-                        display: 'inline-block',
-                        width: '8px',
-                        height: '14px',
-                        marginLeft: '4px',
-                        background: '#10b981',
-                        verticalAlign: 'middle',
-                        animation: 'pulse 1s infinite'
-                      }} />
-                    )}
-                  </>
-                ) : m.loading ? (
-                  /* ⚡ Barra y Telemetría de Carga Líquida Porcentual */
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    padding: '12px 14px',
-                    background: 'rgba(16, 185, 129, 0.06)',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: '#10b981',
-                          boxShadow: '0 0 10px #10b981',
-                          animation: 'pulse 1s infinite'
-                        }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a7f3d0' }}>
-                          {m.statusText || 'Iniciando agente y montando contexto...'}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#facc15', fontWeight: 700, fontSize: '0.74rem' }}>
+                        <ShieldAlert size={14} color="#facc15" />
+                        <span>[ ⚠️ PERMISO REQUERIDO: EJECUCIÓN CLI ]</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, color: '#34d399' }}>
+                      <p style={{ margin: '6px 0', fontSize: '0.74rem', color: 'var(--text-high)', whiteSpace: 'pre-wrap' }}>
+                        {m.permissionPrompt}
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                        <button
+                          onClick={() => handlePermissionResponse(m.id, 'y')}
+                          className="btn btn-primary"
+                          style={{ padding: '3px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <span>Permitir</span>
+                          <kbd className="tactical-kbd">↵</kbd>
+                        </button>
+                        <button
+                          onClick={() => handlePermissionResponse(m.id, 'n')}
+                          className="btn btn-secondary"
+                          style={{ padding: '3px 10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <span>Denegar</span>
+                          <kbd className="tactical-kbd">Esc</kbd>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contenido / Markdown */}
+                  {isUser ? (
+                    <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-high)', fontWeight: 500 }}>
+                      {m.content}
+                    </div>
+                  ) : cleanContent ? (
+                    <>
+                      <MarkdownViewer content={cleanContent} />
+                      {m.loading && (
+                        <span className="terminal-blinking-cursor" style={{ marginLeft: '4px', fontSize: '0.9rem' }}>
+                          █
+                        </span>
+                      )}
+                    </>
+                  ) : m.loading ? (
+                    /* Bloque Terminal de Progreso ASCII + Líquido */
+                    <div className="terminal-progress-block">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="terminal-blinking-cursor">▶</span>
+                          <span style={{ color: 'var(--text-high)', fontWeight: 600 }}>
+                            {m.statusText || 'Iniciando agente y montando contexto...'}
+                          </span>
+                        </div>
+                        <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
                           {loadingProgress}%
                         </span>
                       </div>
-                    </div>
-                    <div className="liquid-progress-container">
-                      <div className="liquid-progress-fill" style={{ width: `${loadingProgress}%` }}>
-                        <div className="liquid-progress-shimmer" />
+                      <div className="terminal-ascii-bar">
+                        &gt; {renderAsciiProgress(loadingProgress, 20)} {loadingProgress}%
+                      </div>
+                      <div className="liquid-progress-container" style={{ height: '4px' }}>
+                        <div className="liquid-progress-fill" style={{ width: `${loadingProgress}%` }}>
+                          <div className="liquid-progress-shimmer" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
+                  ) : null}
 
-              {/* Telemetría y Tokens al finalizar */}
-              {!isUser && !m.loading && (m.totalTokens || m.duration) && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  marginTop: '10px',
-                  paddingTop: '6px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-                  fontSize: '0.66rem',
-                  color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-mono)'
-                }}>
-                  {m.totalTokens && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Cpu size={11} color="#10b981" />
-                      {m.totalTokens.toLocaleString()} tokens
-                    </span>
-                  )}
-                  {m.duration && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={11} />
-                      {m.duration.toFixed(1)}s
-                    </span>
-                  )}
-                  {m.totalTokens && m.duration && m.duration > 0 && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.8 }}>
-                      ⚡ {(m.totalTokens / m.duration).toFixed(0)} tok/s
-                    </span>
+                  {/* Telemetría y Tokens al finalizar */}
+                  {!isUser && !m.loading && (m.totalTokens || m.duration) && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginTop: '8px',
+                      paddingTop: '4px',
+                      fontSize: '0.64rem',
+                      color: 'var(--text-muted)',
+                      fontFamily: 'var(--font-mono)'
+                    }}>
+                      <span>└─</span>
+                      {m.totalTokens && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Cpu size={11} color="var(--primary)" />
+                          {m.totalTokens.toLocaleString()} tokens
+                        </span>
+                      )}
+                      {m.duration && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={11} />
+                          {m.duration.toFixed(1)}s
+                        </span>
+                      )}
+                      {m.totalTokens && m.duration && m.duration > 0 && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.8 }}>
+                          ⚡ {(m.totalTokens / m.duration).toFixed(0)} tok/s
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* ⚡ Quick Macros Row */}
+      {/* ⚡ Quick Macros Row (CRUD de Macros) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '8px',
-        padding: '2px 2px',
+        padding: '1px 2px',
         flexShrink: 0
       }}>
         <div className="no-scrollbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}>
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>MACROS:</span>
-          {quickMacros.map((macro, idx) => (
+          {macros.map((macro, idx) => (
             <button
-              key={idx}
+              key={macro.id || idx}
               onClick={() => handleSend(macro.text)}
               disabled={loading}
-              className="crystal-card"
-              style={{
-                fontSize: '0.68rem',
-                padding: '3px 9px',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-high)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                opacity: loading ? 0.5 : 1
-              }}
+              className="terminal-btn"
+              style={{ opacity: loading ? 0.5 : 1 }}
             >
               <kbd className="tactical-kbd" style={{ fontSize: '0.55rem', padding: '0 4px' }}>{idx + 1}</kbd>
               <span>{macro.label}</span>
             </button>
           ))}
+          <button
+            onClick={() => setShowMacroModal(true)}
+            className="terminal-btn"
+            style={{ padding: '3px 7px' }}
+            title="Administrar macros personalizados (CRUD)"
+          >
+            <Plus size={11} color="var(--primary)" />
+            <span>Editar</span>
+          </button>
         </div>
 
         {/* 🪟 Zen mode toggle */}
         {zenMode && (
           <button
             onClick={onToggleZenMode}
-            className="crystal-card"
+            className="terminal-btn"
             title="Restaurar barra de navegación (Escape o Alt + Z)"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '3px 10px',
-              borderRadius: 'var(--radius-sm)',
-              cursor: 'pointer',
-              fontSize: '0.68rem',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              color: 'var(--text-high)'
-            }}
+            style={{ flexShrink: 0 }}
           >
-            <Minimize2 size={12} color="#10b981" />
+            <Minimize2 size={12} color="var(--primary)" />
             <span>Restaurar Barra</span>
             <kbd className="tactical-kbd">Esc</kbd>
           </button>
         )}
       </div>
 
-      {/* ⌨️ Input Command Deck */}
-      <div 
-        className="crystal-surface"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          borderRadius: 'var(--radius-lg)',
-          padding: '0.45rem 0.85rem',
-          flexShrink: 0,
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)'
-        }}
-      >
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '26px',
-          height: '26px',
-          borderRadius: '6px',
-          background: 'rgba(16, 185, 129, 0.12)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          flexShrink: 0
-        }}>
-          <Terminal size={14} color="#10b981" />
+      {/* ⌨️ Terminal Command Input Deck */}
+      <div className="terminal-input-bar">
+        <div className="terminal-prompt-chevron">
+          <span>&gt;</span>
         </div>
 
         <input
@@ -1288,7 +1151,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !loading && handleSend()}
-          placeholder={loading ? 'Agente ejecutando en segundo plano...' : `[${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}] Instrucción para el agente...`}
+          placeholder={loading ? 'Agente ejecutando instrucción...' : `[${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}] Instrucción para el agente...`}
           disabled={loading}
           style={{
             flex: 1,
@@ -1296,41 +1159,36 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
             border: 'none',
             outline: 'none',
             color: 'var(--text-high)',
-            fontSize: '0.85rem',
+            fontSize: '0.86rem',
             fontFamily: 'inherit'
           }}
         />
 
+        <span className="terminal-blinking-cursor" style={{ marginRight: '6px' }}>█</span>
+
         <button
           onClick={() => handleSend()}
           disabled={loading || !prompt.trim()}
+          className="btn btn-primary"
           style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            padding: '6px 14px',
-            color: '#000',
-            cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
-            opacity: loading || !prompt.trim() ? 0.35 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
+            padding: '5px 14px',
             fontSize: '0.74rem',
             fontWeight: 700,
-            boxShadow: loading || !prompt.trim() ? 'none' : '0 0 12px rgba(16, 185, 129, 0.35)',
-            transition: 'var(--transition)'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}
         >
           {loading ? (
             <>
-              <RefreshCw size={12} className="spin" color="#000" />
+              <RefreshCw size={12} className="spin" />
               <span>Ejecutando...</span>
             </>
           ) : (
             <>
-              <Send size={12} color="#000" />
+              <Send size={12} />
               <span>Enviar</span>
-              <kbd className="tactical-kbd" style={{ background: 'rgba(0, 0, 0, 0.25)', color: '#000', border: 'none', boxShadow: 'none' }}>↵</kbd>
+              <kbd className="tactical-kbd" style={{ background: 'rgba(0, 0, 0, 0.25)', color: 'inherit', border: 'none', boxShadow: 'none' }}>↵</kbd>
             </>
           )}
         </button>
@@ -1344,6 +1202,14 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         onSaveContexts={handleSaveContexts}
         currentContextId={selectedContextId}
         onSelectContext={handleSelectContext}
+      />
+
+      {/* ⚡ Modal Administrador de Macros (CRUD) */}
+      <MacroManagerModal
+        isOpen={showMacroModal}
+        onClose={() => setShowMacroModal(false)}
+        macros={macros}
+        onSaveMacros={handleSaveMacros}
       />
     </div>
   );

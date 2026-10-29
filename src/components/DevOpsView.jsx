@@ -567,7 +567,7 @@ export default function DevOpsView() {
                           gap: '3px'
                         }}
                       >
-                        <Download size={10} className={actionLoading === `pull-${repo.id}` ? 'animate-bounce' : ''} />
+                        <Download size={10} className={actionLoading === `pull-${repo.id}` ? 'spin' : ''} />
                         <span>Pull</span>
                       </button>
 
@@ -893,7 +893,7 @@ export default function DevOpsView() {
                     gap: '4px'
                   }}
                 >
-                  <Download size={11} className={actionLoading === `pull-${activeRepoInspector.id}` ? 'animate-bounce' : ''} />
+                  <Download size={11} className={actionLoading === `pull-${activeRepoInspector.id}` ? 'spin' : ''} />
                   <span>Pull</span>
                 </button>
 
