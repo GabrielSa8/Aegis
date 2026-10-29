@@ -1040,8 +1040,8 @@ select option:checked {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.3rem 0.85rem;
-  background: rgba(15, 18, 17, 0.88);
+  padding: 0.15rem 0.85rem;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   border-top: none;
   border-left: none;
@@ -1050,13 +1050,14 @@ select option:checked {
   flex-shrink: 0;
   gap: 8px;
   box-shadow: none;
+  min-height: 28px;
 }
 
 .terminal-btn {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);

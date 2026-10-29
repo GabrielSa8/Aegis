@@ -36,8 +36,8 @@ export default function TopHeader({
 
   return (
     <header style={{
-      height: '36px',
-      background: 'rgba(15, 18, 17, 0.96)',
+      height: '32px',
+      background: 'var(--bg-card)',
       borderBottom: '1px solid var(--border-color)',
       padding: '0 0.85rem',
       display: 'flex',
@@ -49,7 +49,7 @@ export default function TopHeader({
       gap: '8px'
     }}>
       {/* 🛡️ Brand & Segmented Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
         {/* Brand Logo */}
         <div 
           onClick={() => onSelectTab('agent')}
@@ -63,18 +63,18 @@ export default function TopHeader({
           title="Aegis Master Cockpit"
         >
           <div style={{
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            padding: '3px',
-            borderRadius: '6px',
+            background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
+            padding: '2px',
+            borderRadius: '5px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <ShieldCheck size={14} color="#10b981" />
+            <ShieldCheck size={13} color="var(--primary)" />
           </div>
           <span style={{ 
-            fontSize: '0.8rem', 
+            fontSize: '0.78rem', 
             fontWeight: 800, 
             color: 'var(--text-high)', 
             letterSpacing: '0.06em' 
@@ -92,9 +92,9 @@ export default function TopHeader({
           alignItems: 'center', 
           gap: '2px',
           background: 'rgba(0, 0, 0, 0.25)',
-          padding: '2px 3px',
-          borderRadius: '8px',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
+          padding: '1px 2px',
+          borderRadius: '6px',
+          border: '1px solid var(--border-color)',
           overflowX: 'auto'
         }}>
           {tabs.map((tab) => {
@@ -108,13 +108,13 @@ export default function TopHeader({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  background: isActive ? 'rgba(16, 185, 129, 0.14)' : 'transparent',
-                  border: isActive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid transparent',
-                  color: isActive ? '#34d399' : 'var(--text-muted)',
-                  fontSize: '0.72rem',
+                  gap: '4px',
+                  padding: '2px 7px',
+                  borderRadius: '5px',
+                  background: isActive ? 'color-mix(in srgb, var(--primary) 14%, transparent)' : 'transparent',
+                  border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
+                  color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                  fontSize: '0.7rem',
                   fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
                   transition: 'color 0.15s ease, background 0.15s ease',
@@ -135,10 +135,10 @@ export default function TopHeader({
                   }
                 }}
               >
-                <Icon size={13} color={isActive ? '#10b981' : '#788882'} />
+                <Icon size={12} color={isActive ? 'var(--primary)' : 'var(--text-muted)'} />
                 <span>{tab.label}</span>
                 <span style={{ 
-                  fontSize: '0.58rem', 
+                  fontSize: '0.56rem', 
                   opacity: isActive ? 0.9 : 0.4, 
                   fontFamily: 'var(--font-mono)',
                   marginLeft: '1px'
