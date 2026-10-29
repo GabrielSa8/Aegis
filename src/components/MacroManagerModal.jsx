@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, Plus, Trash2, Edit3, Save, RotateCcw, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, RotateCcw, Sparkles } from 'lucide-react';
+import { ModalWrapper, TacticalButton } from './ui';
 
 export const DEFAULT_MACROS = [
   { id: 'm1', label: 'Auditar Git', text: 'Revisa status de git y ramas locales de los repositorios vigilados.' },
@@ -48,7 +49,7 @@ export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacro
   const handleCreate = () => {
     if (!newLabel.trim() || !newText.trim()) return;
     const newMacro = {
-      id: 'm_' + Date.now(),
+      id: `m_${Date.now()}`,
       label: newLabel.trim(),
       text: newText.trim()
     };
@@ -64,239 +65,232 @@ export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacro
     setIsCreating(false);
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div 
-        className="modal-content crystal-surface" 
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: '560px',
-          width: '92%',
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
-        }}
+  const footer = (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      <TacticalButton
+        variant="ghost"
+        size="xs"
+        icon={<RotateCcw size={12} />}
+        onClick={handleResetDefaults}
       >
-        {/* Header */}
-        <div className="modal-header" style={{ padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={16} color="var(--primary)" />
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-high)' }}>
-              Administrador de Macros Tácticos
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="btn btn-secondary"
-            style={{ width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <X size={14} />
-          </button>
-        </div>
+        Restaurar Predeterminados
+      </TacticalButton>
+      <TacticalButton
+        variant="primary"
+        size="sm"
+        onClick={onClose}
+      >
+        Listo
+      </TacticalButton>
+    </div>
+  );
 
-        {/* Body */}
-        <div className="modal-body" style={{ padding: '1rem 1.25rem', maxHeight: '60vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
-            Configura atajos predefinidos para instrucciones recurrentes del agente IA. Se ejecutan con un clic o atajo numérico.
-          </p>
+  return (
+    <ModalWrapper
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Administrador de Macros Tácticos"
+      icon={<Sparkles size={16} />}
+      maxWidth="560px"
+      footer={footer}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
+          Configura atajos predefinidos para instrucciones recurrentes del agente IA. Se ejecutan con un clic o atajo numérico.
+        </p>
 
-          {/* Formulario de creación */}
-          {isCreating ? (
-            <div style={{
-              padding: '10px',
-              background: 'rgba(0, 0, 0, 0.3)',
-              border: '1px solid var(--primary)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px'
-            }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)' }}>+ Nuevo Macro</span>
-              <input
-                type="text"
-                placeholder="Nombre del botón (ej. Auditar Git)"
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-high)',
-                  fontSize: '0.78rem'
-                }}
-              />
-              <textarea
-                placeholder="Instrucción completa que recibirá el agente..."
-                rows={3}
-                value={newText}
-                onChange={(e) => setNewText(e.target.value)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-high)',
-                  fontSize: '0.78rem',
-                  resize: 'none'
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                <button onClick={() => setIsCreating(false)} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.72rem' }}>
-                  Cancelar
-                </button>
-                <button onClick={handleCreate} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Save size={12} />
-                  <span>Guardar</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsCreating(true)}
-              className="btn btn-secondary"
+        {/* Formulario de creación */}
+        {isCreating ? (
+          <div style={{
+            padding: '10px',
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid var(--primary)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
+              + Nuevo Macro Táctico
+            </span>
+            <input
+              type="text"
+              placeholder="Etiqueta corta (ej. Auditar Git)"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                fontSize: '0.74rem',
-                borderStyle: 'dashed'
+                fontSize: '0.75rem',
+                padding: '6px 10px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-main)',
+                outline: 'none'
               }}
+            />
+            <textarea
+              placeholder="Instrucción detallada para el agente..."
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              rows={3}
+              style={{
+                fontSize: '0.75rem',
+                padding: '6px 10px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-main)',
+                outline: 'none',
+                resize: 'none'
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+              <TacticalButton
+                variant="ghost"
+                size="xs"
+                onClick={() => setIsCreating(false)}
+              >
+                Cancelar
+              </TacticalButton>
+              <TacticalButton
+                variant="primary"
+                size="xs"
+                icon={<Save size={12} />}
+                onClick={handleCreate}
+              >
+                Guardar
+              </TacticalButton>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <TacticalButton
+              variant="terminal"
+              size="xs"
+              icon={<Plus size={12} />}
+              onClick={() => setIsCreating(true)}
             >
-              <Plus size={13} color="var(--primary)" />
-              <span>Añadir Nuevo Macro</span>
-            </button>
-          )}
+              Nuevo Macro
+            </TacticalButton>
+          </div>
+        )}
 
-          {/* Lista de Macros */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {macros.map((macro, idx) => {
-              const isEditing = editingId === macro.id;
+        {/* Lista de macros */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '45vh', overflowY: 'auto' }}>
+          {macros.map((macro, idx) => {
+            const isEditingThis = editingId === macro.id;
 
-              if (isEditing) {
-                return (
-                  <div
-                    key={macro.id}
-                    style={{
-                      padding: '10px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid var(--primary)',
-                      borderRadius: 'var(--radius-md)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={editLabel}
-                      onChange={(e) => setEditLabel(e.target.value)}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'var(--bg-main)',
-                        border: '1px solid var(--border-color)',
-                        color: 'var(--text-high)',
-                        fontSize: '0.78rem'
-                      }}
-                    />
-                    <textarea
-                      rows={2}
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'var(--bg-main)',
-                        border: '1px solid var(--border-color)',
-                        color: 'var(--text-high)',
-                        fontSize: '0.78rem',
-                        resize: 'none'
-                      }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                      <button onClick={handleCancelEdit} className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.72rem' }}>
-                        Cancelar
-                      </button>
-                      <button onClick={() => handleSaveEdit(macro.id)} className="btn btn-primary" style={{ padding: '4px 12px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Save size={12} />
-                        <span>Guardar</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
+            if (isEditingThis) {
               return (
                 <div
                   key={macro.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    padding: '10px',
+                    background: 'rgba(0, 0, 0, 0.3)',
                     border: '1px solid var(--border-color)',
                     borderRadius: 'var(--radius-md)',
-                    gap: '10px'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
                   }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span className="tactical-kbd" style={{ fontSize: '0.58rem' }}>{idx + 1}</span>
-                      <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                        {macro.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {macro.text}
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <button
-                      onClick={() => handleStartEdit(macro)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-                      title="Editar macro"
+                  <input
+                    type="text"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-main)',
+                      outline: 'none'
+                    }}
+                  />
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    rows={2}
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-main)',
+                      outline: 'none',
+                      resize: 'none'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <TacticalButton
+                      variant="ghost"
+                      size="xs"
+                      onClick={handleCancelEdit}
                     >
-                      <Edit3 size={13} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(macro.id)}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }}
-                      title="Eliminar macro"
+                      Cancelar
+                    </TacticalButton>
+                    <TacticalButton
+                      variant="primary"
+                      size="xs"
+                      icon={<Save size={12} />}
+                      onClick={() => handleSaveEdit(macro.id)}
                     >
-                      <Trash2 size={13} />
-                    </button>
+                      Guardar
+                    </TacticalButton>
                   </div>
                 </div>
               );
-            })}
-          </div>
-        </div>
+            }
 
-        {/* Footer */}
-        <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button
-            onClick={handleResetDefaults}
-            className="btn btn-secondary"
-            style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}
-          >
-            <RotateCcw size={12} />
-            <span>Restaurar Predeterminados</span>
-          </button>
-          <button
-            onClick={onClose}
-            className="btn btn-primary"
-            style={{ fontSize: '0.72rem', padding: '4px 14px' }}
-          >
-            Listo
-          </button>
+            return (
+              <div
+                key={macro.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="tactical-kbd" style={{ fontSize: '0.58rem' }}>{idx + 1}</span>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                      {macro.label}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {macro.text}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TacticalButton
+                    variant="ghost"
+                    size="xs"
+                    icon={<Edit3 size={12} />}
+                    onClick={() => handleStartEdit(macro)}
+                    title="Editar macro"
+                  />
+                  <TacticalButton
+                    variant="danger"
+                    size="xs"
+                    icon={<Trash2 size={12} />}
+                    onClick={() => handleDelete(macro.id)}
+                    title="Eliminar macro"
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 }
