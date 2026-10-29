@@ -30,7 +30,8 @@ export default function TopHeader({
     { id: 'devops', label: 'DevOps', icon: GitBranch, shortcut: '4' },
     { id: 'tasks', label: 'Tareas', icon: CheckSquare, shortcut: '5' },
     { id: 'sentinel', label: 'Centinela', icon: Activity, shortcut: '6' },
-    { id: 'gaming', label: 'Gaming', icon: Gamepad2, shortcut: '7' }
+    { id: 'gaming', label: 'Gaming', icon: Gamepad2, shortcut: '7' },
+    { id: 'settings', label: 'Sistema', icon: Settings, shortcut: '8' }
   ];
 
   return (
@@ -175,16 +176,6 @@ export default function TopHeader({
           <span>{coreStatus ? 'Core Rust' : 'Web'}</span>
         </div>
 
-        {/* N150 Hardware Pill */}
-        <span style={{ 
-          fontSize: '0.64rem', 
-          color: 'var(--text-muted)', 
-          fontFamily: 'var(--font-mono)',
-          display: 'none',
-          '@media (min-width: 900px)': { display: 'inline' }
-        }}>
-          N150
-        </span>
 
         {/* Command shortcut */}
         <div 

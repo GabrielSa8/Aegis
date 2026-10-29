@@ -56,8 +56,9 @@ export default function CommandPaletteModal({
     { id: 'nav-vault', title: 'Ir a Bóveda Obsidian', category: 'Navegación', icon: BookOpen, shortcut: 'Alt + 3', action: () => { onSelectTab('vault'); onClose(); } },
     { id: 'nav-devops', title: 'Ir a DevOps & Flota Git', category: 'Navegación', icon: GitBranch, shortcut: 'Alt + 4', action: () => { onSelectTab('devops'); onClose(); } },
     { id: 'nav-tasks', title: 'Ir a Tareas de Bóveda', category: 'Navegación', icon: CheckSquare, shortcut: 'Alt + 5', action: () => { onSelectTab('tasks'); onClose(); } },
-    { id: 'nav-sentinel', title: 'Ir a Centinela Hardware N150', category: 'Navegación', icon: Activity, shortcut: 'Alt + 6', action: () => { onSelectTab('sentinel'); onClose(); } },
-    { id: 'nav-gaming', title: 'Ir a Gaming N150 & Steam', category: 'Navegación', icon: Gamepad2, shortcut: 'Alt + 7', action: () => { onSelectTab('gaming'); onClose(); } },
+    { id: 'nav-sentinel', title: 'Ir a Centinela & Telemetría Host', category: 'Navegación', icon: Activity, shortcut: 'Alt + 6', action: () => { onSelectTab('sentinel'); onClose(); } },
+    { id: 'nav-gaming', title: 'Ir a Gaming Cockpit & Aceleración', category: 'Navegación', icon: Gamepad2, shortcut: 'Alt + 7', action: () => { onSelectTab('gaming'); onClose(); } },
+    { id: 'nav-settings', title: 'Ir a Sistema & Configuración Soberana', category: 'Navegación', icon: Settings, shortcut: 'Alt + 8', action: () => { onSelectTab('settings'); onClose(); } },
 
     // ⚡ Acciones Tácticas
     { id: 'act-zen', title: 'Alternar Modo Zen (Pantalla Completa)', category: 'Acciones', icon: Minimize2, shortcut: 'Alt + Z', action: () => { onToggleZenMode(); onClose(); } },

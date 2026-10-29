@@ -21,13 +21,16 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
 
-  // Cargar tema desde configuración en arranque
+  // Cargar tema y escala desde configuración en arranque
   useEffect(() => {
     invoke('get_aegis_config')
       .then((cfg) => {
         if (cfg?.theme) {
           setCurrentTheme(cfg.theme);
           document.documentElement.setAttribute('data-theme', cfg.theme);
+        }
+        if (cfg?.uiScale) {
+          document.documentElement.style.zoom = String(cfg.uiScale);
         }
       })
       .catch(() => {});
@@ -38,7 +41,7 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Atajos de teclado globales (Ctrl + K, Alt + 1..7, Alt + Z y Ctrl + ,)
+  // Atajos de teclado globales (Ctrl + K, Alt + 1..8, Alt + Z y Ctrl + ,)
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ctrl + K para abrir Paleta de Comandos Omnibar
@@ -48,10 +51,10 @@ export default function App() {
         return;
       }
 
-      // Ctrl + , para abrir Ajustes
+      // Ctrl + , para ir a Ajustes de Sistema
       if ((e.ctrlKey || e.metaKey) && e.key === ',') {
         e.preventDefault();
-        setShowSettings((prev) => !prev);
+        setActiveTab('settings');
         return;
       }
 
@@ -84,7 +87,8 @@ export default function App() {
           '4': 'devops',
           '5': 'tasks',
           '6': 'sentinel',
-          '7': 'gaming'
+          '7': 'gaming',
+          '8': 'settings'
         };
         if (keyMap[e.key]) {
           e.preventDefault();
@@ -122,7 +126,7 @@ export default function App() {
           onSelectTab={setActiveTab}
           zenMode={zenMode}
           onToggleZenMode={() => setZenMode(!zenMode)}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={() => setActiveTab('settings')}
           onOpenCommandPalette={() => setShowCommandPalette(true)}
         />
       ) : activeTab !== 'agent' ? (
@@ -183,9 +187,16 @@ export default function App() {
         {activeTab === 'tasks' && <TasksView />}
         {activeTab === 'sentinel' && <SentinelView />}
         {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
+        {activeTab === 'settings' && (
+          <SettingsView 
+            currentTheme={currentTheme} 
+            onThemeChange={handleThemeChange} 
+            isFullView={true} 
+          />
+        )}
       </main>
 
-      {/* ⚙️ Modal Global de Ajustes y Temas */}
+      {/* ⚙️ Modal Global de Ajustes y Temas (Fallback si se abre como popup) */}
       {showSettings && (
         <SettingsView 
           onClose={() => setShowSettings(false)}
@@ -200,7 +211,7 @@ export default function App() {
         onClose={() => setShowCommandPalette(false)}
         onSelectTab={setActiveTab}
         onToggleZenMode={() => setZenMode((prev) => !prev)}
-        onOpenSettings={() => setShowSettings(true)}
+        onOpenSettings={() => setActiveTab('settings')}
         onThemeChange={handleThemeChange}
       />
     </div>

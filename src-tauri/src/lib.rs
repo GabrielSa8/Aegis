@@ -20,6 +20,8 @@ pub fn run() {
             ping,
             config::get_aegis_config,
             config::save_aegis_config,
+            config::get_storage_stats,
+            config::purge_app_caches,
             agent::execute_agent_prompt,
             agent::send_agent_input,
             agent::sqlite_get_chat_sessions,

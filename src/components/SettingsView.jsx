@@ -1,22 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
-  Settings as SettingsIcon, 
+  User, 
   Palette, 
-  BookOpen, 
+  HardDrive, 
   Bot, 
   GitBranch, 
+  Bell, 
   Gamepad2, 
   Save, 
   RotateCcw, 
   Check, 
-  Folder, 
   Plus, 
   Trash2, 
+  ExternalLink, 
+  ShieldCheck, 
+  Sliders, 
+  Keyboard, 
+  Zap, 
+  Folder, 
   X,
-  ExternalLink,
-  ShieldCheck
+  Gauge
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 const THEMES = [
   {
@@ -61,31 +67,61 @@ const THEMES = [
   }
 ];
 
-export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
-  const [activeTab, setActiveTab] = useState('appearance'); // 'appearance' | 'vault' | 'agent' | 'devops' | 'gaming'
+const EMOJI_AVATARS = ['🛡️', '⚡', '💻', '🚀', '🦾', '🧠', '🎯', '🌌', '🕹️', '⚔️', '🦅', '🔥'];
+
+const BILLING_LINKS = [
+  { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },
+  { name: 'Anthropic Console', url: 'https://console.anthropic.com/', desc: 'Claude API & Facturación' },
+  { name: 'OpenAI Platform', url: 'https://platform.openai.com/usage', desc: 'GPT-4o & Consumo' },
+  { name: 'OpenRouter Credits', url: 'https://openrouter.ai/credits', desc: 'Balance Multi-Proveedor' },
+  { name: 'DeepSeek Platform', url: 'https://platform.deepseek.com/', desc: 'DeepSeek-V3 / R1 Cuotas' }
+];
+
+const MASTER_SHORTCUTS = [
+  { key: 'Alt + 1..8', desc: 'Navegación instantánea entre pestañas de Aegis' },
+  { key: 'Ctrl + K', desc: 'Abrir Paleta de Comandos Omnibar & Buscador' },
+  { key: 'Alt + Z', desc: 'Modo Zen: Ocultar barra superior para 100% de pantalla' },
+  { key: 'Ctrl + B', desc: 'Alternar panel lateral de carpetas en Bóveda' },
+  { key: 'Ctrl + ,', desc: 'Acceso directo a este Centro de Configuración' },
+  { key: 'Esc', desc: 'Cerrar modales, búsqueda o restaurar de Modo Zen' }
+];
+
+export default function SettingsView({ onClose, currentTheme, onThemeChange, isFullView = false }) {
+  const [activeSection, setActiveSection] = useState('profile');
   const [config, setConfig] = useState(null);
+  const [storageStats, setStorageStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [purgeStatus, setPurgeStatus] = useState(null);
 
-  // New Repo Form State
+  // Formulario nuevo repositorio
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoPath, setNewRepoPath] = useState('');
   const [newRepoRole, setNewRepoRole] = useState('');
+  const [newRepoWarning, setNewRepoWarning] = useState('');
 
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const cfg = await invoke('get_aegis_config');
-        setConfig(cfg);
-      } catch (e) {
-        console.error('Error cargando configuración:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadConfig();
+  // Carga de configuración y estadísticas
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [cfg, stats] = await Promise.all([
+        invoke('get_aegis_config').catch(() => null),
+        invoke('get_storage_stats').catch(() => null)
+      ]);
+      setConfig(cfg);
+      setStorageStats(stats);
+    } catch (e) {
+      console.error('Error cargando configuración:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Selección de tema
   const handleSelectTheme = async (themeId) => {
     onThemeChange(themeId);
     if (config) {
@@ -99,12 +135,22 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
     }
   };
 
+  // Cambio de escala de interfaz (Zoom DPI)
+  const handleScaleChange = (scale) => {
+    if (!config) return;
+    const updated = { ...config, uiScale: scale };
+    setConfig(updated);
+    document.documentElement.style.zoom = String(scale);
+    invoke('save_aegis_config', { config: updated }).catch(console.error);
+  };
+
+  // Guardar configuración completa
   const handleSaveConfig = async () => {
     if (!config) return;
     try {
       const res = await invoke('save_aegis_config', { config });
       setConfig(res);
-      setSaveStatus('Guardado correctamente en $XDG_CONFIG_HOME/aegis/config.json');
+      setSaveStatus('Configuración soberana persistida con éxito.');
       setTimeout(() => setSaveStatus(null), 3500);
     } catch (e) {
       setSaveStatus(`Error guardando: ${e}`);
@@ -112,6 +158,21 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
     }
   };
 
+  // Purgar cachés temporales
+  const handlePurgeCaches = async () => {
+    try {
+      const bytes = await invoke('purge_app_caches');
+      const mb = (bytes / (1024 * 1024)).toFixed(2);
+      setPurgeStatus(`Caché purgada: ${mb} MB liberados.`);
+      loadData();
+      setTimeout(() => setPurgeStatus(null), 3500);
+    } catch (e) {
+      setPurgeStatus(`Error: ${e}`);
+      setTimeout(() => setPurgeStatus(null), 3500);
+    }
+  };
+
+  // Repositorios
   const handleAddRepo = () => {
     if (!newRepoName.trim() || !newRepoPath.trim()) return;
     const newRepo = {
@@ -119,7 +180,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
       name: newRepoName.trim(),
       path: newRepoPath.trim(),
       role: newRepoRole.trim() || 'Proyecto Local',
-      warning: null
+      warning: newRepoWarning.trim() || null
     };
     setConfig(prev => ({
       ...prev,
@@ -128,6 +189,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
     setNewRepoName('');
     setNewRepoPath('');
     setNewRepoRole('');
+    setNewRepoWarning('');
   };
 
   const handleRemoveRepo = (id) => {
@@ -137,91 +199,332 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
     }));
   };
 
-  return (
-    <div className="modal-overlay" style={{ zIndex: 2000 }}>
-      <div className="modal-content glass" style={{ maxWidth: '780px', width: '92%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', padding: '0' }}>
-        {/* Modal Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 18px',
-          borderBottom: '1px solid var(--border-color)',
-          background: 'rgba(0,0,0,0.2)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <SettingsIcon size={18} color="var(--primary)" />
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: '#fff' }}>
-              Ajustes y Configuración Global de Aegis
-            </h3>
+  const handleOpenExternal = (url) => {
+    openUrl(url).catch(() => window.open(url, '_blank'));
+  };
+
+  const sections = [
+    { id: 'profile', label: 'Identidad & Perfil', icon: User },
+    { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
+    { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },
+    { id: 'ai', label: 'Motores IA & Presupuesto', icon: Bot },
+    { id: 'devops', label: 'Flota Git & DevOps', icon: GitBranch },
+    { id: 'notifications', label: 'Notificaciones SO', icon: Bell },
+    { id: 'gaming', label: 'Modo Gaming', icon: Gamepad2 }
+  ];
+
+  // Helper para bytes legibles
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const content = (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      background: 'var(--bg-main)',
+      color: 'var(--text-high)',
+      overflow: 'hidden'
+    }}>
+      {/* 🛡️ Header de Configuración */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 16px',
+        borderBottom: '1px solid var(--border-color)',
+        background: 'rgba(0,0,0,0.25)',
+        flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sliders size={18} color="var(--primary)" />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: '#fff' }}>
+                Centro de Configuración & Soberanía del Sistema
+              </h2>
+              <span style={{
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                color: 'var(--primary)',
+                background: 'var(--primary-glow)',
+                padding: '1px 6px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--primary)'
+              }}>
+                v2.8.0
+              </span>
+            </div>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+              Ajustes globales, identidad, rutas de datos soberanas y presupuesto de recursos.
+            </span>
           </div>
-          <button
-            onClick={onClose}
-            className="btn btn-secondary btn-icon"
-            style={{ width: '28px', height: '28px' }}
-            title="Cerrar (Esc)"
-          >
-            <X size={14} />
-          </button>
         </div>
 
-        {/* Navigation Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {saveStatus && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600 }}>
+              {saveStatus}
+            </span>
+          )}
+          <button
+            onClick={handleSaveConfig}
+            className="btn btn-primary"
+            style={{ padding: '4px 12px', fontSize: '0.72rem' }}
+          >
+            <Save size={12} />
+            <span>Guardar Todo</span>
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="btn btn-secondary btn-icon"
+              style={{ width: '28px', height: '28px' }}
+              title="Cerrar (Esc)"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 🧭 Panel Dividido: Subnavegación Lateral + Contenido */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Barra Lateral de Secciones */}
         <div style={{
+          width: '210px',
+          borderRight: '1px solid var(--border-color)',
+          background: 'rgba(0,0,0,0.15)',
+          padding: '8px',
           display: 'flex',
-          gap: '6px',
-          padding: '8px 18px',
-          background: 'rgba(0,0,0,0.1)',
-          borderBottom: '1px solid var(--border-color)',
-          flexWrap: 'wrap'
+          flexDirection: 'column',
+          gap: '3px',
+          flexShrink: 0
         }}>
-          {[
-            { id: 'appearance', label: 'Apariencia & Temas', icon: Palette },
-            { id: 'vault', label: 'Bóveda Obsidian', icon: BookOpen },
-            { id: 'agent', label: 'Agente de IA', icon: Bot },
-            { id: 'devops', label: 'Repositorios Git', icon: GitBranch },
-            { id: 'gaming', label: 'Modo Gaming', icon: Gamepad2 }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+          {sections.map(sec => {
+            const Icon = sec.icon;
+            const isActive = activeSection === sec.id;
             return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                key={sec.id}
+                onClick={() => setActiveSection(sec.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-md)',
+                  gap: '8px',
+                  padding: '7px 10px',
+                  borderRadius: 'var(--radius-sm)',
                   background: isActive ? 'var(--primary-glow)' : 'transparent',
                   border: isActive ? '1px solid var(--primary)' : '1px solid transparent',
                   color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
                   fontSize: '0.74rem',
                   fontWeight: isActive ? 700 : 500,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.12s ease'
                 }}
               >
-                <Icon size={13} color={isActive ? 'var(--primary)' : '#9ca3af'} />
-                <span>{tab.label}</span>
+                <Icon size={14} color={isActive ? 'var(--primary)' : 'var(--text-muted)'} />
+                <span>{sec.label}</span>
               </button>
             );
           })}
+
+          <div style={{ marginTop: 'auto', padding: '8px 4px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.64rem' }}>
+              <ShieldCheck size={12} color="var(--primary)" />
+              <span>Cero Hardcode · 100% Soberano</span>
+            </div>
+          </div>
         </div>
 
-        {/* Modal Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* ================= 🎨 PESTAÑA 1: APARIENCIA & TEMAS ================= */}
-          {activeTab === 'appearance' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Área de Configuración Activa */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          {loading && (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+              Cargando parámetros del sistema...
+            </div>
+          )}
+
+          {/* ================= 👤 SECCIÓN 1: PERFIL & IDENTIDAD ================= */}
+          {!loading && activeSection === 'profile' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '720px' }}>
               <div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', display: 'block' }}>
-                  Esquemas de Color Tácticos
-                </span>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                  El cambio de tema se aplica instantáneamente y persiste en tu configuración local.
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Identidad del Operador & Estilo de Trabajo
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Configura tu perfil soberano y las directrices para la interacción del agente.
                 </p>
               </div>
 
+              {/* Selector de Avatar Emoji */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  Avatar / Emblema
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {EMOJI_AVATARS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => setConfig({
+                        ...config,
+                        profile: { ...(config.profile || {}), avatarEmoji: emoji }
+                      })}
+                      style={{
+                        fontSize: '1.25rem',
+                        padding: '6px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: config.profile?.avatarEmoji === emoji ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
+                        border: config.profile?.avatarEmoji === emoji ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nombre y Rol */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Nombre o Alias</label>
+                  <input
+                    type="text"
+                    value={config.profile?.name || ''}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      profile: { ...(config.profile || {}), name: e.target.value }
+                    })}
+                    placeholder="Operador Soberano"
+                    style={{ fontSize: '0.78rem' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>Especialidad / Rol Profesional</label>
+                  <input
+                    type="text"
+                    value={config.profile?.role || ''}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      profile: { ...(config.profile || {}), role: e.target.value }
+                    })}
+                    placeholder="Ingeniero de Software"
+                    style={{ fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Modo de Comunicación del Agente */}
+              <div className="form-group">
+                <label style={{ fontSize: '0.74rem', fontWeight: 700 }}>
+                  Estilo de Respuesta Preferido del Agente IA
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                  {[
+                    { id: 'caveman', title: 'Caveman Full', desc: 'Ultra-comprimido, directo al código o comando, cero relleno.' },
+                    { id: 'technical', title: 'Técnico Conciso', desc: 'Respuestas precisas con arquitectura y trade-offs técnicos.' },
+                    { id: 'detailed', title: 'Formativo & Detallado', desc: 'Explicaciones paso a paso, razonamiento y contexto amplio.' }
+                  ].map(style => {
+                    const isSelected = (config.profile?.responseStyle || 'caveman') === style.id;
+                    return (
+                      <div
+                        key={style.id}
+                        onClick={() => setConfig({
+                          ...config,
+                          profile: { ...(config.profile || {}), responseStyle: style.id }
+                        })}
+                        style={{
+                          padding: '10px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: isSelected ? 'var(--primary-glow)' : 'rgba(255,255,255,0.02)',
+                          border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isSelected ? 'var(--primary)' : '#fff' }}>
+                            {style.title}
+                          </span>
+                          {isSelected && <Check size={12} color="var(--primary)" />}
+                        </div>
+                        <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.15' }}>
+                          {style.desc}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Cheat Sheet de Atajos de Teclado */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Keyboard size={14} color="var(--primary)" />
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#fff' }}>
+                    Atajos Maestros de Teclado (Cheat Sheet)
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px' }}>
+                  {MASTER_SHORTCUTS.map(sc => (
+                    <div
+                      key={sc.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '4px 8px',
+                        background: 'rgba(255,255,255,0.02)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.7rem'
+                      }}
+                    >
+                      <span style={{ color: 'var(--text-muted)' }}>{sc.desc}</span>
+                      <kbd style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        color: 'var(--primary)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.66rem',
+                        fontWeight: 700
+                      }}>
+                        {sc.key}
+                      </kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= 🎨 SECCIÓN 2: APARIENCIA & ESCALA ================= */}
+          {!loading && activeSection === 'appearance' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '780px' }}>
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Esquemas de Color Tácticos
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Personaliza la paleta visual para optimizar el contraste y el confort de lectura.
+                </p>
+              </div>
+
+              {/* Grid de Temas */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                 {THEMES.map(theme => {
                   const isSelected = currentTheme === theme.id;
@@ -258,82 +561,284 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
                       {/* Swatches */}
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: theme.bg, border: '1px solid #444' }} title="Fondo" />
-                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: theme.card, border: '1px solid #444' }} title="Tarjetas" />
-                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: theme.accent }} title="Acento Primario" />
+                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: theme.card, border: '1px solid #444' }} title="Superficie" />
+                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: theme.accent }} title="Acento" />
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Escala de Interfaz / Zoom DPI */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '4px' }}>
+                  Escala de Interfaz (Zoom DPI)
+                </span>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 10px 0' }}>
+                  Ajusta la densidad visual de toda la aplicación sin distorsionar la tipografía nativa.
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { label: '90% Compacto', val: 0.9 },
+                    { label: '100% Estándar', val: 1.0 },
+                    { label: '110% Cómodo', val: 1.1 }
+                  ].map(scale => {
+                    const isSelected = (config.uiScale || 1.0) === scale.val;
+                    return (
+                      <button
+                        key={scale.val}
+                        onClick={() => handleScaleChange(scale.val)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: isSelected ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
+                          border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                          color: isSelected ? 'var(--text-high)' : 'var(--text-muted)',
+                          fontSize: '0.74rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {scale.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* ================= 📚 PESTAÑA 2: BÓVEDA OBSIDIAN ================= */}
-          {activeTab === 'vault' && config && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ================= 📂 SECCIÓN 3: RUTAS & ALMACENAMIENTO ================= */}
+          {!loading && activeSection === 'storage' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '780px' }}>
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Rutas y Almacenamiento Soberano
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Aegis opera sin intermediarios de nube. Todos los datos residen en el sistema local de archivos.
+                </p>
+              </div>
+
+              {/* Métricas de Almacenamiento */}
+              {storageStats && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block' }}>Bóveda Obsidian</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                      {storageStats.vaultNotesCount} notas .md
+                    </span>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {storageStats.vaultPath}
+                    </span>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block' }}>Base de Datos SQLite</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#60a5fa' }}>
+                      {formatBytes(storageStats.dbSizeBytes)}
+                    </span>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {storageStats.dbPath}
+                    </span>
+                  </div>
+
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block' }}>Caché Temporal</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fbbf24' }}>
+                      {formatBytes(storageStats.cacheSizeBytes)}
+                    </span>
+                    <button
+                      onClick={handlePurgeCaches}
+                      style={{
+                        marginTop: '4px',
+                        background: 'transparent',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-muted)',
+                        padding: '2px 6px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.64rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Purgar Cachés
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {purgeStatus && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600 }}>
+                  {purgeStatus}
+                </span>
+              )}
+
+              {/* Input de Bóveda Obsidian */}
               <div className="form-group">
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+                <label style={{ fontSize: '0.76rem', fontWeight: 700 }}>
                   Ruta Local de la Bóveda de Obsidian
                 </label>
                 <input
                   type="text"
                   value={config.vaultPath}
                   onChange={(e) => setConfig({ ...config, vaultPath: e.target.value })}
-                  placeholder="/home/usuario/Documentos/Mi Boveda"
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}
+                  placeholder="/home/usuario/Documentos/Mi Bóveda"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}
                 />
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                  Aegis lee y escribe directamente sobre los archivos `.md` de esta carpeta sin duplicar almacenamiento.
+                <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                  Aegis lee y escribe directamente sobre los archivos Markdown sin sincronizaciones opacas.
                 </p>
               </div>
             </div>
           )}
 
-          {/* ================= 🤖 PESTAÑA 3: AGENTE DE IA ================= */}
-          {activeTab === 'agent' && config && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ================= 🤖 SECCIÓN 4: MOTORES IA & PRESUPUESTO ================= */}
+          {!loading && activeSection === 'ai' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '780px' }}>
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Hub de Motores IA & Presupuesto de Tokens
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Controla qué agente ejecuta tus tareas y define topes para prevenir sobrecostos de API.
+                </p>
+              </div>
+
+              {/* Selector de Agente */}
               <div className="form-group">
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
-                  Motor de Agente CLI Preferido
-                </label>
+                <label style={{ fontSize: '0.76rem', fontWeight: 700 }}>Motor de Agente Activo</label>
                 <select
                   value={config.agentType}
                   onChange={(e) => setConfig({ ...config, agentType: e.target.value })}
+                  style={{ fontSize: '0.78rem' }}
                 >
                   <option value="agy">Google Antigravity CLI (agy) — Integrado nativo</option>
                   <option value="claude">Claude Code (claude)</option>
-                  <option value="ollama">Ollama Local (CLI)</option>
+                  <option value="ollama">Ollama Local (Offline / Privado)</option>
                   <option value="custom">Comando Shell Personalizado</option>
                 </select>
               </div>
 
               {config.agentType === 'custom' && (
                 <div className="form-group">
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
-                    Comando de Ejecución del Agente
-                  </label>
+                  <label style={{ fontSize: '0.76rem', fontWeight: 700 }}>Comando de Ejecución del Agente</label>
                   <input
                     type="text"
                     value={config.agentCustomCmd || ''}
                     onChange={(e) => setConfig({ ...config, agentCustomCmd: e.target.value })}
-                    placeholder="ej. /usr/local/bin/my-agent --prompt"
-                    style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}
+                    placeholder="ej. /usr/local/bin/custom-agent --stream"
+                    style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}
                   />
                 </div>
               )}
+
+              {/* Presupuesto de Tokens */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Gauge size={14} color="var(--primary)" />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+                    Control de Presupuesto & Topes de Consumo
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.7rem' }}>Límite Diario (Tokens)</label>
+                    <input
+                      type="number"
+                      value={config.tokenBudget?.dailyLimit || 100000}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        tokenBudget: { ...(config.tokenBudget || {}), dailyLimit: Number(e.target.value) }
+                      })}
+                      style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.7rem' }}>Límite Semanal (Tokens)</label>
+                    <input
+                      type="number"
+                      value={config.tokenBudget?.weeklyLimit || 500000}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        tokenBudget: { ...(config.tokenBudget || {}), weeklyLimit: Number(e.target.value) }
+                      })}
+                      style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ fontSize: '0.7rem' }}>Umbral de Alerta (%)</label>
+                    <input
+                      type="number"
+                      value={config.tokenBudget?.warnThresholdPercent || 80}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        tokenBudget: { ...(config.tokenBudget || {}), warnThresholdPercent: Number(e.target.value) }
+                      })}
+                      style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Consolas Oficiales de Facturación */}
+              <div>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '6px' }}>
+                  Consolas Oficiales de Facturación y Cuotas
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '8px' }}>
+                  {BILLING_LINKS.map(link => (
+                    <div
+                      key={link.name}
+                      onClick={() => handleOpenExternal(link.url)}
+                      style={{
+                        padding: '8px 10px',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                          {link.name}
+                        </span>
+                        <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+                          {link.desc}
+                        </span>
+                      </div>
+                      <ExternalLink size={12} color="var(--primary)" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* ================= 🌿 PESTAÑA 4: REPOSITORIOS GIT ================= */}
-          {activeTab === 'devops' && config && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ================= 🌿 SECCIÓN 5: FLOTA GIT & DEVOPS ================= */}
+          {!loading && activeSection === 'devops' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '780px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
-                  Flota de Repositorios Vigilados ({config.gitRepos?.length || 0})
-                </span>
+                <div>
+                  <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                    Flota de Repositorios Vigilados ({config.gitRepos?.length || 0})
+                  </h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                    Controla los repositorios monitoreados en el radar DevOps y sus políticas de commit.
+                  </p>
+                </div>
               </div>
 
-              {/* Lista de Repos */}
+              {/* Lista de Repositorios */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {(config.gitRepos || []).map(repo => (
                   <div
@@ -356,6 +861,11 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
                       <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                         {repo.path}
                       </span>
+                      {repo.warning && (
+                        <span style={{ display: 'block', fontSize: '0.64rem', color: '#ef4444', fontWeight: 600, marginTop: '2px' }}>
+                          ⚠️ {repo.warning}
+                        </span>
+                      )}
                     </div>
 
                     <button
@@ -369,9 +879,9 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
                 ))}
               </div>
 
-              {/* Agregar Nuevo Repo Form */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '8px' }}>
+              {/* Añadir Nuevo Repositorio */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#fff', display: 'block', marginBottom: '8px' }}>
                   + Añadir Repositorio a la Flota
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
@@ -386,22 +896,31 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
                     type="text"
                     value={newRepoRole}
                     onChange={(e) => setNewRepoRole(e.target.value)}
-                    placeholder="Rol (ej. Backend / Web)"
+                    placeholder="Rol (ej. Backend / Móvil)"
                     style={{ fontSize: '0.75rem' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    value={newRepoPath}
+                    onChange={(e) => setNewRepoPath(e.target.value)}
+                    placeholder="Ruta local absoluta (ej. /home/usuario/proyectos/app)"
+                    style={{ flex: 1, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
-                    value={newRepoPath}
-                    onChange={(e) => setNewRepoPath(e.target.value)}
-                    placeholder="Ruta local absoluta (ej. /home/usuario/proyectos/miapp)"
-                    style={{ flex: 1, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
+                    value={newRepoWarning}
+                    onChange={(e) => setNewRepoWarning(e.target.value)}
+                    placeholder="Advertencia preventiva opcional (ej. Nunca usar git add -A)"
+                    style={{ flex: 1, fontSize: '0.72rem' }}
                   />
                   <button
                     onClick={handleAddRepo}
                     className="btn btn-secondary"
-                    style={{ padding: '4px 10px', fontSize: '0.72rem' }}
+                    style={{ padding: '4px 12px', fontSize: '0.72rem' }}
                   >
                     <Plus size={12} />
                     <span>Añadir</span>
@@ -411,58 +930,145 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange }) {
             </div>
           )}
 
-          {/* ================= 🎮 PESTAÑA 5: MODO GAMING ================= */}
-          {activeTab === 'gaming' && config && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* ================= 🔔 SECCIÓN 6: NOTIFICACIONES ================= */}
+          {!loading && activeSection === 'notifications' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '720px' }}>
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Centro de Notificaciones Nativas del SO
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Activa alertas preventivas de escritorio para eventos críticos sin saturación sensorial.
+                </p>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.78rem', color: '#fff' }}>
+                {[
+                  {
+                    id: 'sentinelTempAlert',
+                    title: 'Alerta Térmica de Centinela (> 85°C)',
+                    desc: 'Notifica inmediatamente si la CPU alcanza umbrales de sobrecalentamiento o estrangulamiento térmico.'
+                  },
+                  {
+                    id: 'taskDeadlinesAlert',
+                    title: 'Recordatorio de Tareas Próximas a Vencer',
+                    desc: 'Avisa sobre compromisos y checkboxes con fecha límite programada para hoy.'
+                  },
+                  {
+                    id: 'financeCutoffsAlert',
+                    title: 'Recordatorio de Cortes de Tarjetas y Pagos Fijos',
+                    desc: 'Avisa con 48 horas de antelación sobre fechas de corte quincenales y mensuales.'
+                  },
+                  {
+                    id: 'gitBranchAlerts',
+                    title: 'Avisos de Divergencia Git (Ahead / Behind)',
+                    desc: 'Alerta cuando una rama local esté detrás del remoto para evitar conflictos.'
+                  }
+                ].map(notif => {
+                  const isChecked = config.notifications?.[notif.id] ?? true;
+                  return (
+                    <label
+                      key={notif.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          notifications: {
+                            ...(config.notifications || {}),
+                            [notif.id]: e.target.checked
+                          }
+                        })}
+                        style={{ marginTop: '2px' }}
+                      />
+                      <div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                          {notif.title}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                          {notif.desc}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ================= 🎮 SECCIÓN 7: MODO GAMING ================= */}
+          {!loading && activeSection === 'gaming' && config && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '720px' }}>
+              <div>
+                <h3 style={{ fontSize: '0.85rem', fontWeight: 800, margin: '0 0 4px 0', color: '#fff' }}>
+                  Modo Gaming & Aceleración de Hardware
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Preconfigura las capas de aceleración agnóstica para tus lanzadores.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={config.enableGamemode}
                     onChange={(e) => setConfig({ ...config, enableGamemode: e.target.checked })}
+                    style={{ marginTop: '2px' }}
                   />
-                  <span>Activar Feral GameMode (`gamemoderun`) por defecto al lanzar juegos</span>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                      Activar Feral GameMode (`gamemoderun`) por defecto
+                    </span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      Optimiza el planificador del kernel (SCHED_ISO), gobernador de CPU e I/O de disco al ejecutar cualquier juego.
+                    </span>
+                  </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.78rem', color: '#fff' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={config.enableGamescopeFsr}
                     onChange={(e) => setConfig({ ...config, enableGamescopeFsr: e.target.checked })}
+                    style={{ marginTop: '2px' }}
                   />
-                  <span>Forzar escalado Gamescope FSR (720p 60fps → 1080p)</span>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                      Forzar escalado Gamescope FSR (720p 60fps → 1080p)
+                    </span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      Renderiza a resolución interna reducida aplicando AMD FidelityFX Super Resolution de forma transparente.
+                    </span>
+                  </div>
                 </label>
               </div>
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
 
-        {/* Modal Footer */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 18px',
-          borderTop: '1px solid var(--border-color)',
-          background: 'rgba(0,0,0,0.2)'
-        }}>
-          <div>
-            {saveStatus && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
-                {saveStatus}
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={onClose} className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: '0.75rem' }}>
-              Cerrar
-            </button>
-            <button onClick={handleSaveConfig} className="btn btn-primary" style={{ padding: '5px 14px', fontSize: '0.75rem' }}>
-              <Save size={13} />
-              <span>Guardar Ajustes</span>
-            </button>
-          </div>
-        </div>
+  if (isFullView) {
+    return content;
+  }
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 2000 }}>
+      <div className="modal-content glass" style={{ maxWidth: '920px', width: '92%', height: '88vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+        {content}
       </div>
     </div>
   );
