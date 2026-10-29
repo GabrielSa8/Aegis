@@ -87,13 +87,7 @@ pub fn run() {
             leisure::sqlite_get_custom_games,
             leisure::sqlite_save_custom_game,
             leisure::sqlite_delete_custom_game,
-            leisure::sqlite_record_game_session,
-            leisure::sqlite_get_ttrpg_characters,
-            leisure::sqlite_save_ttrpg_character,
-            leisure::sqlite_delete_ttrpg_character,
-            leisure::sqlite_save_dice_roll,
-            leisure::sqlite_get_dice_roll_history,
-            leisure::sqlite_clear_dice_roll_history
+            leisure::sqlite_record_game_session
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

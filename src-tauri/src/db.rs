@@ -148,7 +148,7 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             last_paid_date TEXT
         );
 
-        -- Tablas v2.7.0: Gaming, Lanzadores Personalizados y TTRPG Soberano
+        -- Tablas v2.7.0: Gaming & Lanzadores Personalizados
         CREATE TABLE IF NOT EXISTS custom_games (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -159,43 +159,6 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             banner_url TEXT,
             play_time_minutes INTEGER NOT NULL DEFAULT 0,
             last_played TEXT,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS ttrpg_characters (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            character_class TEXT NOT NULL,
-            level INTEGER NOT NULL DEFAULT 1,
-            race TEXT NOT NULL,
-            current_hp INTEGER NOT NULL DEFAULT 10,
-            max_hp INTEGER NOT NULL DEFAULT 10,
-            temp_hp INTEGER NOT NULL DEFAULT 0,
-            armor_class INTEGER NOT NULL DEFAULT 10,
-            initiative_bonus INTEGER NOT NULL DEFAULT 0,
-            speed INTEGER NOT NULL DEFAULT 30,
-            proficiency_bonus INTEGER NOT NULL DEFAULT 2,
-            str_score INTEGER NOT NULL DEFAULT 10,
-            dex_score INTEGER NOT NULL DEFAULT 10,
-            con_score INTEGER NOT NULL DEFAULT 10,
-            int_score INTEGER NOT NULL DEFAULT 10,
-            wis_score INTEGER NOT NULL DEFAULT 10,
-            cha_score INTEGER NOT NULL DEFAULT 10,
-            notes TEXT,
-            vault_note_path TEXT,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS ttrpg_dice_rolls (
-            id TEXT PRIMARY KEY,
-            character_name TEXT,
-            dice_expression TEXT NOT NULL,
-            rolls_json TEXT NOT NULL,
-            modifier INTEGER NOT NULL DEFAULT 0,
-            total INTEGER NOT NULL,
-            is_crit_success INTEGER NOT NULL DEFAULT 0,
-            is_crit_fail INTEGER NOT NULL DEFAULT 0,
-            label TEXT,
             created_at TEXT NOT NULL
         );
         ",
@@ -411,41 +374,6 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![g.0, g.1, g.2, g.3, g.4, g.5, g.6],
             );
         }
-    }
-
-    // Seed ttrpg_characters si está vacía (Plantilla genérica inicial)
-    let char_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM ttrpg_characters", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if char_count == 0 {
-        let _ = conn.execute(
-            "INSERT OR IGNORE INTO ttrpg_characters
-            (id, name, character_class, level, race, current_hp, max_hp, temp_hp, armor_class, initiative_bonus, speed, proficiency_bonus, str_score, dex_score, con_score, int_score, wis_score, cha_score, notes, vault_note_path, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, datetime('now'))",
-            params![
-                "char_aventurero_default",
-                "Aventurero Novato",
-                "Guerrero",
-                1,
-                "Humano",
-                12,
-                12,
-                0,
-                14,
-                1,
-                30,
-                2,
-                15,
-                12,
-                14,
-                10,
-                12,
-                8,
-                "Plantilla estándar D&D 5e lista para personalizar.",
-                ""
-            ],
-        );
     }
 
     Ok(())

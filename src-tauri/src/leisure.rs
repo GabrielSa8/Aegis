@@ -25,6 +25,7 @@ pub struct SteamGame {
     pub install_dir: String,
     pub size_mb: u64,
     pub last_played: u64,
+    pub cover_image: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,45 +43,52 @@ pub struct CustomGame {
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TtrpgCharacter {
-    pub id: String,
-    pub name: String,
-    pub character_class: String,
-    pub level: i32,
-    pub race: String,
-    pub current_hp: i32,
-    pub max_hp: i32,
-    pub temp_hp: i32,
-    pub armor_class: i32,
-    pub initiative_bonus: i32,
-    pub speed: i32,
-    pub proficiency_bonus: i32,
-    pub str_score: i32,
-    pub dex_score: i32,
-    pub con_score: i32,
-    pub int_score: i32,
-    pub wis_score: i32,
-    pub cha_score: i32,
-    pub notes: Option<String>,
-    pub vault_note_path: Option<String>,
-    pub updated_at: String,
+fn to_base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as usize;
+        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        let triple = (b0 << 16) | (b1 << 8) | b2;
+        out.push(TABLE[(triple >> 18) & 63] as char);
+        out.push(TABLE[(triple >> 12) & 63] as char);
+        if chunk.len() > 1 {
+            out.push(TABLE[(triple >> 6) & 63] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[triple & 63] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DiceRollRecord {
-    pub id: String,
-    pub character_name: Option<String>,
-    pub dice_expression: String,
-    pub rolls_json: String,
-    pub modifier: i32,
-    pub total: i32,
-    pub is_crit_success: bool,
-    pub is_crit_fail: bool,
-    pub label: Option<String>,
-    pub created_at: String,
+fn get_local_steam_cover(app_id: &str) -> Option<String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let candidates = [
+        format!("{}/.local/share/Steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
+        format!("{}/.steam/steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
+        format!("{}/.local/share/Steam/appcache/librarycache/{}/header.jpg", home, app_id),
+        format!("{}/.steam/steam/appcache/librarycache/{}/header.jpg", home, app_id),
+        format!("{}/.local/share/Steam/appcache/librarycache/{}/library_hero.jpg", home, app_id),
+        format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
+    ];
+
+    for path in &candidates {
+        if Path::new(path).exists() {
+            if let Ok(bytes) = fs::read(path) {
+                if !bytes.is_empty() {
+                    let b64 = to_base64(&bytes);
+                    return Some(format!("data:image/jpeg;base64,{}", b64));
+                }
+            }
+        }
+    }
+    None
 }
 
 fn detect_gpu_driver() -> String {
@@ -248,12 +256,14 @@ pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
                                 && !name.contains("SteamVR")
                                 && seen_appids.insert(appid.clone())
                             {
+                                let cover_image = get_local_steam_cover(&appid);
                                 games.push(SteamGame {
                                     app_id: appid,
                                     name,
                                     install_dir: installdir,
                                     size_mb: size_bytes / (1024 * 1024),
                                     last_played,
+                                    cover_image,
                                 });
                             }
                         }
@@ -371,13 +381,13 @@ pub fn launch_game(
     match l_type.as_str() {
         "url" => {
             let _ = Command::new("xdg-open").arg(&target).spawn();
-            Ok(format!("Enlace web abierto en navegador: {}", target))
+            Ok(format!("Enlace web abierto: {}", target))
         }
         "steam" => {
             if target == "steam" || target.is_empty() {
                 let mut cmd = build_accelerated_command("steam", &[], use_gamemode, use_gamescope_fsr, mangohud_flag, gamescope_res);
-                cmd.spawn().map_err(|e| format!("Error iniciando cliente Steam: {}", e))?;
-                Ok("Cliente Steam iniciado con perfil de aceleración.".to_string())
+                cmd.spawn().map_err(|e| format!("Error iniciando Steam: {}", e))?;
+                Ok("Cliente Steam iniciado con aceleración.".to_string())
             } else {
                 let run_arg = format!("steam://run/{}", target);
                 let mut cmd = build_accelerated_command("steam", &[&run_arg], use_gamemode, use_gamescope_fsr, mangohud_flag, gamescope_res);
@@ -496,195 +506,4 @@ pub fn sqlite_record_game_session(id: String, minutes: i64) -> Result<String, St
     )
     .map_err(|e| e.to_string())?;
     Ok("Sesión registrada.".to_string())
-}
-
-// ==========================================
-// 🎲 SQLite CRUD: D&D 5e TTRPG & Dice Roller
-// ==========================================
-
-#[tauri::command]
-pub fn sqlite_get_ttrpg_characters() -> Result<Vec<TtrpgCharacter>, String> {
-    let conn = get_db_connection()?;
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, character_class, level, race, current_hp, max_hp, temp_hp, armor_class, 
-                    initiative_bonus, speed, proficiency_bonus, str_score, dex_score, con_score, 
-                    int_score, wis_score, cha_score, notes, vault_note_path, updated_at
-             FROM ttrpg_characters ORDER BY updated_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map([], |row| {
-            Ok(TtrpgCharacter {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                character_class: row.get(2)?,
-                level: row.get(3)?,
-                race: row.get(4)?,
-                current_hp: row.get(5)?,
-                max_hp: row.get(6)?,
-                temp_hp: row.get(7)?,
-                armor_class: row.get(8)?,
-                initiative_bonus: row.get(9)?,
-                speed: row.get(10)?,
-                proficiency_bonus: row.get(11)?,
-                str_score: row.get(12)?,
-                dex_score: row.get(13)?,
-                con_score: row.get(14)?,
-                int_score: row.get(15)?,
-                wis_score: row.get(16)?,
-                cha_score: row.get(17)?,
-                notes: row.get(18)?,
-                vault_note_path: row.get(19)?,
-                updated_at: row.get(20)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let mut list = Vec::new();
-    for r in rows {
-        if let Ok(c) = r {
-            list.push(c);
-        }
-    }
-    Ok(list)
-}
-
-#[tauri::command]
-pub fn sqlite_save_ttrpg_character(character: TtrpgCharacter) -> Result<String, String> {
-    let conn = get_db_connection()?;
-    conn.execute(
-        "INSERT INTO ttrpg_characters (
-            id, name, character_class, level, race, current_hp, max_hp, temp_hp, armor_class,
-            initiative_bonus, speed, proficiency_bonus, str_score, dex_score, con_score,
-            int_score, wis_score, cha_score, notes, vault_note_path, updated_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, datetime('now'))
-        ON CONFLICT(id) DO UPDATE SET
-            name = excluded.name,
-            character_class = excluded.character_class,
-            level = excluded.level,
-            race = excluded.race,
-            current_hp = excluded.current_hp,
-            max_hp = excluded.max_hp,
-            temp_hp = excluded.temp_hp,
-            armor_class = excluded.armor_class,
-            initiative_bonus = excluded.initiative_bonus,
-            speed = excluded.speed,
-            proficiency_bonus = excluded.proficiency_bonus,
-            str_score = excluded.str_score,
-            dex_score = excluded.dex_score,
-            con_score = excluded.con_score,
-            int_score = excluded.int_score,
-            wis_score = excluded.wis_score,
-            cha_score = excluded.cha_score,
-            notes = excluded.notes,
-            vault_note_path = excluded.vault_note_path,
-            updated_at = datetime('now')",
-        params![
-            character.id,
-            character.name,
-            character.character_class,
-            character.level,
-            character.race,
-            character.current_hp,
-            character.max_hp,
-            character.temp_hp,
-            character.armor_class,
-            character.initiative_bonus,
-            character.speed,
-            character.proficiency_bonus,
-            character.str_score,
-            character.dex_score,
-            character.con_score,
-            character.int_score,
-            character.wis_score,
-            character.cha_score,
-            character.notes,
-            character.vault_note_path
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok("Personaje guardado.".to_string())
-}
-
-#[tauri::command]
-pub fn sqlite_delete_ttrpg_character(id: String) -> Result<String, String> {
-    let conn = get_db_connection()?;
-    conn.execute("DELETE FROM ttrpg_characters WHERE id = ?1", params![id])
-        .map_err(|e| e.to_string())?;
-    Ok("Personaje eliminado.".to_string())
-}
-
-#[tauri::command]
-pub fn sqlite_save_dice_roll(roll: DiceRollRecord) -> Result<String, String> {
-    let conn = get_db_connection()?;
-    conn.execute(
-        "INSERT INTO ttrpg_dice_rolls (
-            id, character_name, dice_expression, rolls_json, modifier, total, is_crit_success, is_crit_fail, label, created_at
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-        params![
-            roll.id,
-            roll.character_name,
-            roll.dice_expression,
-            roll.rolls_json,
-            roll.modifier,
-            roll.total,
-            if roll.is_crit_success { 1 } else { 0 },
-            if roll.is_crit_fail { 1 } else { 0 },
-            roll.label,
-            roll.created_at
-        ],
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok("Tirada registrada.".to_string())
-}
-
-#[tauri::command]
-pub fn sqlite_get_dice_roll_history(limit: Option<i64>) -> Result<Vec<DiceRollRecord>, String> {
-    let conn = get_db_connection()?;
-    let l = limit.unwrap_or(25);
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, character_name, dice_expression, rolls_json, modifier, total, is_crit_success, is_crit_fail, label, created_at
-             FROM ttrpg_dice_rolls ORDER BY created_at DESC LIMIT ?1",
-        )
-        .map_err(|e| e.to_string())?;
-
-    let rows = stmt
-        .query_map(params![l], |row| {
-            let crit_s: i32 = row.get(6)?;
-            let crit_f: i32 = row.get(7)?;
-            Ok(DiceRollRecord {
-                id: row.get(0)?,
-                character_name: row.get(1)?,
-                dice_expression: row.get(2)?,
-                rolls_json: row.get(3)?,
-                modifier: row.get(4)?,
-                total: row.get(5)?,
-                is_crit_success: crit_s == 1,
-                is_crit_fail: crit_f == 1,
-                label: row.get(8)?,
-                created_at: row.get(9)?,
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let mut list = Vec::new();
-    for r in rows {
-        if let Ok(rec) = r {
-            list.push(rec);
-        }
-    }
-    Ok(list)
-}
-
-#[tauri::command]
-pub fn sqlite_clear_dice_roll_history() -> Result<String, String> {
-    let conn = get_db_connection()?;
-    conn.execute("DELETE FROM ttrpg_dice_rolls", [])
-        .map_err(|e| e.to_string())?;
-    Ok("Historial de tiradas vaciado.".to_string())
 }
