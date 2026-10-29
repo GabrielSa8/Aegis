@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Send, 
   Terminal, 
@@ -660,118 +661,137 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
     ]);
   };
 
+  const [portalTarget, setPortalTarget] = useState(() => (typeof document !== 'undefined' ? document.getElementById('top-header-slot') : null));
+
+  useEffect(() => {
+    if (!portalTarget) {
+      const el = document.getElementById('top-header-slot');
+      if (el) setPortalTarget(el);
+    }
+  }, [portalTarget]);
+
   return (
     <div className="terminal-stream-container">
-      {/* 🧭 Terminal Context & Effort Strip */}
-      <div className="terminal-strip">
-        {/* Selector de perfiles dinámicos con scrollbar invisible */}
-        <div 
-          className="no-scrollbar"
-          onWheel={(e) => {
-            if (e.deltaY !== 0) {
-              e.currentTarget.scrollLeft += e.deltaY;
-            }
-          }}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '240px' }}
-        >
-          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
-            CONTEXTO:
-          </span>
-          {contexts.map((ctx) => {
-            const isSelected = selectedContextId === ctx.id;
-            return (
-              <button
-                key={ctx.id}
-                onClick={() => handleSelectContext(ctx.id)}
-                className={`terminal-btn ${isSelected ? 'active' : ''}`}
-              >
-                <FolderGit2 size={12} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
-                <span>{ctx.label}</span>
-                {ctx.skills?.length > 0 && (
-                  <span style={{ fontSize: '0.58rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.06)', fontFamily: 'var(--font-mono)' }}>
-                    {ctx.skills.length} skills
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {/* 🧭 Controles de Contexto y Esfuerzo Unificados en la Barra Superior (Cero Espacio Muerto) */}
+      {portalTarget ? createPortal(
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+          {/* Separador */}
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px', flexShrink: 0 }} />
 
-          {/* Botón Gestión de Contextos */}
-          <button
-            onClick={() => setShowContextModal(true)}
-            className="terminal-btn"
-            title="Administrar carpetas, skills y modelos de contextos"
+          {/* Selector de perfiles dinámicos con scrollbar invisible */}
+          <div 
+            className="no-scrollbar"
+            onWheel={(e) => {
+              if (e.deltaY !== 0) {
+                e.currentTarget.scrollLeft += e.deltaY;
+              }
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', overflowX: 'auto', flex: 1, minWidth: '160px' }}
           >
-            <Settings size={12} />
-            <span>Editar</span>
-          </button>
-        </div>
+            <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '2px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
+              CONTEXTO:
+            </span>
+            {contexts.map((ctx) => {
+              const isSelected = selectedContextId === ctx.id;
+              return (
+                <button
+                  key={ctx.id}
+                  onClick={() => handleSelectContext(ctx.id)}
+                  className={`terminal-btn ${isSelected ? 'active' : ''}`}
+                  style={{ padding: '2px 7px' }}
+                >
+                  <FolderGit2 size={11} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
+                  <span>{ctx.label}</span>
+                  {ctx.skills?.length > 0 && (
+                    <span style={{ fontSize: '0.55rem', padding: '1px 4px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.06)', fontFamily: 'var(--font-mono)' }}>
+                      {ctx.skills.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
 
-        {/* Toggle de Esfuerzo (Flash vs Profundo) y Controles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Toggle Flash / Profundo */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.35)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '2px'
-          }}>
+            {/* Botón Gestión de Contextos */}
             <button
-              onClick={() => setEffortMode('low')}
-              className={`terminal-btn ${effortMode === 'low' ? 'active' : ''}`}
-              style={{ border: 'none' }}
-              title="Modo Rápido: ~1.9s de respuesta, bajo consumo de tokens"
+              onClick={() => setShowContextModal(true)}
+              className="terminal-btn"
+              title="Administrar carpetas, skills y modelos de contextos"
+              style={{ padding: '2px 6px' }}
             >
-              <Zap size={11} color={effortMode === 'low' ? 'var(--primary)' : 'var(--text-muted)'} />
-              <span>Flash (1.9s)</span>
-            </button>
-
-            <button
-              onClick={() => setEffortMode('high')}
-              className={`terminal-btn ${effortMode === 'high' ? 'active' : ''}`}
-              style={{ border: 'none' }}
-              title="Modo Profundo: Razonamiento exhaustivo para refactorización y lógica compleja"
-            >
-              <Brain size={11} color={effortMode === 'high' ? 'var(--primary)' : 'var(--text-muted)'} />
-              <span>Profundo</span>
+              <Settings size={11} />
+              <span>Editar</span>
             </button>
           </div>
 
-          {/* Toggle Acordeón de Pensamiento */}
-          <button
-            onClick={() => setExpandThoughts((prev) => !prev)}
-            className={`terminal-btn ${expandThoughts ? 'active' : ''}`}
-            title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
-          >
-            <Brain size={12} color={expandThoughts ? 'var(--primary)' : 'var(--text-muted)'} />
-            <span>{expandThoughts ? 'Ocultar Razonamiento' : 'Ver Razonamiento'}</span>
-            <kbd className="tactical-kbd" style={{ fontSize: '0.56rem' }}>Ctrl+O</kbd>
-          </button>
+          {/* Toggle de Esfuerzo (Flash vs Profundo) y Controles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+            {/* Toggle Flash / Profundo */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'rgba(0, 0, 0, 0.35)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '1px'
+            }}>
+              <button
+                onClick={() => setEffortMode('low')}
+                className={`terminal-btn ${effortMode === 'low' ? 'active' : ''}`}
+                style={{ border: 'none', padding: '2px 6px' }}
+                title="Modo Rápido: ~1.9s de respuesta"
+              >
+                <Zap size={10} color={effortMode === 'low' ? 'var(--primary)' : 'var(--text-muted)'} />
+                <span>Flash</span>
+              </button>
 
-          {/* Historial de Sesiones Drawer Toggle */}
-          <button
-            onClick={() => setShowSessionsDrawer((prev) => !prev)}
-            className={`terminal-btn ${showSessionsDrawer ? 'active' : ''}`}
-            title="Abrir historial de sesiones tácticas"
-          >
-            <History size={12} color={showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)'} />
-            <span>Sesiones ({sessions.length})</span>
-          </button>
+              <button
+                onClick={() => setEffortMode('high')}
+                className={`terminal-btn ${effortMode === 'high' ? 'active' : ''}`}
+                style={{ border: 'none', padding: '2px 6px' }}
+                title="Modo Profundo: Razonamiento exhaustivo"
+              >
+                <Brain size={10} color={effortMode === 'high' ? 'var(--primary)' : 'var(--text-muted)'} />
+                <span>Profundo</span>
+              </button>
+            </div>
 
-          {/* Limpiar Historial */}
-          <button
-            onClick={clearHistory}
-            className="terminal-btn"
-            style={{ width: '28px', height: '28px', padding: 0, justifyContent: 'center' }}
-            title="Limpiar conversación"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
+            {/* Toggle Acordeón de Pensamiento */}
+            <button
+              onClick={() => setExpandThoughts((prev) => !prev)}
+              className={`terminal-btn ${expandThoughts ? 'active' : ''}`}
+              title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
+              style={{ padding: '2px 6px' }}
+            >
+              <Brain size={11} color={expandThoughts ? 'var(--primary)' : 'var(--text-muted)'} />
+              <span>{expandThoughts ? 'Ocultar Raz.' : 'Ver Raz.'}</span>
+              <kbd className="tactical-kbd" style={{ fontSize: '0.52rem', padding: '0 3px' }}>Ctrl+O</kbd>
+            </button>
+
+            {/* Historial de Sesiones Drawer Toggle */}
+            <button
+              onClick={() => setShowSessionsDrawer((prev) => !prev)}
+              className={`terminal-btn ${showSessionsDrawer ? 'active' : ''}`}
+              title="Abrir historial de sesiones tácticas"
+              style={{ padding: '2px 6px' }}
+            >
+              <History size={11} color={showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)'} />
+              <span>Sesiones ({sessions.length})</span>
+            </button>
+
+            {/* Limpiar Historial */}
+            <button
+              onClick={clearHistory}
+              className="terminal-btn"
+              style={{ width: '22px', height: '22px', padding: 0, justifyContent: 'center' }}
+              title="Limpiar conversación"
+            >
+              <Trash2 size={11} />
+            </button>
+          </div>
+        </div>,
+        portalTarget
+      ) : null}
 
       {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', padding: '0.45rem 0.85rem' }}>

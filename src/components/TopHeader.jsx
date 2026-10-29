@@ -49,7 +49,7 @@ export default function TopHeader({
       gap: '8px'
     }}>
       {/* 🛡️ Brand & Segmented Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, minWidth: 0 }}>
         {/* Brand Logo */}
         <div 
           onClick={() => onSelectTab('agent')}
@@ -151,6 +151,19 @@ export default function TopHeader({
         </nav>
       </div>
 
+      {/* 🧭 Slot Dinámico de Controles Activos de la Vista (ej. Contexto y Esfuerzo de Agente en la misma barra) */}
+      <div 
+        id="top-header-slot" 
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          flex: 1, 
+          minWidth: 0, 
+          overflow: 'hidden',
+          padding: '0 4px'
+        }} 
+      />
+
       {/* 📡 Telemetría, Búsqueda y Zen Focus Mode */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         {/* Core Status Pill */}
@@ -158,20 +171,20 @@ export default function TopHeader({
           display: 'flex',
           alignItems: 'center',
           gap: '5px',
-          background: 'rgba(16, 185, 129, 0.08)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
+          background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
           padding: '2px 8px',
           borderRadius: 'var(--radius-full)',
           fontSize: '0.64rem',
-          color: '#34d399',
+          color: 'var(--primary)',
           fontWeight: 600
         }}>
           <span style={{
             width: '5px',
             height: '5px',
             borderRadius: '50%',
-            background: '#10b981',
-            boxShadow: '0 0 6px #10b981'
+            background: 'var(--primary)',
+            boxShadow: '0 0 6px var(--primary)'
           }} />
           <span>{coreStatus ? 'Core Rust' : 'Web'}</span>
         </div>
