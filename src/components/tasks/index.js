@@ -1,4 +1,6 @@
 export { PomodoroWidget } from './PomodoroWidget';
+export { TasksHeader } from './TasksHeader';
+export { TasksHudStats } from './TasksHudStats';
 export { TaskCard } from './TaskCard';
 export { KanbanColumn } from './KanbanColumn';
 export { ProjectKanbanSwimlane } from './ProjectKanbanSwimlane';

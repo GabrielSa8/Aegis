@@ -2,6 +2,8 @@ export * from './vaultHelpers';
 export * from './useVault';
 export * from './VaultTreeNode';
 export * from './VaultSidebar';
+export * from './VaultSidebarHeader';
+export * from './VaultFullTextResults';
 export * from './VaultNoteHeader';
 export * from './VaultNoteEditor';
 export * from './NewNoteModal';
