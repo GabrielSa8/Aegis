@@ -75,21 +75,9 @@ pub struct MatchSnippet {
 fn resolve_hub(relative_path: &str) -> String {
     let parts: Vec<&str> = relative_path.split('/').collect();
     if parts.len() > 1 {
-        let first = parts[0];
-        if first.starts_with("00") {
-            return "00 Sistema".to_string();
-        } else if first.starts_with("01") {
-            return "01 Operaciones MELI".to_string();
-        } else if first.starts_with("02") {
-            return "02 Proyectos de Software".to_string();
-        } else if first.starts_with("03") {
-            return "03 Personal y Ocio".to_string();
-        } else if first.starts_with("04") {
-            return "04 Estudios y Certs".to_string();
-        }
-        return first.to_string();
+        return parts[0].to_string();
     }
-    "Raíz".to_string()
+    "General".to_string()
 }
 
 fn is_vault_path_safe(target_path: &Path) -> bool {

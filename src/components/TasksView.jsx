@@ -29,54 +29,144 @@ import {
   Boxes,
   Target,
   Shield,
-  Activity
+  Palette,
+  Settings2,
+  X,
+  Undo2,
+  Save,
+  Smile
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
-// Paleta y Temas Tácticos de Proyectos (Nordic Slate & Moss)
-const PROJECT_THEMES = {
-  'Aegis': { icon: '🛡️', color: '#10b981', border: 'rgba(16, 185, 129, 0.4)', bg: 'rgba(16, 185, 129, 0.12)' },
-  'TADÚ': { icon: '🚕', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.12)' },
-  'Granja Android': { icon: '📱', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.4)', bg: 'rgba(56, 189, 248, 0.12)' },
-  'AegisTrack': { icon: '📡', color: '#a855f7', border: 'rgba(168, 85, 247, 0.4)', bg: 'rgba(168, 85, 247, 0.12)' },
-  'Booklet V2': { icon: '📖', color: '#ec4899', border: 'rgba(236, 72, 153, 0.4)', bg: 'rgba(236, 72, 153, 0.12)' },
-  'Operaciones MELI': { icon: '📦', color: '#eab308', border: 'rgba(234, 179, 8, 0.4)', bg: 'rgba(234, 179, 8, 0.12)' },
-  'Bitácora & Cerebro': { icon: '🧠', color: '#6366f1', border: 'rgba(99, 102, 241, 0.4)', bg: 'rgba(99, 102, 241, 0.12)' },
-  'Estudios & AWS': { icon: '☁️', color: '#f97316', border: 'rgba(249, 115, 22, 0.4)', bg: 'rgba(249, 115, 22, 0.12)' },
-  'Personal & Gaming': { icon: '🎮', color: '#8b5cf6', border: 'rgba(139, 92, 246, 0.4)', bg: 'rgba(139, 92, 246, 0.12)' },
-  'Plantillas': { icon: '📋', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.4)', bg: 'rgba(148, 163, 184, 0.12)' },
+// Paleta Curada Táctica Nórdica Universal (10 Colores Armónicos de Alta Legibilidad)
+const NORDIC_PALETTE = [
+  { id: 'emerald', name: 'Esmeralda', color: '#10b981', border: 'rgba(16, 185, 129, 0.4)', bg: 'rgba(16, 185, 129, 0.12)' },
+  { id: 'sky', name: 'Cielo', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.4)', bg: 'rgba(56, 189, 248, 0.12)' },
+  { id: 'amber', name: 'Ámbar', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.12)' },
+  { id: 'purple', name: 'Púrpura', color: '#a855f7', border: 'rgba(168, 85, 247, 0.4)', bg: 'rgba(168, 85, 247, 0.12)' },
+  { id: 'pink', name: 'Rosa', color: '#ec4899', border: 'rgba(236, 72, 153, 0.4)', bg: 'rgba(236, 72, 153, 0.12)' },
+  { id: 'teal', name: 'Verde Mar', color: '#14b8a6', border: 'rgba(20, 184, 166, 0.4)', bg: 'rgba(20, 184, 166, 0.12)' },
+  { id: 'indigo', name: 'Índigo', color: '#6366f1', border: 'rgba(99, 102, 241, 0.4)', bg: 'rgba(99, 102, 241, 0.12)' },
+  { id: 'orange', name: 'Naranja', color: '#f97316', border: 'rgba(249, 115, 22, 0.4)', bg: 'rgba(249, 115, 22, 0.12)' },
+  { id: 'yellow', name: 'Dorado', color: '#eab308', border: 'rgba(234, 179, 8, 0.4)', bg: 'rgba(234, 179, 8, 0.12)' },
+  { id: 'violet', name: 'Violeta', color: '#8b5cf6', border: 'rgba(139, 92, 246, 0.4)', bg: 'rgba(139, 92, 246, 0.12)' },
+];
+
+const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
+
+// Presets iniciales inteligentes (fallback si no hay personalización explícita del usuario)
+const DEFAULT_PRESETS = {
+  'Aegis': { icon: '🛡️', colorId: 'emerald' },
+  'TADU - Plataforma de Movilidad': { icon: '🚕', colorId: 'amber' },
+  'TADÚ': { icon: '🚕', colorId: 'amber' },
+  'Granja - App Android': { icon: '📱', colorId: 'sky' },
+  'Granja Android': { icon: '📱', colorId: 'sky' },
+  'AegisTrack': { icon: '📡', colorId: 'purple' },
+  'Booklet V2': { icon: '📖', colorId: 'pink' },
+  'MOC - Operaciones Mercado Libre': { icon: '📦', colorId: 'yellow' },
+  'Ambulancias': { icon: '🚑', colorId: 'yellow' },
+  'Bitacora_Proyectos': { icon: '🧠', colorId: 'indigo' },
+  'Bitácora & Cerebro': { icon: '🧠', colorId: 'indigo' },
 };
 
-function getProjectTheme(project) {
-  if (PROJECT_THEMES[project]) return PROJECT_THEMES[project];
-  if (project.startsWith('Skill:')) {
-    return { icon: '⚡', color: '#14b8a6', border: 'rgba(20, 184, 166, 0.4)', bg: 'rgba(20, 184, 166, 0.12)' };
+// Generador determinista de color basado en hash de texto para CUALQUIER proyecto desconocido
+function hashStringToPalette(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return { icon: '📁', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.35)', bg: 'rgba(148, 163, 184, 0.1)' };
+  const index = Math.abs(hash) % NORDIC_PALETTE.length;
+  return NORDIC_PALETTE[index];
 }
 
-// Extractor de Proyecto/Módulo por ruta y nombre de archivo
-function getTaskProject(t) {
-  const cleanName = t.file_name.replace(/\.md$/i, '');
-  const parts = t.relative_path.split('/');
-  if (parts.length > 2 && parts[1] === 'Skills') {
-    return `Skill: ${parts[2]}`;
+// Extractor de emoji al inicio del nombre de una nota o carpeta (ej. "🚕 TADU" o "🛡️ Aegis")
+function extractLeadingEmoji(str) {
+  const match = str.match(/^(\p{Extended_Pictographic}|\p{Emoji_Presentation})\s*/u);
+  if (match) {
+    return { emoji: match[1], cleanStr: str.slice(match[0].length).trim() };
   }
-  if (/^tadu\b/i.test(cleanName)) return 'TADÚ';
-  if (/^aegistrack\b/i.test(cleanName)) return 'AegisTrack';
-  if (/^aegis\b/i.test(cleanName)) return 'Aegis';
-  if (/^granja\b/i.test(cleanName)) return 'Granja Android';
-  if (/^booklet\b/i.test(cleanName)) return 'Booklet V2';
-  if (/^bitacora/i.test(cleanName)) return 'Bitácora & Cerebro';
-  if (/^plantilla/i.test(cleanName)) return 'Plantillas';
-  if (t.hub.includes('Operaciones') || /meli|mercado\s*libre/i.test(cleanName)) return 'Operaciones MELI';
-  if (t.hub.includes('Estudios') || /aws/i.test(cleanName)) return 'Estudios & AWS';
-  if (t.hub.includes('Personal') || /gaming/i.test(cleanName)) return 'Personal & Gaming';
+  return { emoji: null, cleanStr: str };
+}
+
+// Extractor dinámico y agnóstico de Proyecto/Módulo según la estructura de carpetas de cualquier Bóveda
+function getTaskProject(t) {
+  const cleanName = t.file_name.replace(/\.md$/i, '').trim();
+  const parts = t.relative_path.split('/');
+
+  // Si el archivo está dentro de subcarpetas en el Hub (ej. "Hub/Subcarpeta/Nota.md")
+  if (parts.length > 2) {
+    const parentDir = parts[parts.length - 2];
+    // Si la nota tiene nombre genérico (Index, README, MOC, etc.), el proyecto es la subcarpeta
+    if (parentDir && parentDir !== parts[0] && /^(readme|index|skill|moc|nota|general)$/i.test(cleanName)) {
+      return parentDir;
+    }
+  }
+
+  // De lo contrario, la nota misma representa el contexto/proyecto
   return cleanName;
 }
 
-// Extractor de metadatos Obsidian Tasks (fechas, prioridad, etiquetas, proyecto)
-function parseTask(t) {
+// Resuelve tema visual de un proyecto: Personalización de Usuario > Emoji en Título > Preset > Hash Automático
+function resolveProjectTheme(projectName, customizations) {
+  // 1. Personalización manual guardada por el usuario en localStorage
+  if (customizations && customizations[projectName]) {
+    const custom = customizations[projectName];
+    const palette = NORDIC_PALETTE.find((p) => p.id === custom.colorId) || hashStringToPalette(projectName);
+    return {
+      icon: custom.icon || '📁',
+      color: palette.color,
+      border: palette.border,
+      bg: palette.bg
+    };
+  }
+
+  // 2. Si el nombre del proyecto ya inicia con emoji (ej. "🚕 TADU" o "🛡️ Aegis")
+  const extracted = extractLeadingEmoji(projectName);
+  if (extracted.emoji) {
+    const palette = hashStringToPalette(extracted.cleanStr);
+    return {
+      icon: extracted.emoji,
+      color: palette.color,
+      border: palette.border,
+      bg: palette.bg
+    };
+  }
+
+  // 3. Preset inicial por defecto (si coincide)
+  if (DEFAULT_PRESETS[projectName]) {
+    const preset = DEFAULT_PRESETS[projectName];
+    const palette = NORDIC_PALETTE.find((p) => p.id === preset.colorId) || hashStringToPalette(projectName);
+    return {
+      icon: preset.icon,
+      color: palette.color,
+      border: palette.border,
+      bg: palette.bg
+    };
+  }
+
+  // 4. Si es una habilidad (Skill)
+  if (projectName.startsWith('Skill:')) {
+    const palette = NORDIC_PALETTE.find((p) => p.id === 'teal') || hashStringToPalette(projectName);
+    return {
+      icon: '⚡',
+      color: palette.color,
+      border: palette.border,
+      bg: palette.bg
+    };
+  }
+
+  // 5. Fallback 100% agnóstico y determinista para cualquier bóveda
+  const palette = hashStringToPalette(projectName);
+  return {
+    icon: '📁',
+    color: palette.color,
+    border: palette.border,
+    bg: palette.bg
+  };
+}
+
+// Parseo de metadatos Obsidian Tasks (fechas, prioridad, etiquetas, proyecto)
+function parseTask(t, customizations) {
   const text = t.text;
   
   // Fecha límite: 📅 YYYY-MM-DD o ⏳ YYYY-MM-DD
@@ -104,7 +194,9 @@ function parseTask(t) {
     .replace(/[🔺⏫🔼🔽]/g, '')
     .trim();
 
-  const project = getTaskProject(t);
+  const rawProject = getTaskProject(t);
+  const theme = resolveProjectTheme(rawProject, customizations);
+  const cleanProjectName = extractLeadingEmoji(rawProject).cleanStr;
 
   return {
     ...t,
@@ -112,8 +204,9 @@ function parseTask(t) {
     priority,
     tags,
     cleanText: cleanText || text,
-    project,
-    theme: getProjectTheme(project)
+    project: cleanProjectName,
+    rawProject,
+    theme
   };
 }
 
@@ -123,7 +216,20 @@ export default function TasksView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   
-  // Filtros
+  // Personalizaciones de usuario en localStorage
+  const [customizations, setCustomizations] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_CUSTOM_KEY);
+      return stored ? JSON.parse(stored) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // Modal de Personalización
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
+  // Filtros dinámicos
   const [selectedHub, setSelectedHub] = useState('Todos');
   const [selectedProject, setSelectedProject] = useState('Todos');
   const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending', 'completed'
@@ -145,15 +251,6 @@ export default function TasksView() {
   const [pomoTimeLeft, setPomoTimeLeft] = useState(25 * 60);
   const [pomoRunning, setPomoRunning] = useState(false);
   const pomoTimerRef = useRef(null);
-
-  const hubs = [
-    'Todos',
-    '00 Sistema',
-    '01 Operaciones MELI',
-    '02 Proyectos de Software',
-    '03 Personal y Ocio',
-    '04 Estudios y Certs'
-  ];
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -232,6 +329,14 @@ export default function TasksView() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Guardar personalizaciones
+  const handleSaveCustomizations = (newCustoms) => {
+    setCustomizations(newCustoms);
+    try {
+      localStorage.setItem(STORAGE_CUSTOM_KEY, JSON.stringify(newCustoms));
+    } catch (_) {}
+  };
+
   // Conmutar estado de tarea en disco
   const handleToggle = async (task) => {
     const targetState = !task.completed;
@@ -273,12 +378,21 @@ export default function TasksView() {
     });
   };
 
-  // Tareas enriquecidas con metadatos
+  // Tareas enriquecidas con metadatos y temas dinámicos
   const parsedTasks = useMemo(() => {
-    return tasks.map(parseTask);
+    return tasks.map((t) => parseTask(t, customizations));
+  }, [tasks, customizations]);
+
+  // Lista dinámica de Hubs descubiertos en la bóveda del usuario
+  const hubs = useMemo(() => {
+    const set = new Set();
+    tasks.forEach((t) => {
+      if (t.hub) set.add(t.hub);
+    });
+    return ['Todos', ...Array.from(set).sort()];
   }, [tasks]);
 
-  // Lista única de Proyectos detectados para el filtro superior
+  // Lista dinámica de Proyectos descubiertos en la bóveda del usuario
   const availableProjects = useMemo(() => {
     const set = new Set();
     parsedTasks.forEach((t) => {
@@ -290,17 +404,11 @@ export default function TasksView() {
   // Tareas filtradas por Hub, Proyecto, Estado y Búsqueda
   const filteredTasks = useMemo(() => {
     return parsedTasks.filter((t) => {
-      // Filtro por Hub
       if (selectedHub !== 'Todos' && t.hub !== selectedHub) return false;
-
-      // Filtro por Proyecto
       if (selectedProject !== 'Todos' && t.project !== selectedProject) return false;
-
-      // Filtro por Estado
       if (statusFilter === 'pending' && t.completed) return false;
       if (statusFilter === 'completed' && !t.completed) return false;
 
-      // Filtro por Búsqueda
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesText = t.cleanText.toLowerCase().includes(q) || t.text.toLowerCase().includes(q);
@@ -325,7 +433,7 @@ export default function TasksView() {
     return { total, pending, completed, highPriority, percent };
   }, [parsedTasks]);
 
-  // Jerarquía: Hub -> Proyecto -> Tareas
+  // Jerarquía dinámica: Hub -> Proyecto -> Tareas
   const tasksHierarchy = useMemo(() => {
     const hierarchy = {};
     filteredTasks.forEach((t) => {
@@ -375,27 +483,39 @@ export default function TasksView() {
     return { todo, focus, done };
   }, [filteredTasks]);
 
-  // Agrupación para Matriz de Enfoque (4 cuadrantes)
+  // Agrupación adaptable para Matriz de Enfoque (100% universal según los Hubs reales del usuario)
   const matrixQuadrants = useMemo(() => {
     const urgent = [];
-    const software = [];
-    const meli = [];
-    const personal = [];
+    const hub1Tasks = [];
+    const hub2Tasks = [];
+    const restTasks = [];
+
+    const activeHubs = hubs.filter((h) => h !== 'Todos');
+    const primaryHub = activeHubs[0] || 'Enfoque Principal';
+    const secondaryHub = activeHubs[1] || 'Operaciones';
 
     filteredTasks.forEach((t) => {
-      if (!t.completed && t.priority === 'high') {
+      if (!t.completed && (t.priority === 'high' || t.dueDate)) {
         urgent.push(t);
-      } else if (t.hub.includes('02 Proyectos')) {
-        software.push(t);
-      } else if (t.hub.includes('01 Operaciones')) {
-        meli.push(t);
+      } else if (t.hub === primaryHub) {
+        hub1Tasks.push(t);
+      } else if (t.hub === secondaryHub) {
+        hub2Tasks.push(t);
       } else {
-        personal.push(t);
+        restTasks.push(t);
       }
     });
 
-    return { urgent, software, meli, personal };
-  }, [filteredTasks]);
+    return {
+      urgent,
+      hub1Tasks,
+      hub1Title: primaryHub,
+      hub2Tasks,
+      hub2Title: secondaryHub,
+      restTasks,
+      restTitle: activeHubs.length > 2 ? 'Otros Contextos' : 'Backlog General'
+    };
+  }, [filteredTasks, hubs]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem', overflowY: 'auto' }}>
@@ -411,7 +531,7 @@ export default function TasksView() {
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
         flexShrink: 0
       }}>
-        {/* Fila 1: HUD Stats + Pomodoro Widget + Refrescar */}
+        {/* Fila 1: HUD Stats + Pomodoro Widget + Personalizador + Refrescar */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -460,8 +580,9 @@ export default function TasksView() {
             </div>
           </div>
 
-          {/* Pomodoro HUD Widget + Refrescar */}
+          {/* Pomodoro HUD Widget + Personalizador + Refrescar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Widget Pomodoro */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -475,7 +596,6 @@ export default function TasksView() {
               boxShadow: pomoRunning ? `0 0 12px ${pomoMode === 'work' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.2)'}` : 'none',
               transition: 'all 0.2s ease'
             }}>
-              {/* LED indicador */}
               <div style={{
                 width: '6px',
                 height: '6px',
@@ -550,6 +670,30 @@ export default function TasksView() {
               </button>
             </div>
 
+            {/* Botón Personalizar Temas/Iconos */}
+            <button
+              type="button"
+              onClick={() => setShowCustomizer(true)}
+              title="Personalizar iconos y colores para tus proyectos y hubs"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 8px',
+                fontSize: '0.7rem',
+                borderRadius: '6px',
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                color: '#38bdf8',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              <Palette size={12} />
+              <span>Personalizar</span>
+            </button>
+
+            {/* Botón Escanear */}
             <button
               type="button"
               onClick={fetchTasks}
@@ -612,7 +756,7 @@ export default function TasksView() {
               />
             </div>
 
-            {/* Selector de Hub */}
+            {/* Selector de Hub Dinámico */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <FolderGit2 size={12} color="#34d399" />
               <select
@@ -637,7 +781,7 @@ export default function TasksView() {
               </select>
             </div>
 
-            {/* Selector de Proyecto Granular */}
+            {/* Selector de Proyecto Granular Dinámico */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <Boxes size={12} color="#38bdf8" />
               <select
@@ -653,7 +797,7 @@ export default function TasksView() {
                   cursor: 'pointer',
                   fontWeight: 600
                 }}
-                title="Filtrar por Proyecto específico (Aegis, TADÚ, Granja, etc.)"
+                title="Filtrar por Proyecto específico"
               >
                 {availableProjects.map((p) => (
                   <option key={p} value={p} style={{ background: '#131716', color: '#e2e8f0' }}>
@@ -909,7 +1053,7 @@ export default function TasksView() {
                         const pTotal = projTasks.length;
                         const pDone = projTasks.filter((t) => t.completed).length;
                         const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
-                        const theme = getProjectTheme(projectName);
+                        const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
                         return (
                           <div
@@ -979,7 +1123,7 @@ export default function TasksView() {
               const pTotal = projTasks.length;
               const pDone = projTasks.filter((t) => t.completed).length;
               const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
-              const theme = getProjectTheme(projectName);
+              const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
               return (
                 <div
@@ -1166,7 +1310,7 @@ export default function TasksView() {
                           const pTotal = projTasks.length;
                           const pDone = projTasks.filter((t) => t.completed).length;
                           const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
-                          const theme = getProjectTheme(projectName);
+                          const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
                           const pTodo = [];
                           const pFocus = [];
@@ -1206,7 +1350,7 @@ export default function TasksView() {
                 const pTotal = projTasks.length;
                 const pDone = projTasks.filter((t) => t.completed).length;
                 const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
-                const theme = getProjectTheme(projectName);
+                const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
                 const pTodo = [];
                 const pFocus = [];
@@ -1244,7 +1388,6 @@ export default function TasksView() {
             gap: '0.85rem',
             alignItems: 'start'
           }}>
-            {/* Columna 1: Por Hacer */}
             <KanbanColumn
               title="📥 Por Hacer"
               count={kanbanColumns.todo.length}
@@ -1255,7 +1398,6 @@ export default function TasksView() {
               emptyMessage="Sin tareas en cola"
             />
 
-            {/* Columna 2: En Foco / Urgente */}
             <KanbanColumn
               title="🔥 En Foco / Urgente"
               count={kanbanColumns.focus.length}
@@ -1267,7 +1409,6 @@ export default function TasksView() {
               emptyMessage="Sin tareas urgentes en foco"
             />
 
-            {/* Columna 3: Completadas */}
             <KanbanColumn
               title="✅ Completadas"
               count={kanbanColumns.done.length}
@@ -1280,14 +1421,14 @@ export default function TasksView() {
           </div>
         )
       ) : (
-        /* 🎯 3. VISTA MATRIZ DE ENFOQUE & CUADRANTES */
+        /* 🎯 3. VISTA MATRIZ DE ENFOQUE & CUADRANTES ADAPTABLES */
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '0.85rem'
         }}>
           <MatrixQuadrant
-            title="🚨 Urgente & Crítico"
+            title="🚨 Urgente & Alta Prioridad"
             color="#fbbf24"
             bgColor="rgba(245, 158, 11, 0.08)"
             borderColor="rgba(245, 158, 11, 0.3)"
@@ -1295,31 +1436,282 @@ export default function TasksView() {
             onToggle={handleToggle}
           />
           <MatrixQuadrant
-            title="💻 Desarrollo & Código (TADÚ / Aegis)"
+            title={`💻 ${matrixQuadrants.hub1Title}`}
             color="#38bdf8"
             bgColor="rgba(56, 189, 248, 0.08)"
             borderColor="rgba(56, 189, 248, 0.3)"
-            tasks={matrixQuadrants.software}
+            tasks={matrixQuadrants.hub1Tasks}
             onToggle={handleToggle}
           />
           <MatrixQuadrant
-            title="📦 Operaciones MELI (Última Milla)"
+            title={`📦 ${matrixQuadrants.hub2Title}`}
             color="#eab308"
             bgColor="rgba(234, 179, 8, 0.08)"
             borderColor="rgba(234, 179, 8, 0.3)"
-            tasks={matrixQuadrants.meli}
+            tasks={matrixQuadrants.hub2Tasks}
             onToggle={handleToggle}
           />
           <MatrixQuadrant
-            title="📚 Estudios, Certs & Personal"
+            title={`📚 ${matrixQuadrants.restTitle}`}
             color="#a855f7"
             bgColor="rgba(168, 85, 247, 0.08)"
             borderColor="rgba(168, 85, 247, 0.3)"
-            tasks={matrixQuadrants.personal}
+            tasks={matrixQuadrants.restTasks}
             onToggle={handleToggle}
           />
         </div>
       )}
+
+      {/* 🎨 MODAL DE PERSONALIZACIÓN UNIVERSAL DE PROYECTOS & HUBS */}
+      {showCustomizer && (
+        <CustomizerModal
+          projects={availableProjects.filter((p) => p !== 'Todos')}
+          customizations={customizations}
+          onSave={handleSaveCustomizations}
+          onClose={() => setShowCustomizer(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal de Personalización Universal
+function CustomizerModal({ projects, customizations, onSave, onClose }) {
+  const [draft, setDraft] = useState({ ...customizations });
+
+  const handleUpdate = (proj, field, val) => {
+    setDraft((prev) => ({
+      ...prev,
+      [proj]: {
+        ...(prev[proj] || {}),
+        [field]: val
+      }
+    }));
+  };
+
+  const handleResetAll = () => {
+    setDraft({});
+  };
+
+  const handleSaveAndClose = () => {
+    onSave(draft);
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0, 0, 0, 0.75)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999,
+      padding: '1rem'
+    }}>
+      <div style={{
+        background: 'linear-gradient(180deg, #161c1a 0%, #0e1211 100%)',
+        border: '1px solid rgba(52, 211, 153, 0.3)',
+        borderRadius: '10px',
+        width: '100%',
+        maxWidth: '560px',
+        maxHeight: '85vh',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
+      }}>
+        {/* Cabecera del Modal */}
+        <div style={{
+          padding: '0.75rem 1rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Palette size={16} color="#34d399" />
+            <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#f1f5f9' }}>
+              Personalizador de Proyectos & Contextos
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '4px'
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Subtítulo descriptivo */}
+        <div style={{ padding: '0.6rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          Configura tus propios emojis y colores nórdicos para cada proyecto o contexto detectado en tu Bóveda.
+        </div>
+
+        {/* Lista de Proyectos Configurable */}
+        <div style={{ padding: '0.75rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
+          {projects.map((proj) => {
+            const currentTheme = resolveProjectTheme(proj, draft);
+            const userCustom = draft[proj] || {};
+            const currentColorId = userCustom.colorId || NORDIC_PALETTE.find(p => p.color === currentTheme.color)?.id || 'emerald';
+
+            return (
+              <div
+                key={proj}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: `1px solid ${currentTheme.border}`,
+                  borderRadius: '6px',
+                  gap: '10px'
+                }}
+              >
+                {/* Nombre y Badge Preview */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '150px' }}>
+                  <span style={{
+                    fontSize: '0.66rem',
+                    fontWeight: 800,
+                    color: currentTheme.color,
+                    background: currentTheme.bg,
+                    border: `1px solid ${currentTheme.border}`,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>{currentTheme.icon}</span>
+                    <span>{proj}</span>
+                  </span>
+                </div>
+
+                {/* Controles: Emoji Input + Swatches de Color */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* Emoji input */}
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={userCustom.icon !== undefined ? userCustom.icon : currentTheme.icon}
+                    onChange={(e) => handleUpdate(proj, 'icon', e.target.value)}
+                    title="Escribe un emoji (ej. 🚗, 💼, 🛡️, 🚀)"
+                    style={{
+                      width: '36px',
+                      height: '28px',
+                      textAlign: 'center',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '4px',
+                      color: '#f1f5f9',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+
+                  {/* Swatches de Color Nórdicos */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {NORDIC_PALETTE.map((pal) => {
+                      const isSelected = currentColorId === pal.id;
+                      return (
+                        <div
+                          key={pal.id}
+                          onClick={() => handleUpdate(proj, 'colorId', pal.id)}
+                          title={pal.name}
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            background: pal.color,
+                            cursor: 'pointer',
+                            border: isSelected ? '2px solid #ffffff' : '1px solid rgba(0, 0, 0, 0.5)',
+                            transform: isSelected ? 'scale(1.2)' : 'none',
+                            boxShadow: isSelected ? `0 0 6px ${pal.color}` : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer del Modal */}
+        <div style={{
+          padding: '0.65rem 1rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <button
+            type="button"
+            onClick={handleResetAll}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontSize: '0.72rem',
+              cursor: 'pointer'
+            }}
+          >
+            <Undo2 size={12} />
+            <span>Restablecer Todo</span>
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-high)',
+                padding: '4px 12px',
+                borderRadius: '5px',
+                fontSize: '0.74rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAndClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: '#10b981',
+                border: 'none',
+                color: '#042f2e',
+                fontWeight: 800,
+                padding: '4px 14px',
+                borderRadius: '5px',
+                fontSize: '0.74rem',
+                cursor: 'pointer',
+                boxShadow: '0 0 10px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              <Save size={13} />
+              <span>Guardar</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1496,7 +1888,6 @@ function ProjectKanbanSwimlane({
 
 // Subcomponente de Columna Kanban Global
 function KanbanColumn({ title, count, tasks, onToggle, headerColor, accentColor, highlight = false, emptyMessage }) {
-  // Agrupar tareas dentro de la columna por Proyecto
   const grouped = useMemo(() => {
     const map = {};
     tasks.forEach((t) => {
@@ -1537,7 +1928,7 @@ function KanbanColumn({ title, count, tasks, onToggle, headerColor, accentColor,
           </div>
         ) : (
           Object.entries(grouped).map(([project, projTasks]) => {
-            const theme = getProjectTheme(project);
+            const theme = projTasks[0]?.theme || { icon: '📁', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' };
             return (
               <div key={project} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <div style={{
@@ -1570,7 +1961,7 @@ function KanbanColumn({ title, count, tasks, onToggle, headerColor, accentColor,
   );
 }
 
-// Subcomponente de Cuadrante para la Matriz
+// Subcomponente de Cuadrante para la Matriz Adaptable
 function MatrixQuadrant({ title, color, bgColor, borderColor, tasks, onToggle }) {
   return (
     <div style={{
@@ -1615,7 +2006,7 @@ function MatrixQuadrant({ title, color, bgColor, borderColor, tasks, onToggle })
 
 // Subcomponente de Tarjeta de Tarea Táctica de Alto Impacto
 function TaskCard({ task, onToggle, compact = false, highlight = false }) {
-  const theme = task.theme || getProjectTheme(task.project);
+  const theme = task.theme || { icon: '📁', color: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)', bg: 'rgba(148, 163, 184, 0.1)' };
 
   return (
     <div
