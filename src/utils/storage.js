@@ -278,7 +278,7 @@ export const deleteCategory = async (categoryName) => {
   return categories;
 };
 
-// --- TIMELINE MAESTRO CRUZADO (MELI, TADÚ, CERTS, UNI) ---
+// --- TIMELINE MAESTRO CRUZADO (HITOS, SCLIENTS, OPERACIONES) ---
 export const getTimelineEvents = async () => {
   if (isTauri()) {
     try {

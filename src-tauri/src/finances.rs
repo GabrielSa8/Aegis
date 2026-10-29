@@ -386,7 +386,7 @@ pub fn sqlite_restore_snapshot(snapshot_id: String) -> Result<(), String> {
     Ok(())
 }
 
-// ================= TIMELINE MAESTRO CRUZADO (MELI, TADÚ, CERTS, UNI) =================
+// ================= TIMELINE MAESTRO CRUZADO (HITOS & OPERACIONES) =================
 
 #[tauri::command]
 pub fn sqlite_get_timeline_events() -> Result<Vec<TimelineEvent>, String> {

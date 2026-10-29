@@ -247,7 +247,7 @@ export default function ContextManagerModal({
                 type="text"
                 value={activeCtx.label || ''}
                 onChange={(e) => handleUpdateActive('label', e.target.value)}
-                placeholder="Ej. TADÚ (Backend)"
+                placeholder="Ej. Mi Proyecto (Backend)"
                 style={{ fontSize: '0.85rem', padding: '0.5rem 0.8rem' }}
               />
             </div>

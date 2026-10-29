@@ -388,9 +388,9 @@ export default function SentinelView() {
           </div>
 
           <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Compuerta de Seguridad TADÚ</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Protección de Repositorios Git</span>
             <span style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700 }}>
-              Bloqueo git add -A / clean ACTIVO
+              Compuertas y Bloqueos de Seguridad ACTIVOS
             </span>
           </div>
         </div>

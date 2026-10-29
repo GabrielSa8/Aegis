@@ -251,7 +251,7 @@ export default function FinancesView() {
   const subTabs = [
     { id: 'operations', label: 'Operaciones & Registro', icon: ReceiptText },
     { id: 'accounts', label: 'Cuentas, MSI & Recurrentes', icon: CreditCard },
-    { id: 'timeline', label: 'Timeline Maestro (MELI / TADÚ / Certs)', icon: CalendarRange },
+    { id: 'timeline', label: 'Timeline Maestro (Hitos & Operaciones)', icon: CalendarRange },
     { id: 'calendar', label: 'Calendario Mensual', icon: CalendarIcon },
     { id: 'analytics', label: 'Métricas & Analítica', icon: PieChart },
     { id: 'budgets', label: 'Presupuestos & Respaldos', icon: Target }
@@ -422,7 +422,7 @@ export default function FinancesView() {
         <AccountsMsiView onTransactionCreated={refreshTransactionsAndSnapshots} />
       )}
 
-      {/* 🧭 SUB-VISTA 2: TIMELINE MAESTRO CRUZADO (MELI, TADÚ, CERTS, UNI) */}
+      {/* 🧭 SUB-VISTA 2: TIMELINE MAESTRO CRUZADO (HITOS & OPERACIONES) */}
       {subTab === 'timeline' && (
         <TimelineView 
           events={timelineEvents}
