@@ -74,7 +74,6 @@ fn get_local_steam_cover(app_id: &str) -> Option<String> {
         format!("{}/.steam/steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
         format!("{}/.local/share/Steam/appcache/librarycache/{}/header.jpg", home, app_id),
         format!("{}/.steam/steam/appcache/librarycache/{}/header.jpg", home, app_id),
-        format!("{}/.local/share/Steam/appcache/librarycache/{}/library_hero.jpg", home, app_id),
         format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/appcache/librarycache/{}/library_600x900.jpg", home, app_id),
     ];
 

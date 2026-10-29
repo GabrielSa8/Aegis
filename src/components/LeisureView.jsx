@@ -1,20 +1,180 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { 
   Gamepad2, 
   Flame, 
   Play, 
-  RefreshCw,
-  Plus,
-  Trash2,
-  Edit3,
-  Zap,
-  Sparkles,
-  Search,
-  ExternalLink,
-  Layers,
-  Settings2
+  RefreshCw, 
+  Plus, 
+  Trash2, 
+  Zap, 
+  Search 
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+
+// 🎴 Componente Memoizado de Tarjeta de Juego (Zero re-renders innecesarios)
+const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const coverSrc = isSteam ? game.coverImage : game.bannerUrl;
+  const hasCover = Boolean(coverSrc) && !imgFailed;
+
+  return (
+    <div
+      onClick={() => onLaunch(isSteam ? `steam:${game.appId}` : game.id, isSteam ? null : game.launchType, isSteam ? null : game.launchTarget)}
+      style={{
+        position: 'relative',
+        aspectRatio: '2 / 3',
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden',
+        background: 'linear-gradient(145deg, #161c19, #0c100e)',
+        border: '1px solid var(--border-color)',
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, border-color 0.15s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        willChange: 'transform'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-3px)';
+        e.currentTarget.style.borderColor = 'var(--primary)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.borderColor = 'var(--border-color)';
+      }}
+      title={`Lanzar ${game.name || game.title}`}
+    >
+      {/* Portada Full Image si está disponible */}
+      {hasCover ? (
+        <img
+          src={coverSrc}
+          alt={game.name || game.title}
+          loading="lazy"
+          decoding="async"
+          onError={() => setImgFailed(true)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover'
+          }}
+        />
+      ) : (
+        /* Tarjeta Estilizada Minimalista cuando no hay portada local */
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(circle at center, rgba(16,185,129,0.08) 0%, rgba(0,0,0,0.5) 100%)',
+          padding: '16px',
+          textAlign: 'center'
+        }}>
+          <Gamepad2 size={36} color="rgba(255,255,255,0.15)" />
+        </div>
+      )}
+
+      {/* Tag de Categoría / Tipo en Esquina Superior */}
+      <div style={{
+        position: 'absolute',
+        top: '8px',
+        right: '8px',
+        background: 'rgba(10, 14, 12, 0.88)',
+        padding: '2px 6px',
+        borderRadius: 'var(--radius-sm)',
+        fontSize: '0.6rem',
+        fontWeight: 700,
+        color: isSteam ? '#a7f3d0' : 'var(--primary)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        zIndex: 2,
+        pointerEvents: 'none'
+      }}>
+        {isSteam ? 'STEAM' : (game.category || 'CUSTOM').toUpperCase()}
+      </div>
+
+      {/* Botón Eliminar para juegos personalizados */}
+      {!isSteam && onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(game.id);
+          }}
+          style={{
+            position: 'absolute',
+            top: '8px',
+            left: '8px',
+            background: 'rgba(10, 14, 12, 0.88)',
+            border: 'none',
+            color: '#ef4444',
+            cursor: 'pointer',
+            padding: '3px 5px',
+            borderRadius: 'var(--radius-sm)',
+            zIndex: 3
+          }}
+          title="Eliminar este lanzador"
+        >
+          <Trash2 size={11} />
+        </button>
+      )}
+
+      {/* Degradado Inferior & Título Minimalista */}
+      <div style={{
+        position: 'relative',
+        zIndex: 2,
+        background: 'linear-gradient(to top, rgba(8,12,10,0.96) 0%, rgba(8,12,10,0.7) 65%, transparent 100%)',
+        padding: '12px 10px 10px 10px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
+      }}>
+        <span style={{
+          fontSize: '0.82rem',
+          fontWeight: 800,
+          color: '#fff',
+          lineHeight: '1.15',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical'
+        }}>
+          {game.name || game.title}
+        </span>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: '2px'
+        }}>
+          <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+            {isSteam 
+              ? (game.sizeMb > 1024 ? `${(game.sizeMb / 1024).toFixed(1)} GB` : `${game.sizeMb} MB`)
+              : (game.launchType ? game.launchType.toUpperCase() : 'URL')}
+          </span>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: 'var(--primary)',
+            color: '#052e16',
+            padding: '2px 8px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.66rem',
+            fontWeight: 800
+          }}>
+            <Play size={10} fill="#052e16" />
+            <span>Jugar</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export default function LeisureView() {
   const [gamingStatus, setGamingStatus] = useState(null);
@@ -47,10 +207,31 @@ export default function LeisureView() {
     bannerUrl: ''
   });
 
-  // Telemetría Gamepad (HTML5 Gamepad API)
-  const [gamepadInfo, setGamepadInfo] = useState({ connected: false });
+  // Telemetría Gamepad reactiva basada en eventos (Sin polling de CPU)
+  const [gamepadConnected, setGamepadConnected] = useState(false);
 
-  // Carga de datos
+  useEffect(() => {
+    const handleConnect = () => setGamepadConnected(true);
+    const handleDisconnect = () => setGamepadConnected(false);
+
+    window.addEventListener('gamepadconnected', handleConnect);
+    window.addEventListener('gamepaddisconnected', handleDisconnect);
+
+    // Verificación inicial única sin interval
+    try {
+      const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      setGamepadConnected(Array.from(gps).some(g => g && g.connected));
+    } catch {
+      // Ignorar
+    }
+
+    return () => {
+      window.removeEventListener('gamepadconnected', handleConnect);
+      window.removeEventListener('gamepaddisconnected', handleDisconnect);
+    };
+  }, []);
+
+  // Carga inicial
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -90,55 +271,8 @@ export default function LeisureView() {
     localStorage.setItem('aegis_leisure_mangohud', String(val));
   };
 
-  // Sonido sintético Web Audio para lanzador
-  const playChime = useCallback((frequency = 540, duration = 0.2) => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    } catch {
-      // Ignorar si audio está restringido
-    }
-  }, []);
-
-  // Polling de gamepad
-  useEffect(() => {
-    const pollGamepad = () => {
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      let found = null;
-      for (let i = 0; i < gamepads.length; i++) {
-        const gp = gamepads[i];
-        if (gp && gp.connected) {
-          found = gp;
-          break;
-        }
-      }
-      if (found) {
-        setGamepadInfo({
-          connected: true,
-          id: found.id,
-          buttonsCount: found.buttons.length,
-          axesCount: found.axes.length
-        });
-      } else {
-        setGamepadInfo({ connected: false });
-      }
-    };
-
-    const interval = setInterval(pollGamepad, 400);
-    return () => clearInterval(interval);
-  }, []);
-
   // Lanzar juego universal
-  const handleLaunchGame = async (gameId, launchType = null, launchTarget = null) => {
+  const handleLaunchGame = useCallback(async (gameId, launchType = null, launchTarget = null) => {
     try {
       const res = await invoke('launch_game', {
         gameId,
@@ -150,14 +284,12 @@ export default function LeisureView() {
         gamescopeRes
       });
       setLaunchMessage(res);
-      playChime(600, 0.15);
-      setTimeout(() => setLaunchMessage(null), 4000);
-      fetchData();
+      setTimeout(() => setLaunchMessage(null), 3500);
     } catch (e) {
       setLaunchMessage(`Error: ${e}`);
-      setTimeout(() => setLaunchMessage(null), 4000);
+      setTimeout(() => setLaunchMessage(null), 3500);
     }
-  };
+  }, [useGamescopeFsr, useMangohud, gamescopeRes]);
 
   // Guardar juego personalizado
   const handleSaveCustomGame = async (e) => {
@@ -196,8 +328,7 @@ export default function LeisureView() {
   };
 
   // Eliminar juego personalizado
-  const handleDeleteCustomGame = async (id, e) => {
-    e.stopPropagation();
+  const handleDeleteCustomGame = useCallback(async (id) => {
     if (!confirm('¿Eliminar este lanzador del catálogo?')) return;
     try {
       await invoke('sqlite_delete_custom_game', { id });
@@ -205,21 +336,26 @@ export default function LeisureView() {
     } catch (err) {
       alert(`Error eliminando juego: ${err}`);
     }
-  };
+  }, [fetchData]);
 
-  // Filtrado de títulos
-  const q = searchQuery.toLowerCase().trim();
-  const filteredSteam = steamGames.filter(g => {
-    if (categoryFilter !== 'all' && categoryFilter !== 'steam') return false;
-    return !q || g.name.toLowerCase().includes(q) || g.appId.includes(q);
-  });
+  // Filtrado de títulos optimizado con useMemo
+  const filteredSteam = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return steamGames.filter(g => {
+      if (categoryFilter !== 'all' && categoryFilter !== 'steam') return false;
+      return !q || g.name.toLowerCase().includes(q) || g.appId.includes(q);
+    });
+  }, [steamGames, searchQuery, categoryFilter]);
 
-  const filteredCustom = customGames.filter(g => {
-    if (categoryFilter === 'steam') return false;
-    if (categoryFilter === 'web' && g.launchType !== 'url') return false;
-    if (categoryFilter === 'emu' && g.launchType !== 'flatpak' && g.launchType !== 'cmd') return false;
-    return !q || g.title.toLowerCase().includes(q) || (g.category || '').toLowerCase().includes(q);
-  });
+  const filteredCustom = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return customGames.filter(g => {
+      if (categoryFilter === 'steam') return false;
+      if (categoryFilter === 'web' && g.launchType !== 'url') return false;
+      if (categoryFilter === 'emu' && g.launchType !== 'flatpak' && g.launchType !== 'cmd') return false;
+      return !q || g.title.toLowerCase().includes(q) || (g.category || '').toLowerCase().includes(q);
+    });
+  }, [customGames, searchQuery, categoryFilter]);
 
   const totalTitles = filteredSteam.length + filteredCustom.length;
 
@@ -232,7 +368,7 @@ export default function LeisureView() {
       overflowY: 'auto',
       paddingRight: '2px'
     }}>
-      {/* 🧭 Barra Táctica: Telemetría, Aceleración & Filtros */}
+      {/* 🧭 Barra Superior: Filtros & Telemetría */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -245,9 +381,8 @@ export default function LeisureView() {
         gap: '10px',
         flexWrap: 'wrap'
       }}>
-        {/* Lado Izquierdo: Buscador & Categorías */}
+        {/* Buscador & Pastillas */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '260px', flexWrap: 'wrap' }}>
-          {/* Input de Búsqueda Minimalista */}
           <div style={{ position: 'relative', width: '220px' }}>
             <Search size={13} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
             <input
@@ -269,7 +404,6 @@ export default function LeisureView() {
             />
           </div>
 
-          {/* Pastillas de Categoría */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {[
               { id: 'all', label: `Todos (${steamGames.length + customGames.length})` },
@@ -297,7 +431,7 @@ export default function LeisureView() {
           </div>
         </div>
 
-        {/* Lado Derecho: Telemetría & Acciones */}
+        {/* Telemetría & Acciones */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {launchMessage && (
             <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
@@ -305,7 +439,6 @@ export default function LeisureView() {
             </span>
           )}
 
-          {/* GPU Driver Dinámico */}
           {gamingStatus?.gpuDriver && (
             <span style={{
               fontSize: '0.66rem',
@@ -319,24 +452,22 @@ export default function LeisureView() {
             </span>
           )}
 
-          {/* Gamepad Status */}
           <div style={{
-            background: gamepadInfo.connected ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${gamepadInfo.connected ? '#38bdf8' : 'var(--border-color)'}`,
+            background: gamepadConnected ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${gamepadConnected ? '#38bdf8' : 'var(--border-color)'}`,
             padding: '2px 8px',
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.68rem',
-            color: gamepadInfo.connected ? '#38bdf8' : 'var(--text-muted)',
+            color: gamepadConnected ? '#38bdf8' : 'var(--text-muted)',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
             gap: '5px'
-          }} title={gamepadInfo.connected ? `Mando Conectado: ${gamepadInfo.id}` : 'Conecta un mando USB o Bluetooth'}>
-            <Gamepad2 size={12} color={gamepadInfo.connected ? '#38bdf8' : '#9ca3af'} />
-            <span>{gamepadInfo.connected ? 'MANDO' : 'SIN MANDO'}</span>
+          }}>
+            <Gamepad2 size={12} color={gamepadConnected ? '#38bdf8' : '#9ca3af'} />
+            <span>{gamepadConnected ? 'MANDO' : 'SIN MANDO'}</span>
           </div>
 
-          {/* GameMode Status */}
           <div style={{
             background: gamingStatus?.gamemodeActive ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
             border: `1px solid ${gamingStatus?.gamemodeActive ? 'var(--primary)' : 'var(--border-color)'}`,
@@ -353,7 +484,6 @@ export default function LeisureView() {
             <span>GameMode: {gamingStatus?.gamemodeActive ? 'ACTIVO' : 'STANDBY'}</span>
           </div>
 
-          {/* Botón Agregar Lanzador */}
           <button
             onClick={() => {
               setGameFormData({
@@ -374,7 +504,6 @@ export default function LeisureView() {
             <span>+ Juego</span>
           </button>
 
-          {/* Botón Abrir Steam */}
           <button
             onClick={() => handleLaunchGame('steam')}
             className="btn btn-secondary"
@@ -394,7 +523,7 @@ export default function LeisureView() {
         </div>
       </div>
 
-      {/* 🚀 Barra de Ajustes de Aceleración (Gamescope FSR & MangoHud) */}
+      {/* 🚀 Barra de Aceleración: Gamescope & MangoHud */}
       <div style={{
         background: 'rgba(255,255,255,0.02)',
         border: '1px solid var(--border-color)',
@@ -414,7 +543,6 @@ export default function LeisureView() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* Gamescope FSR */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', color: '#fff' }}>
               <input
@@ -445,7 +573,6 @@ export default function LeisureView() {
             )}
           </div>
 
-          {/* MangoHud Overlay */}
           {gamingStatus?.mangohudInstalled && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', color: '#fff' }}>
               <input
@@ -460,7 +587,7 @@ export default function LeisureView() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 🎮 CUADRÍCULA INMERSIVA: CARDS FULL PORTADA & MINIMALISTAS                */}
+      {/* 🎮 CUADRÍCULA: CARDS FULL PORTADA & MINIMALISTAS                          */}
       {/* ========================================================================= */}
       <div style={{
         display: 'grid',
@@ -468,284 +595,23 @@ export default function LeisureView() {
         gap: '12px',
         paddingBottom: '12px'
       }}>
-        {/* 1. Títulos de Steam */}
-        {filteredSteam.map(game => {
-          // Usar portada local en base64 si existe, sino CDN oficial con fallback
-          const coverSrc = game.coverImage 
-            ? game.coverImage 
-            : `https://shared.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_600x900.jpg`;
+        {filteredSteam.map(game => (
+          <GameCard
+            key={game.appId}
+            game={game}
+            isSteam={true}
+            onLaunch={handleLaunchGame}
+          />
+        ))}
 
-          return (
-            <div
-              key={game.appId}
-              style={{
-                position: 'relative',
-                aspectRatio: '2 / 3',
-                borderRadius: 'var(--radius-md)',
-                overflow: 'hidden',
-                background: 'linear-gradient(145deg, #18201c, #0e1210)',
-                border: '1px solid var(--border-color)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = 'var(--primary)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.18)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-              }}
-              onClick={() => handleLaunchGame(`steam:${game.appId}`)}
-              title={`Lanzar ${game.name}`}
-            >
-              {/* Imagen Full Portada */}
-              <img
-                src={coverSrc}
-                alt={game.name}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-                onError={(e) => {
-                  // Si falla el poster vertical 600x900, intentar header horizontal de Steam
-                  if (!e.currentTarget.src.includes('header.jpg')) {
-                    e.currentTarget.src = `https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`;
-                  } else {
-                    e.currentTarget.style.display = 'none';
-                  }
-                }}
-              />
-
-              {/* Tag Minimalista Flotante en Esquina Superior */}
-              <div style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                background: 'rgba(0,0,0,0.75)',
-                backdropFilter: 'blur(4px)',
-                padding: '2px 6px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.6rem',
-                fontWeight: 700,
-                color: '#a7f3d0',
-                border: '1px solid rgba(255,255,255,0.08)',
-                zIndex: 2
-              }}>
-                STEAM
-              </div>
-
-              {/* Gradiente Oscuro & Metadata Minimalista en la Base */}
-              <div style={{
-                position: 'relative',
-                zIndex: 2,
-                background: 'linear-gradient(to top, rgba(10,14,12,0.96) 0%, rgba(10,14,12,0.7) 65%, transparent 100%)',
-                padding: '12px 10px 10px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px'
-              }}>
-                <span style={{
-                  fontSize: '0.84rem',
-                  fontWeight: 800,
-                  color: '#fff',
-                  lineHeight: '1.15',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical'
-                }}>
-                  {game.name}
-                </span>
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: '2px'
-                }}>
-                  <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-                    {game.sizeMb > 1024 ? `${(game.sizeMb / 1024).toFixed(1)} GB` : `${game.sizeMb} MB`}
-                  </span>
-
-                  {/* Botón Jugar Minimalista */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    background: 'var(--primary)',
-                    color: '#052e16',
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.66rem',
-                    fontWeight: 800
-                  }}>
-                    <Play size={10} fill="#052e16" />
-                    <span>Jugar</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* 2. Lanzadores y Juegos Personalizados */}
         {filteredCustom.map(game => (
-          <div
+          <GameCard
             key={game.id}
-            style={{
-              position: 'relative',
-              aspectRatio: '2 / 3',
-              borderRadius: 'var(--radius-md)',
-              overflow: 'hidden',
-              background: 'linear-gradient(145deg, #18201c, #0e1210)',
-              border: '1px solid var(--border-color)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-end'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.borderColor = 'var(--primary)';
-              e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.18)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-            }}
-            onClick={() => handleLaunchGame(game.id, game.launchType, game.launchTarget)}
-            title={`Lanzar ${game.title}`}
-          >
-            {/* Portada de Imagen si existe */}
-            {game.bannerUrl ? (
-              <img
-                src={game.bannerUrl}
-                alt={game.title}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'radial-gradient(circle at center, rgba(16,185,129,0.08) 0%, rgba(0,0,0,0.4) 100%)'
-              }}>
-                <Gamepad2 size={42} color="rgba(255,255,255,0.12)" />
-              </div>
-            )}
-
-            {/* Tag de Categoría / Tipo Flotante */}
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: 'rgba(0,0,0,0.75)',
-              backdropFilter: 'blur(4px)',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              color: 'var(--primary)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              zIndex: 2
-            }}>
-              {game.category.toUpperCase()}
-            </div>
-
-            {/* Botón Eliminar en Esquina Izquierda */}
-            <button
-              onClick={(e) => handleDeleteCustomGame(game.id, e)}
-              style={{
-                position: 'absolute',
-                top: '8px',
-                left: '8px',
-                background: 'rgba(0,0,0,0.65)',
-                border: 'none',
-                color: '#ef4444',
-                cursor: 'pointer',
-                padding: '4px',
-                borderRadius: 'var(--radius-sm)',
-                zIndex: 3
-              }}
-              title="Eliminar este lanzador"
-            >
-              <Trash2 size={11} />
-            </button>
-
-            {/* Gradiente Oscuro & Título */}
-            <div style={{
-              position: 'relative',
-              zIndex: 2,
-              background: 'linear-gradient(to top, rgba(10,14,12,0.96) 0%, rgba(10,14,12,0.7) 65%, transparent 100%)',
-              padding: '12px 10px 10px 10px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{
-                fontSize: '0.84rem',
-                fontWeight: 800,
-                color: '#fff',
-                lineHeight: '1.15',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical'
-              }}>
-                {game.title}
-              </span>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: '2px'
-              }}>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  {game.launchType}
-                </span>
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: 'var(--primary)',
-                  color: '#052e16',
-                  padding: '2px 8px',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.66rem',
-                  fontWeight: 800
-                }}>
-                  <Play size={10} fill="#052e16" />
-                  <span>Lanzar</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            game={game}
+            isSteam={false}
+            onLaunch={handleLaunchGame}
+            onDelete={handleDeleteCustomGame}
+          />
         ))}
       </div>
 
@@ -782,8 +648,7 @@ export default function LeisureView() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 99999,
-          backdropFilter: 'blur(3px)'
+          zIndex: 99999
         }}>
           <div style={{
             background: 'var(--bg-main)',
