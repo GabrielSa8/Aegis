@@ -34,7 +34,8 @@ import {
   X,
   Undo2,
   Save,
-  Smile
+  Smile,
+  SlidersHorizontal
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -52,9 +53,19 @@ const NORDIC_PALETTE = [
   { id: 'violet', name: 'Violeta', color: '#8b5cf6', border: 'rgba(139, 92, 246, 0.4)', bg: 'rgba(139, 92, 246, 0.12)' },
 ];
 
-const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
+// Emojis Curados para Selección Rápida en el Personalizador
+const CURATED_EMOJIS = [
+  '🛡️', '🚕', '📱', '📦', '💻', '🧠', '⚡', '🚀',
+  '📚', '🎮', '☁️', '💼', '🔬', '🛠️', '🎨', '📊',
+  '🎯', '🏋️', '💰', '🏠', '🌐', '📝', '🤖', '🔑',
+  '☕', '💡', '🔥', '🧪', '📋', '📈', '🕹️', '🎧',
+  '🚗', '🛵', '🔧', '🩺', '🧩', '💎', '📡', '🌍'
+];
 
-// Presets iniciales inteligentes (fallback si no hay personalización explícita del usuario)
+const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
+const STORAGE_MATRIX_KEY = 'aegis_matrix_quadrant_config';
+
+// Presets iniciales inteligentes (fallback solo si no hay personalización explícita del usuario)
 const DEFAULT_PRESETS = {
   'Aegis': { icon: '🛡️', colorId: 'emerald' },
   'TADU - Plataforma de Movilidad': { icon: '🚕', colorId: 'amber' },
@@ -210,6 +221,83 @@ function parseTask(t, customizations) {
   };
 }
 
+// Resuelve la configuración y tareas de un Cuadrante de la Matriz de Enfoque
+function resolveQuadrantData(targetKey, allFilteredTasks, activeHubs, availableProjects, customizations) {
+  // Manejo de valores por defecto automáticos según la bóveda cargada
+  let resolvedKey = targetKey;
+  if (targetKey === 'auto_1') resolvedKey = 'urgent';
+  if (targetKey === 'auto_2') resolvedKey = activeHubs[0] ? `hub:${activeHubs[0]}` : 'focus';
+  if (targetKey === 'auto_3') resolvedKey = activeHubs[1] ? `hub:${activeHubs[1]}` : 'backlog';
+  if (targetKey === 'auto_4') resolvedKey = activeHubs[2] ? `hub:${activeHubs[2]}` : 'done';
+
+  if (resolvedKey === 'urgent') {
+    return {
+      title: '🚨 Urgente & Crítico',
+      color: '#fbbf24',
+      bgColor: 'rgba(245, 158, 11, 0.08)',
+      borderColor: 'rgba(245, 158, 11, 0.3)',
+      tasks: allFilteredTasks.filter((t) => !t.completed && (t.priority === 'high' || t.dueDate))
+    };
+  }
+  if (resolvedKey === 'focus') {
+    return {
+      title: '🔥 En Foco',
+      color: '#f97316',
+      bgColor: 'rgba(249, 115, 22, 0.08)',
+      borderColor: 'rgba(249, 115, 22, 0.3)',
+      tasks: allFilteredTasks.filter((t) => !t.completed && t.priority === 'high')
+    };
+  }
+  if (resolvedKey === 'backlog') {
+    return {
+      title: '📥 Backlog General',
+      color: '#94a3b8',
+      bgColor: 'rgba(148, 163, 184, 0.06)',
+      borderColor: 'rgba(148, 163, 184, 0.25)',
+      tasks: allFilteredTasks.filter((t) => !t.completed && t.priority !== 'high' && !t.dueDate)
+    };
+  }
+  if (resolvedKey === 'done') {
+    return {
+      title: '✅ Completadas',
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.08)',
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+      tasks: allFilteredTasks.filter((t) => t.completed)
+    };
+  }
+  if (resolvedKey.startsWith('hub:')) {
+    const hubName = resolvedKey.slice(4);
+    const theme = hashStringToPalette(hubName);
+    return {
+      title: `📁 ${hubName}`,
+      color: theme.color,
+      bgColor: theme.bg,
+      borderColor: theme.border,
+      tasks: allFilteredTasks.filter((t) => t.hub === hubName)
+    };
+  }
+  if (resolvedKey.startsWith('project:')) {
+    const projName = resolvedKey.slice(8);
+    const theme = resolveProjectTheme(projName, customizations);
+    return {
+      title: `${theme.icon} ${projName}`,
+      color: theme.color,
+      bgColor: theme.bg,
+      borderColor: theme.border,
+      tasks: allFilteredTasks.filter((t) => t.project === projName)
+    };
+  }
+
+  return {
+    title: 'Tareas',
+    color: '#94a3b8',
+    bgColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'var(--border-color)',
+    tasks: allFilteredTasks
+  };
+}
+
 export default function TasksView() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -225,6 +313,26 @@ export default function TasksView() {
       return {};
     }
   });
+
+  // Configuración de los 4 Cuadrantes de la Matriz (100% personalizable por usuario)
+  const [matrixConfig, setMatrixConfig] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_MATRIX_KEY);
+      return stored ? JSON.parse(stored) : { q1: 'auto_1', q2: 'auto_2', q3: 'auto_3', q4: 'auto_4' };
+    } catch (_) {
+      return { q1: 'auto_1', q2: 'auto_2', q3: 'auto_3', q4: 'auto_4' };
+    }
+  });
+
+  const updateMatrixQuadrant = (quadrantKey, newTarget) => {
+    setMatrixConfig((prev) => {
+      const next = { ...prev, [quadrantKey]: newTarget };
+      try {
+        localStorage.setItem(STORAGE_MATRIX_KEY, JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  };
 
   // Modal de Personalización
   const [showCustomizer, setShowCustomizer] = useState(false);
@@ -329,7 +437,7 @@ export default function TasksView() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Guardar personalizaciones
+  // Guardar personalizaciones en localStorage
   const handleSaveCustomizations = (newCustoms) => {
     setCustomizations(newCustoms);
     try {
@@ -391,6 +499,8 @@ export default function TasksView() {
     });
     return ['Todos', ...Array.from(set).sort()];
   }, [tasks]);
+
+  const activeHubs = useMemo(() => hubs.filter((h) => h !== 'Todos'), [hubs]);
 
   // Lista dinámica de Proyectos descubiertos en la bóveda del usuario
   const availableProjects = useMemo(() => {
@@ -483,39 +593,11 @@ export default function TasksView() {
     return { todo, focus, done };
   }, [filteredTasks]);
 
-  // Agrupación adaptable para Matriz de Enfoque (100% universal según los Hubs reales del usuario)
-  const matrixQuadrants = useMemo(() => {
-    const urgent = [];
-    const hub1Tasks = [];
-    const hub2Tasks = [];
-    const restTasks = [];
-
-    const activeHubs = hubs.filter((h) => h !== 'Todos');
-    const primaryHub = activeHubs[0] || 'Enfoque Principal';
-    const secondaryHub = activeHubs[1] || 'Operaciones';
-
-    filteredTasks.forEach((t) => {
-      if (!t.completed && (t.priority === 'high' || t.dueDate)) {
-        urgent.push(t);
-      } else if (t.hub === primaryHub) {
-        hub1Tasks.push(t);
-      } else if (t.hub === secondaryHub) {
-        hub2Tasks.push(t);
-      } else {
-        restTasks.push(t);
-      }
-    });
-
-    return {
-      urgent,
-      hub1Tasks,
-      hub1Title: primaryHub,
-      hub2Tasks,
-      hub2Title: secondaryHub,
-      restTasks,
-      restTitle: activeHubs.length > 2 ? 'Otros Contextos' : 'Backlog General'
-    };
-  }, [filteredTasks, hubs]);
+  // Datos resueltos de los 4 Cuadrantes de la Matriz Adaptable
+  const q1Data = useMemo(() => resolveQuadrantData(matrixConfig.q1, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q1, filteredTasks, activeHubs, availableProjects, customizations]);
+  const q2Data = useMemo(() => resolveQuadrantData(matrixConfig.q2, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q2, filteredTasks, activeHubs, availableProjects, customizations]);
+  const q3Data = useMemo(() => resolveQuadrantData(matrixConfig.q3, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q3, filteredTasks, activeHubs, availableProjects, customizations]);
+  const q4Data = useMemo(() => resolveQuadrantData(matrixConfig.q4, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q4, filteredTasks, activeHubs, availableProjects, customizations]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem', overflowY: 'auto' }}>
@@ -1421,42 +1503,46 @@ export default function TasksView() {
           </div>
         )
       ) : (
-        /* 🎯 3. VISTA MATRIZ DE ENFOQUE & CUADRANTES ADAPTABLES */
+        /* 🎯 3. VISTA MATRIZ DE ENFOQUE & CUADRANTES 100% CONFIGURABLES */
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '0.85rem'
         }}>
-          <MatrixQuadrant
-            title="🚨 Urgente & Alta Prioridad"
-            color="#fbbf24"
-            bgColor="rgba(245, 158, 11, 0.08)"
-            borderColor="rgba(245, 158, 11, 0.3)"
-            tasks={matrixQuadrants.urgent}
+          <ConfigurableMatrixQuadrant
+            quadrantId="q1"
+            currentConfig={matrixConfig.q1}
+            data={q1Data}
+            onConfigChange={(val) => updateMatrixQuadrant('q1', val)}
+            activeHubs={activeHubs}
+            availableProjects={availableProjects}
             onToggle={handleToggle}
           />
-          <MatrixQuadrant
-            title={`💻 ${matrixQuadrants.hub1Title}`}
-            color="#38bdf8"
-            bgColor="rgba(56, 189, 248, 0.08)"
-            borderColor="rgba(56, 189, 248, 0.3)"
-            tasks={matrixQuadrants.hub1Tasks}
+          <ConfigurableMatrixQuadrant
+            quadrantId="q2"
+            currentConfig={matrixConfig.q2}
+            data={q2Data}
+            onConfigChange={(val) => updateMatrixQuadrant('q2', val)}
+            activeHubs={activeHubs}
+            availableProjects={availableProjects}
             onToggle={handleToggle}
           />
-          <MatrixQuadrant
-            title={`📦 ${matrixQuadrants.hub2Title}`}
-            color="#eab308"
-            bgColor="rgba(234, 179, 8, 0.08)"
-            borderColor="rgba(234, 179, 8, 0.3)"
-            tasks={matrixQuadrants.hub2Tasks}
+          <ConfigurableMatrixQuadrant
+            quadrantId="q3"
+            currentConfig={matrixConfig.q3}
+            data={q3Data}
+            onConfigChange={(val) => updateMatrixQuadrant('q3', val)}
+            activeHubs={activeHubs}
+            availableProjects={availableProjects}
             onToggle={handleToggle}
           />
-          <MatrixQuadrant
-            title={`📚 ${matrixQuadrants.restTitle}`}
-            color="#a855f7"
-            bgColor="rgba(168, 85, 247, 0.08)"
-            borderColor="rgba(168, 85, 247, 0.3)"
-            tasks={matrixQuadrants.restTasks}
+          <ConfigurableMatrixQuadrant
+            quadrantId="q4"
+            currentConfig={matrixConfig.q4}
+            data={q4Data}
+            onConfigChange={(val) => updateMatrixQuadrant('q4', val)}
+            activeHubs={activeHubs}
+            availableProjects={availableProjects}
             onToggle={handleToggle}
           />
         </div>
@@ -1475,9 +1561,10 @@ export default function TasksView() {
   );
 }
 
-// Modal de Personalización Universal
+// Modal de Personalización Universal con Selector Rápido de Emojis y Swatches
 function CustomizerModal({ projects, customizations, onSave, onClose }) {
   const [draft, setDraft] = useState({ ...customizations });
+  const [activePickerProj, setActivePickerProj] = useState(null);
 
   const handleUpdate = (proj, field, val) => {
     setDraft((prev) => ({
@@ -1502,8 +1589,8 @@ function CustomizerModal({ projects, customizations, onSave, onClose }) {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(8px)',
+      background: 'rgba(0, 0, 0, 0.8)',
+      backdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -1511,27 +1598,27 @@ function CustomizerModal({ projects, customizations, onSave, onClose }) {
       padding: '1rem'
     }}>
       <div style={{
-        background: 'linear-gradient(180deg, #161c1a 0%, #0e1211 100%)',
-        border: '1px solid rgba(52, 211, 153, 0.3)',
-        borderRadius: '10px',
+        background: 'linear-gradient(180deg, #18201d 0%, #0f1413 100%)',
+        border: '1px solid rgba(52, 211, 153, 0.35)',
+        borderRadius: '12px',
         width: '100%',
-        maxWidth: '560px',
-        maxHeight: '85vh',
+        maxWidth: '620px',
+        maxHeight: '88vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)'
+        boxShadow: '0 24px 50px rgba(0, 0, 0, 0.7)'
       }}>
         {/* Cabecera del Modal */}
         <div style={{
-          padding: '0.75rem 1rem',
+          padding: '0.85rem 1.15rem',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Palette size={16} color="#34d399" />
-            <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#f1f5f9' }}>
+            <Palette size={18} color="#34d399" />
+            <h3 style={{ margin: 0, fontSize: '0.94rem', fontWeight: 800, color: '#f1f5f9' }}>
               Personalizador de Proyectos & Contextos
             </h3>
           </div>
@@ -1546,101 +1633,187 @@ function CustomizerModal({ projects, customizations, onSave, onClose }) {
               padding: '4px'
             }}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Subtítulo descriptivo */}
-        <div style={{ padding: '0.6rem 1rem', background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-          Configura tus propios emojis y colores nórdicos para cada proyecto o contexto detectado en tu Bóveda.
+        <div style={{ padding: '0.65rem 1.15rem', background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+          Haz clic en el emoji para abrir el selector rápido o elige un color de la paleta nórdica para cada proyecto.
         </div>
 
         {/* Lista de Proyectos Configurable */}
-        <div style={{ padding: '0.75rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
+        <div style={{ padding: '0.85rem 1.15rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
           {projects.map((proj) => {
             const currentTheme = resolveProjectTheme(proj, draft);
             const userCustom = draft[proj] || {};
             const currentColorId = userCustom.colorId || NORDIC_PALETTE.find(p => p.color === currentTheme.color)?.id || 'emerald';
+            const isPickerOpen = activePickerProj === proj;
 
             return (
               <div
                 key={proj}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.5rem 0.75rem',
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  border: `1px solid ${currentTheme.border}`,
-                  borderRadius: '6px',
-                  gap: '10px'
+                  flexDirection: 'column',
+                  background: 'rgba(0, 0, 0, 0.38)',
+                  border: isPickerOpen ? '1px solid #34d399' : `1px solid ${currentTheme.border}`,
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  transition: 'border-color 0.15s ease'
                 }}
               >
-                {/* Nombre y Badge Preview */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '150px' }}>
-                  <span style={{
-                    fontSize: '0.66rem',
-                    fontWeight: 800,
-                    color: currentTheme.color,
-                    background: currentTheme.bg,
-                    border: `1px solid ${currentTheme.border}`,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <span>{currentTheme.icon}</span>
-                    <span>{proj}</span>
-                  </span>
-                </div>
+                {/* Fila Principal */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.6rem 0.85rem',
+                  gap: '10px'
+                }}>
+                  {/* Badge Preview en Vivo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '160px' }}>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      color: currentTheme.color,
+                      background: currentTheme.bg,
+                      border: `1px solid ${currentTheme.border}`,
+                      padding: '3px 9px',
+                      borderRadius: '5px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: `0 0 8px ${currentTheme.border}`
+                    }}>
+                      <span style={{ fontSize: '0.95rem' }}>{currentTheme.icon}</span>
+                      <span>{proj}</span>
+                    </span>
+                  </div>
 
-                {/* Controles: Emoji Input + Swatches de Color */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Emoji input */}
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={userCustom.icon !== undefined ? userCustom.icon : currentTheme.icon}
-                    onChange={(e) => handleUpdate(proj, 'icon', e.target.value)}
-                    title="Escribe un emoji (ej. 🚗, 💼, 🛡️, 🚀)"
-                    style={{
-                      width: '36px',
-                      height: '28px',
-                      textAlign: 'center',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '4px',
-                      color: '#f1f5f9',
-                      fontSize: '0.85rem'
-                    }}
-                  />
+                  {/* Controles: Botón Emoji Grande + Swatches de Color */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    {/* Botón de Emoji */}
+                    <button
+                      type="button"
+                      onClick={() => setActivePickerProj(isPickerOpen ? null : proj)}
+                      title="Haz clic para desplegar la cuadrícula de emojis"
+                      style={{
+                        minWidth: '44px',
+                        height: '34px',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        background: isPickerOpen ? 'rgba(52, 211, 153, 0.2)' : 'rgba(0, 0, 0, 0.5)',
+                        border: isPickerOpen ? '1.5px solid #34d399' : '1px solid var(--border-color)',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: isPickerOpen ? '0 0 10px rgba(52, 211, 153, 0.4)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {currentTheme.icon || '📁'}
+                    </button>
 
-                  {/* Swatches de Color Nórdicos */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {NORDIC_PALETTE.map((pal) => {
-                      const isSelected = currentColorId === pal.id;
-                      return (
-                        <div
-                          key={pal.id}
-                          onClick={() => handleUpdate(proj, 'colorId', pal.id)}
-                          title={pal.name}
-                          style={{
-                            width: '14px',
-                            height: '14px',
-                            borderRadius: '50%',
-                            background: pal.color,
-                            cursor: 'pointer',
-                            border: isSelected ? '2px solid #ffffff' : '1px solid rgba(0, 0, 0, 0.5)',
-                            transform: isSelected ? 'scale(1.2)' : 'none',
-                            boxShadow: isSelected ? `0 0 6px ${pal.color}` : 'none',
-                            transition: 'all 0.15s ease'
-                          }}
-                        />
-                      );
-                    })}
+                    {/* Swatches de Color Nórdicos */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      {NORDIC_PALETTE.map((pal) => {
+                        const isSelected = currentColorId === pal.id;
+                        return (
+                          <div
+                            key={pal.id}
+                            onClick={() => handleUpdate(proj, 'colorId', pal.id)}
+                            title={pal.name}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '50%',
+                              background: pal.color,
+                              cursor: 'pointer',
+                              border: isSelected ? '2px solid #ffffff' : '1px solid rgba(0, 0, 0, 0.5)',
+                              transform: isSelected ? 'scale(1.25)' : 'none',
+                              boxShadow: isSelected ? `0 0 8px ${pal.color}` : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
+
+                {/* Cuadrícula Desplegable de Emojis Rápida */}
+                {isPickerOpen && (
+                  <div style={{
+                    padding: '0.65rem 0.85rem',
+                    background: 'rgba(0, 0, 0, 0.55)',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ fontSize: '0.66rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Selecciona un emoji para {proj}:
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+                      gap: '4px'
+                    }}>
+                      {CURATED_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            handleUpdate(proj, 'icon', emoji);
+                            setActivePickerProj(null);
+                          }}
+                          style={{
+                            height: '32px',
+                            background: currentTheme.icon === emoji ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                            border: currentTheme.icon === emoji ? '1px solid #34d399' : '1px solid transparent',
+                            borderRadius: '4px',
+                            fontSize: '1.15rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.1s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Entrada directa opcional para pegar cualquier emoji */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>O escribe/pega otro:</span>
+                      <input
+                        type="text"
+                        maxLength={4}
+                        placeholder="Emoji..."
+                        value={userCustom.icon || ''}
+                        onChange={(e) => handleUpdate(proj, 'icon', e.target.value)}
+                        style={{
+                          width: '60px',
+                          height: '24px',
+                          textAlign: 'center',
+                          background: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '4px',
+                          color: '#f1f5f9',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1648,7 +1821,7 @@ function CustomizerModal({ projects, customizations, onSave, onClose }) {
 
         {/* Footer del Modal */}
         <div style={{
-          padding: '0.65rem 1rem',
+          padding: '0.75rem 1.15rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
@@ -1711,6 +1884,108 @@ function CustomizerModal({ projects, customizations, onSave, onClose }) {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Subcomponente de Cuadrante para la Matriz Adaptable y 100% Configurable
+function ConfigurableMatrixQuadrant({
+  quadrantId,
+  currentConfig,
+  data,
+  onConfigChange,
+  activeHubs,
+  availableProjects,
+  onToggle
+}) {
+  return (
+    <div style={{
+      background: 'linear-gradient(180deg, rgba(20, 26, 24, 0.8) 0%, rgba(14, 18, 17, 0.9) 100%)',
+      border: `1px solid ${data.borderColor}`,
+      borderRadius: '8px',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '220px',
+      boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
+    }}>
+      {/* Cabecera Interactiva con Selector */}
+      <div style={{
+        padding: '0.45rem 0.75rem',
+        background: data.bgColor,
+        borderBottom: `1px solid ${data.borderColor}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '8px'
+      }}>
+        {/* Selector de Objetivo para este Cuadrante */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+          <select
+            value={currentConfig}
+            onChange={(e) => onConfigChange(e.target.value)}
+            style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: data.color,
+              background: 'rgba(0, 0, 0, 0.4)',
+              border: `1px solid ${data.borderColor}`,
+              borderRadius: '4px',
+              padding: '2px 20px 2px 6px',
+              cursor: 'pointer',
+              outline: 'none',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+            title="Cambiar qué monitorea este cuadrante"
+          >
+            <optgroup label="Tácticas & Urgencia">
+              <option value="urgent" style={{ background: '#131716', color: '#fbbf24' }}>🚨 Urgente & Crítico</option>
+              <option value="focus" style={{ background: '#131716', color: '#f97316' }}>🔥 En Foco</option>
+              <option value="backlog" style={{ background: '#131716', color: '#94a3b8' }}>📥 Backlog General</option>
+              <option value="done" style={{ background: '#131716', color: '#10b981' }}>✅ Completadas</option>
+            </optgroup>
+            
+            {activeHubs.length > 0 && (
+              <optgroup label="Por Hub Maestro (Bóveda)">
+                {activeHubs.map((h) => (
+                  <option key={h} value={`hub:${h}`} style={{ background: '#131716', color: '#34d399' }}>
+                    📁 Hub: {h}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {availableProjects.filter(p => p !== 'Todos').length > 0 && (
+              <optgroup label="Por Proyecto / Contexto">
+                {availableProjects.filter(p => p !== 'Todos').map((p) => (
+                  <option key={p} value={`project:${p}`} style={{ background: '#131716', color: '#38bdf8' }}>
+                    📦 Proyecto: {p}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
+
+        <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-mono)', fontWeight: 800, color: data.color, flexShrink: 0 }}>
+          {data.tasks.length}
+        </span>
+      </div>
+
+      {/* Lista de Tareas */}
+      <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+        {data.tasks.length === 0 ? (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+            Sin tareas en este cuadrante
+          </div>
+        ) : (
+          data.tasks.map((task) => (
+            <TaskCard key={task.id} task={task} onToggle={onToggle} compact />
+          ))
+        )}
       </div>
     </div>
   );
@@ -1955,49 +2230,6 @@ function KanbanColumn({ title, count, tasks, onToggle, headerColor, accentColor,
               </div>
             );
           })
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Subcomponente de Cuadrante para la Matriz Adaptable
-function MatrixQuadrant({ title, color, bgColor, borderColor, tasks, onToggle }) {
-  return (
-    <div style={{
-      background: 'linear-gradient(180deg, rgba(20, 26, 24, 0.8) 0%, rgba(14, 18, 17, 0.9) 100%)',
-      border: `1px solid ${borderColor}`,
-      borderRadius: '8px',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '220px',
-      boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
-    }}>
-      <div style={{
-        padding: '0.55rem 0.85rem',
-        background: bgColor,
-        borderBottom: `1px solid ${borderColor}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <span style={{ fontSize: '0.78rem', fontWeight: 800, color }}>
-          {title}
-        </span>
-        <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color }}>
-          {tasks.length}
-        </span>
-      </div>
-      <div style={{ padding: '0.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {tasks.length === 0 ? (
-          <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-            Sin tareas en este cuadrante
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onToggle={onToggle} compact />
-          ))
         )}
       </div>
     </div>
