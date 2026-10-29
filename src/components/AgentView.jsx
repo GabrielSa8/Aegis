@@ -667,6 +667,11 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         {/* Selector de perfiles dinámicos con scrollbar invisible */}
         <div 
           className="no-scrollbar"
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
           style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '240px' }}
         >
           <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -769,7 +774,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       </div>
 
       {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', padding: '0.45rem 0.85rem' }}>
         {showSessionsDrawer && (
           <div style={{
             width: '240px',
@@ -1097,10 +1102,18 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '8px',
-        padding: '1px 2px',
+        padding: '0.2rem 0.85rem 0.35rem 0.85rem',
         flexShrink: 0
       }}>
-        <div className="no-scrollbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}>
+        <div 
+          className="no-scrollbar" 
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}
+        >
           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>MACROS:</span>
           {macros.map((macro, idx) => (
             <button

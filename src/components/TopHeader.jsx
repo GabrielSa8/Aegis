@@ -36,7 +36,7 @@ export default function TopHeader({
 
   return (
     <header style={{
-      height: '38px',
+      height: '36px',
       background: 'rgba(15, 18, 17, 0.96)',
       borderBottom: '1px solid var(--border-color)',
       padding: '0 0.85rem',

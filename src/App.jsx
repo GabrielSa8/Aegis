@@ -182,11 +182,9 @@ export default function App() {
         minHeight: 0,
         overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault') ? 'hidden' : 'auto',
         overflowX: 'hidden',
-        padding: zenMode 
-          ? '0.5rem 0.75rem' 
-          : (activeTab === 'settings' 
-              ? '0' 
-              : (activeTab === 'agent' ? '0.5rem 0.85rem' : '0.65rem 1rem')),
+        padding: (zenMode || activeTab === 'settings' || activeTab === 'agent')
+          ? '0' 
+          : '0.65rem 1rem',
         display: 'flex',
         flexDirection: 'column'
       }}>
