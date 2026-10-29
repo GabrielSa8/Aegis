@@ -124,7 +124,7 @@ function ThoughtAccordion({ thoughts, defaultOpen }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <kbd style={{ fontSize: '0.58rem', padding: '1px 5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', color: 'var(--text-muted)' }}>
+          <kbd className="tactical-kbd" style={{ color: '#e9d5ff' }}>
             Ctrl + O
           </kbd>
           {isOpen ? <ChevronDown size={14} color="#c084fc" /> : <ChevronRight size={14} color="#c084fc" />}
@@ -175,9 +175,29 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
 
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [copiedId, setCopiedId] = useState(null);
   const [expandThoughts, setExpandThoughts] = useState(false);
   const viewportRef = useRef(null);
+
+  // Animación reactiva de carga porcentual líquida
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      setLoadingProgress(14);
+      interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev < 45) return prev + Math.floor(Math.random() * 8) + 4;
+          if (prev < 78) return prev + Math.floor(Math.random() * 5) + 2;
+          if (prev < 94) return prev + Math.floor(Math.random() * 2) + 1;
+          return prev;
+        });
+      }, 350);
+    } else {
+      setLoadingProgress(100);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Carga reactiva de perfil soberano
   useEffect(() => {
@@ -620,22 +640,27 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, gap: '0.5rem' }}>
       {/* 🧭 Context Router & Effort Bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0.35rem 0.75rem',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-md)',
-        flexShrink: 0,
-        gap: '8px',
-        flexWrap: 'wrap'
-      }}>
-        {/* Selector de perfiles dinámicos */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '260px' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '2px' }}>
-            Contexto:
+      <div 
+        className="crystal-surface"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.4rem 0.85rem',
+          borderRadius: 'var(--radius-lg)',
+          flexShrink: 0,
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}
+      >
+        {/* Selector de perfiles dinámicos con scrollbar invisible */}
+        <div 
+          className="no-scrollbar"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: '260px' }}
+        >
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            CONTEXTO:
           </span>
           {contexts.map((ctx) => {
             const isSelected = selectedContextId === ctx.id;
@@ -643,27 +668,29 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               <button
                 key={ctx.id}
                 onClick={() => handleSelectContext(ctx.id)}
+                className={isSelected ? "crystal-card" : ""}
                 style={{
                   fontSize: '0.72rem',
                   padding: '4px 10px',
                   borderRadius: 'var(--radius-md)',
-                  background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
-                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                  color: isSelected ? 'var(--text-high)' : 'var(--text-muted)',
+                  background: isSelected ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%)' : 'rgba(255, 255, 255, 0.02)',
+                  border: isSelected ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
+                  color: isSelected ? '#a7f3d0' : 'var(--text-muted)',
                   cursor: 'pointer',
                   fontWeight: isSelected ? 700 : 500,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
                   whiteSpace: 'nowrap',
+                  boxShadow: isSelected ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none',
                   transition: 'var(--transition)'
                 }}
               >
                 <FolderGit2 size={12} color={isSelected ? '#10b981' : '#788882'} />
                 <span>{ctx.label}</span>
                 {ctx.skills?.length > 0 && (
-                  <span style={{ fontSize: '0.6rem', padding: '0 4px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.08)', color: '#a7f3d0' }}>
-                    {ctx.skills.length}
+                  <span style={{ fontSize: '0.58rem', padding: '1px 5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.08)', color: '#a7f3d0', fontFamily: 'var(--font-mono)' }}>
+                    {ctx.skills.length} skills
                   </span>
                 )}
               </button>
@@ -673,8 +700,18 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           {/* Botón Gestión de Contextos */}
           <button
             onClick={() => setShowContextModal(true)}
-            className="btn btn-secondary"
-            style={{ padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '4px' }}
+            className="crystal-card"
+            style={{ 
+              padding: '4px 9px', 
+              fontSize: '0.7rem', 
+              borderRadius: 'var(--radius-md)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
             title="Administrar carpetas, skills y modelos de contextos"
           >
             <Settings size={12} />
@@ -688,8 +725,8 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'rgba(0, 0, 0, 0.25)',
-            border: '1px solid var(--border-color)',
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: 'var(--radius-md)',
             padding: '2px'
           }}>
@@ -921,35 +958,60 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           return (
             <div
               key={m.id}
+              className={isUser ? "crystal-card" : "crystal-surface"}
               style={{
-                alignSelf: isUser ? 'flex-end' : 'flex-start',
-                maxWidth: isUser ? '80%' : '90%',
-                padding: '0.85rem 1.15rem',
-                borderRadius: 'var(--radius-lg)',
-                background: isUser ? '#1a221f' : 'var(--bg-card)',
-                border: isUser ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border-color)',
-                boxShadow: 'none',
+                width: '100%',
+                padding: isUser ? '0.75rem 1rem' : '1rem 1.25rem',
+                borderRadius: 'var(--radius-md)',
+                background: isUser 
+                  ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, rgba(22, 26, 25, 0.6) 100%)' 
+                  : 'linear-gradient(135deg, rgba(22, 26, 25, 0.75) 0%, rgba(15, 18, 17, 0.9) 100%)',
+                border: isUser ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(255, 255, 255, 0.08)',
+                borderLeft: isUser ? '3px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: isUser 
+                  ? 'inset 0 1px 0 rgba(255, 255, 255, 0.06)' 
+                  : 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 20px rgba(0, 0, 0, 0.35)',
                 position: 'relative'
               }}
             >
-              {/* Header del Mensaje */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isUser ? '#a7f3d0' : '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isUser ? (operatorName || 'Operador') : 'Aegis Copilot'}
+              {/* Terminal Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ 
+                    fontFamily: 'var(--font-mono)', 
+                    fontSize: '0.74rem', 
+                    fontWeight: 700, 
+                    color: isUser ? '#a7f3d0' : '#10b981', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px' 
+                  }}>
+                    <span style={{ color: isUser ? '#10b981' : '#34d399', opacity: 0.8 }}>❯</span>
+                    {isUser ? (operatorName || 'OPERADOR') : 'AEGIS COPILOT'}
+                  </span>
+                  
                   {m.context && (
-                    <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+                    <span className="tactical-kbd" style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>
                       {m.context}
                     </span>
                   )}
                   {m.effort && (
-                    <span style={{ fontSize: '0.58rem', padding: '1px 4px', borderRadius: '3px', background: m.effort === 'high' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(16, 185, 129, 0.1)', color: m.effort === 'high' ? '#c084fc' : '#34d399' }}>
-                      {m.effort === 'high' ? '🧠 Profundo' : '⚡ Flash'}
+                    <span style={{ 
+                      fontSize: '0.58rem', 
+                      padding: '1px 5px', 
+                      borderRadius: '4px', 
+                      background: m.effort === 'high' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(16, 185, 129, 0.12)', 
+                      color: m.effort === 'high' ? '#c084fc' : '#34d399',
+                      border: m.effort === 'high' ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid rgba(16, 185, 129, 0.25)',
+                      fontFamily: 'var(--font-mono)'
+                    }}>
+                      {m.effort === 'high' ? '🧠 PROFUNDO' : '⚡ FLASH'}
                     </span>
                   )}
-                </span>
+                </div>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>{m.timestamp}</span>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{m.timestamp}</span>
                   {!isUser && m.content && (
                     <button
                       onClick={() => copyToClipboard(cleanContent || m.content, m.id)}
@@ -971,48 +1033,57 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               {!isUser && m.permissionPrompt && (
                 <div style={{
                   margin: '8px 0',
-                  padding: '10px 12px',
-                  background: 'rgba(234, 179, 8, 0.1)',
+                  padding: '10px 14px',
+                  background: 'rgba(234, 179, 8, 0.08)',
                   border: '1px solid rgba(234, 179, 8, 0.35)',
-                  borderRadius: 'var(--radius-md)'
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#facc15', fontWeight: 700, fontSize: '0.74rem' }}>
-                    <ShieldAlert size={13} color="#facc15" />
+                    <ShieldAlert size={14} color="#facc15" />
                     <span>Permiso de Ejecución Solicitado</span>
                   </div>
-                  <p style={{ margin: '6px 0', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', color: 'var(--text-high)', whiteSpace: 'pre-wrap' }}>
+                  <p style={{ margin: '6px 0', fontSize: '0.74rem', fontFamily: 'var(--font-mono)', color: 'var(--text-high)', whiteSpace: 'pre-wrap' }}>
                     {m.permissionPrompt}
                   </p>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <button
                       onClick={() => handlePermissionResponse(m.id, 'y')}
                       style={{
-                        padding: '3px 10px',
-                        fontSize: '0.7rem',
+                        padding: '4px 12px',
+                        fontSize: '0.72rem',
                         fontWeight: 700,
                         background: '#10b981',
                         color: '#000',
                         border: 'none',
                         borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
                     >
-                      ✅ Permitir
+                      <span>Permitir</span>
+                      <kbd className="tactical-kbd" style={{ background: '#000', color: '#10b981', border: 'none' }}>↵</kbd>
                     </button>
                     <button
                       onClick={() => handlePermissionResponse(m.id, 'n')}
                       style={{
-                        padding: '3px 10px',
-                        fontSize: '0.7rem',
+                        padding: '4px 12px',
+                        fontSize: '0.72rem',
                         fontWeight: 600,
                         background: 'rgba(255, 255, 255, 0.08)',
                         color: 'var(--text-high)',
                         border: '1px solid var(--border-color)',
                         borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
                     >
-                      ❌ Cancelar
+                      <span>Cancelar</span>
+                      <kbd className="tactical-kbd">Esc</kbd>
                     </button>
                   </div>
                 </div>
@@ -1021,11 +1092,11 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
               {/* Contenido / Markdown */}
               <div style={{
                 fontSize: '0.86rem',
-                lineHeight: '1.5',
+                lineHeight: '1.55',
                 color: 'var(--text-high)'
               }}>
                 {isUser ? (
-                  <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{m.content}</div>
+                  <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', color: '#f3f4f6' }}>{m.content}</div>
                 ) : cleanContent ? (
                   <>
                     <MarkdownViewer content={cleanContent} />
@@ -1042,28 +1113,43 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                     )}
                   </>
                 ) : m.loading ? (
-                  /* ⚡ Píldora de Carga Animada */
+                  /* ⚡ Barra y Telemetría de Carga Líquida Porcentual */
                   <div style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: '8px',
-                    padding: '8px 12px',
-                    background: 'rgba(16, 185, 129, 0.08)',
+                    padding: '12px 14px',
+                    background: 'rgba(16, 185, 129, 0.06)',
                     border: '1px solid rgba(16, 185, 129, 0.25)',
                     borderRadius: 'var(--radius-md)',
-                    color: '#a7f3d0',
-                    fontSize: '0.78rem'
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)'
                   }}>
-                    <span style={{
-                      display: 'inline-block',
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      border: '2px solid #10b981',
-                      borderTopColor: 'transparent',
-                      animation: 'spin 0.8s linear infinite'
-                    }} />
-                    <span>{m.statusText || 'Iniciando agente y montando contexto...'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: '#10b981',
+                          boxShadow: '0 0 10px #10b981',
+                          animation: 'pulse 1s infinite'
+                        }} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a7f3d0' }}>
+                          {m.statusText || 'Iniciando agente y montando contexto...'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, color: '#34d399' }}>
+                          {loadingProgress}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="liquid-progress-container">
+                      <div className="liquid-progress-fill" style={{ width: `${loadingProgress}%` }}>
+                        <div className="liquid-progress-shimmer" />
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -1073,24 +1159,29 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  marginTop: '8px',
+                  gap: '14px',
+                  marginTop: '10px',
                   paddingTop: '6px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                  fontSize: '0.65rem',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                  fontSize: '0.66rem',
                   color: 'var(--text-muted)',
                   fontFamily: 'var(--font-mono)'
                 }}>
                   {m.totalTokens && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Cpu size={10} color="#10b981" />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Cpu size={11} color="#10b981" />
                       {m.totalTokens.toLocaleString()} tokens
                     </span>
                   )}
                   {m.duration && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <Clock size={10} />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={11} />
                       {m.duration.toFixed(1)}s
+                    </span>
+                  )}
+                  {m.totalTokens && m.duration && m.duration > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.8 }}>
+                      ⚡ {(m.totalTokens / m.duration).toFixed(0)} tok/s
                     </span>
                   )}
                 </div>
@@ -1107,84 +1198,91 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '8px',
-        padding: '2px 0',
+        padding: '2px 2px',
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}>
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>Macros:</span>
+        <div className="no-scrollbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1 }}>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>MACROS:</span>
           {quickMacros.map((macro, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(macro.text)}
               disabled={loading}
+              className="crystal-card"
               style={{
                 fontSize: '0.68rem',
-                padding: '4px 10px',
+                padding: '3px 9px',
                 borderRadius: 'var(--radius-sm)',
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
                 color: 'var(--text-high)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 whiteSpace: 'nowrap',
-                transition: 'var(--transition)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
                 opacity: loading ? 0.5 : 1
               }}
             >
-              {macro.label}
+              <kbd className="tactical-kbd" style={{ fontSize: '0.55rem', padding: '0 4px' }}>{idx + 1}</kbd>
+              <span>{macro.label}</span>
             </button>
           ))}
         </div>
 
-        {/* 🪟 Pegado a la derecha hasta el tope sobre la misma línea de macros */}
+        {/* 🪟 Zen mode toggle */}
         {zenMode && (
           <button
             onClick={onToggleZenMode}
+            className="crystal-card"
             title="Restaurar barra de navegación (Escape o Alt + Z)"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-muted)',
+              gap: '6px',
               padding: '3px 10px',
               borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
               fontSize: '0.68rem',
               fontWeight: 600,
               whiteSpace: 'nowrap',
-              transition: 'var(--transition)',
-              flexShrink: 0
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-high)';
-              e.currentTarget.style.borderColor = 'var(--accent)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-muted)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
+              flexShrink: 0,
+              color: 'var(--text-high)'
             }}
           >
-            <Minimize2 size={12} color="var(--accent)" />
+            <Minimize2 size={12} color="#10b981" />
             <span>Restaurar Barra</span>
-            <kbd style={{ fontSize: '0.6rem', opacity: 0.65, background: 'rgba(255,255,255,0.08)', padding: '1px 4px', borderRadius: '3px' }}>Esc</kbd>
+            <kbd className="tactical-kbd">Esc</kbd>
           </button>
         )}
       </div>
 
-      {/* ⌨️ Input Command Box */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '0.5rem 0.8rem',
-        flexShrink: 0,
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)'
-      }}>
-        <Terminal size={16} color="#10b981" />
+      {/* ⌨️ Input Command Deck */}
+      <div 
+        className="crystal-surface"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          borderRadius: 'var(--radius-lg)',
+          padding: '0.45rem 0.85rem',
+          flexShrink: 0,
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)'
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '26px',
+          height: '26px',
+          borderRadius: '6px',
+          background: 'rgba(16, 185, 129, 0.12)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          flexShrink: 0
+        }}>
+          <Terminal size={14} color="#10b981" />
+        </div>
+
         <input
           type="text"
           value={prompt}
@@ -1202,34 +1300,37 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
             fontFamily: 'inherit'
           }}
         />
+
         <button
           onClick={() => handleSend()}
           disabled={loading || !prompt.trim()}
           style={{
-            background: 'var(--primary-grad)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             border: 'none',
             borderRadius: 'var(--radius-md)',
-            padding: '7px 14px',
-            color: '#fff',
+            padding: '6px 14px',
+            color: '#000',
             cursor: loading || !prompt.trim() ? 'not-allowed' : 'pointer',
-            opacity: loading || !prompt.trim() ? 0.4 : 1,
+            opacity: loading || !prompt.trim() ? 0.35 : 1,
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
+            gap: '6px',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            boxShadow: loading || !prompt.trim() ? 'none' : '0 0 12px rgba(16, 185, 129, 0.35)',
             transition: 'var(--transition)'
           }}
         >
           {loading ? (
             <>
-              <RefreshCw size={12} className="spin" />
+              <RefreshCw size={12} className="spin" color="#000" />
               <span>Ejecutando...</span>
             </>
           ) : (
             <>
-              <Send size={12} />
+              <Send size={12} color="#000" />
               <span>Enviar</span>
+              <kbd className="tactical-kbd" style={{ background: 'rgba(0, 0, 0, 0.25)', color: '#000', border: 'none', boxShadow: 'none' }}>↵</kbd>
             </>
           )}
         </button>
