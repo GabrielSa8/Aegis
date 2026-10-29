@@ -15,6 +15,9 @@ pub struct SystemTelemetry {
     pub cpu_percent: f64,
     pub cpu_cores: Vec<CpuCoreUsage>,
     pub cpu_temp_celsius: f64,
+    pub cpu_model: String,
+    pub os_name: String,
+    pub kernel_version: String,
     pub ram_total_mb: u64,
     pub ram_used_mb: u64,
     pub ram_available_mb: u64,
@@ -127,6 +130,46 @@ fn get_cpu_temp() -> f64 {
         }
     }
     (highest_temp * 10.0).round() / 10.0
+}
+
+fn get_cpu_model() -> String {
+    if let Ok(info) = fs::read_to_string("/proc/cpuinfo") {
+        for line in info.lines() {
+            if line.starts_with("model name") {
+                if let Some(pos) = line.find(':') {
+                    let model = line[pos + 1..].trim();
+                    if !model.is_empty() {
+                        return model.to_string();
+                    }
+                }
+            }
+        }
+    }
+    "Procesador Host".to_string()
+}
+
+fn get_os_name() -> String {
+    if let Ok(info) = fs::read_to_string("/etc/os-release") {
+        for line in info.lines() {
+            if line.starts_with("PRETTY_NAME=") {
+                let name = line[12..].trim().trim_matches('"');
+                if !name.is_empty() {
+                    return name.to_string();
+                }
+            }
+        }
+    }
+    "Linux".to_string()
+}
+
+fn get_kernel_version() -> String {
+    if let Ok(content) = fs::read_to_string("/proc/version") {
+        let parts: Vec<&str> = content.split_whitespace().collect();
+        if parts.len() >= 3 {
+            return parts[2].to_string();
+        }
+    }
+    "Linux Kernel".to_string()
 }
 
 fn get_aegis_memory_mb() -> f64 {
@@ -274,10 +317,17 @@ pub fn get_system_telemetry() -> Result<SystemTelemetry, String> {
         "OPTIMAL".to_string()
     };
 
+    let cpu_model = get_cpu_model();
+    let os_name = get_os_name();
+    let kernel_version = get_kernel_version();
+
     Ok(SystemTelemetry {
         cpu_percent,
         cpu_cores,
         cpu_temp_celsius,
+        cpu_model,
+        os_name,
+        kernel_version,
         ram_total_mb,
         ram_used_mb,
         ram_available_mb,
@@ -308,8 +358,8 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
         alerts.push(SystemAlert {
             id: "alt_temp_crit".to_string(),
             level: "danger".to_string(),
-            title: "Temperatura Elevada en Intel N150".to_string(),
-            message: format!("El núcleo reporta {:.1}°C. Se recomienda verificar ventilación pasiva y suspender compilaciones paralelas.", telemetry.cpu_temp_celsius),
+            title: "Temperatura Elevada de CPU".to_string(),
+            message: format!("El procesador ({}) reporta {:.1}°C. Se recomienda verificar ventilación y carga de procesos.", telemetry.cpu_model, telemetry.cpu_temp_celsius),
             timestamp: ts.clone(),
         });
     }
@@ -319,7 +369,7 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
             id: "alt_ram_high".to_string(),
             level: "warning".to_string(),
             title: "Presión de Memoria RAM".to_string(),
-            message: format!("Uso de RAM al {:.1}% ({} MB disponibles). ZRAM zstd activo absorbiendo swap en Fedora.", telemetry.ram_usage_percent, telemetry.ram_available_mb),
+            message: format!("Uso de RAM al {:.1}% ({} MB disponibles). Swap/ZRAM en absorción activa.", telemetry.ram_usage_percent, telemetry.ram_available_mb),
             timestamp: ts.clone(),
         });
     }
@@ -328,8 +378,8 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
         alerts.push(SystemAlert {
             id: "alt_cpu_high".to_string(),
             level: "warning".to_string(),
-            title: "Carga Alta en Cores Gracemont".to_string(),
-            message: format!("Uso sostenido al {:.1}%. Verifica procesos de fondo.", telemetry.cpu_percent),
+            title: "Carga Alta de Procesador".to_string(),
+            message: format!("Uso sostenido al {:.1}% en {} núcleos. Verifica procesos en segundo plano.", telemetry.cpu_percent, telemetry.cpu_cores.len()),
             timestamp: ts.clone(),
         });
     }
@@ -338,8 +388,8 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
         alerts.push(SystemAlert {
             id: "alt_disk_low".to_string(),
             level: "warning".to_string(),
-            title: "Almacenamiento NVMe Reducido".to_string(),
-            message: format!("Partición raíz LUKS al {:.1}%. Quedan {:.1} GB disponibles.", telemetry.disk_usage_percent, telemetry.disk_available_gb),
+            title: "Almacenamiento Reducido".to_string(),
+            message: format!("Partición raíz al {:.1}%. Quedan {:.1} GB disponibles.", telemetry.disk_usage_percent, telemetry.disk_available_gb),
             timestamp: ts.clone(),
         });
     }
@@ -348,8 +398,8 @@ pub fn get_system_alerts() -> Result<Vec<SystemAlert>, String> {
         alerts.push(SystemAlert {
             id: "alt_all_good".to_string(),
             level: "info".to_string(),
-            title: "Centinela N150 Óptimo".to_string(),
-            message: format!("Temperatura ({:.1}°C), RAM ({:.1}%) y 4 E-cores en parámetros normales. Consumo Aegis: {:.1} MB.", telemetry.cpu_temp_celsius, telemetry.ram_usage_percent, telemetry.aegis_ram_mb),
+            title: "Hardware y Sistema Óptimos".to_string(),
+            message: format!("{} | Temp: {:.1}°C | RAM: {:.1}% ({} núcleos). Consumo Aegis: {:.1} MB.", telemetry.cpu_model, telemetry.cpu_temp_celsius, telemetry.ram_usage_percent, telemetry.cpu_cores.len(), telemetry.aegis_ram_mb),
             timestamp: ts,
         });
     }
@@ -412,7 +462,7 @@ pub fn get_top_processes() -> Result<Vec<ProcessInfo>, String> {
     }
 
     list.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal));
-    list.truncate(10);
+    list.truncate(30);
     Ok(list)
 }
 
