@@ -985,36 +985,28 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
                   return (
                     <label
                       key={notif.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '10px',
-                        padding: '10px 12px',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer'
-                      }}
+                      className={`tactical-option-row ${isChecked ? 'active' : ''}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => setConfig({
-                          ...config,
-                          notifications: {
-                            ...(config.notifications || {}),
-                            [notif.id]: e.target.checked
-                          }
-                        })}
-                        style={{ marginTop: '2px' }}
-                      />
-                      <div>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                      <div style={{ paddingRight: '1rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isChecked ? '#fff' : 'var(--text-high)', display: 'block' }}>
                           {notif.title}
                         </span>
                         <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                           {notif.desc}
                         </span>
+                      </div>
+                      <div className="tactical-switch">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setConfig({
+                            ...config,
+                            notifications: {
+                              ...(config.notifications || {}),
+                              [notif.id]: e.target.checked
+                            }
+                          })}
+                        />
                       </div>
                     </label>
                   );
@@ -1036,37 +1028,39 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={config.enableGamemode}
-                    onChange={(e) => setConfig({ ...config, enableGamemode: e.target.checked })}
-                    style={{ marginTop: '2px' }}
-                  />
-                  <div>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                <label className={`tactical-option-row ${config.enableGamemode ? 'active' : ''}`}>
+                  <div style={{ paddingRight: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: config.enableGamemode ? '#fff' : 'var(--text-high)', display: 'block' }}>
                       Activar Feral GameMode (`gamemoderun`) por defecto
                     </span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                       Optimiza el planificador del kernel (SCHED_ISO), gobernador de CPU e I/O de disco al ejecutar cualquier juego.
                     </span>
                   </div>
+                  <div className="tactical-switch">
+                    <input
+                      type="checkbox"
+                      checked={config.enableGamemode}
+                      onChange={(e) => setConfig({ ...config, enableGamemode: e.target.checked })}
+                    />
+                  </div>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={config.enableGamescopeFsr}
-                    onChange={(e) => setConfig({ ...config, enableGamescopeFsr: e.target.checked })}
-                    style={{ marginTop: '2px' }}
-                  />
-                  <div>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                <label className={`tactical-option-row ${config.enableGamescopeFsr ? 'active' : ''}`}>
+                  <div style={{ paddingRight: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: config.enableGamescopeFsr ? '#fff' : 'var(--text-high)', display: 'block' }}>
                       Forzar escalado Gamescope FSR (720p 60fps → 1080p)
                     </span>
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                       Renderiza a resolución interna reducida aplicando AMD FidelityFX Super Resolution de forma transparente.
                     </span>
+                  </div>
+                  <div className="tactical-switch">
+                    <input
+                      type="checkbox"
+                      checked={config.enableGamescopeFsr}
+                      onChange={(e) => setConfig({ ...config, enableGamescopeFsr: e.target.checked })}
+                    />
                   </div>
                 </label>
               </div>
