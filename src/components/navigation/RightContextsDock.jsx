@@ -99,7 +99,7 @@ export default function RightContextsDock({
           background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
           backdropFilter: 'blur(20px)',
           boxShadow: isHovered
-            ? '-8px 0 36px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.15) inset, 0 0 20px color-mix(in srgb, var(--accent, #38bdf8) 20%, transparent)'
+            ? '-8px 0 36px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.15) inset, 0 0 20px color-mix(in srgb, var(--accent) 20%, transparent)'
             : (isPinned ? '-4px 0 20px rgba(0, 0, 0, 0.45)' : '-2px 0 12px rgba(0, 0, 0, 0.3)'),
           display: 'flex',
           flexDirection: 'column',
@@ -176,7 +176,7 @@ export default function RightContextsDock({
             const isActive = ctx.id === selectedContextId;
             const stepRatio = idx / Math.max(contexts.length - 1, 1);
 
-            const stepColor = `color-mix(in srgb, var(--accent, #38bdf8) ${Math.round(100 - stepRatio * 50)}%, var(--primary) ${Math.round(stepRatio * 50)}%)`;
+            const stepColor = `color-mix(in srgb, var(--accent) ${Math.round(100 - stepRatio * 50)}%, var(--primary) ${Math.round(stepRatio * 50)}%)`;
             const stepBg = isActive
               ? `color-mix(in srgb, ${stepColor} 22%, var(--bg-card))`
               : `color-mix(in srgb, ${stepColor} 4%, transparent)`;

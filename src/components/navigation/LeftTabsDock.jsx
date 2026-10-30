@@ -170,7 +170,7 @@ export default function LeftTabsDock({
             const isActive = activeTab === tab.id;
             const stepRatio = idx / (TABS.length - 1);
             
-            const stepColor = `color-mix(in srgb, var(--primary) ${Math.round(100 - stepRatio * 60)}%, var(--accent, #38bdf8) ${Math.round(stepRatio * 60)}%)`;
+            const stepColor = `color-mix(in srgb, var(--primary) ${Math.round(100 - stepRatio * 60)}%, var(--accent) ${Math.round(stepRatio * 60)}%)`;
             const stepBg = isActive 
               ? `color-mix(in srgb, ${stepColor} 22%, var(--bg-card))` 
               : `color-mix(in srgb, ${stepColor} 4%, transparent)`;
