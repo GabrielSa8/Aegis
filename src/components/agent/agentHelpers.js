@@ -45,3 +45,70 @@ export function parseThoughtBlocks(rawContent) {
     cleanContent: cleanContent.trim()
   };
 }
+
+export function reduceStreamChunk(msg, chunk) {
+  if (chunk.event_type === 'init') {
+    return {
+      ...msg,
+      statusText: chunk.content || 'Montando contexto y preparando modelo...',
+      loading: true
+    };
+  }
+  if (chunk.event_type === 'delta') {
+    let currentStatus = msg.statusText;
+    if (
+      chunk.step_type === 'thinking' ||
+      chunk.content.includes('<thought>') ||
+      chunk.content.includes('<thinking>') ||
+      chunk.content.includes('<think>')
+    ) {
+      currentStatus = '🧠 Razonando proceso técnico...';
+    } else if (
+      chunk.step_type === 'tool' ||
+      chunk.step_type === 'tool_call' ||
+      chunk.content.includes('⚙️ [Herramienta')
+    ) {
+      currentStatus = '⚙️ Ejecutando herramienta de sistema...';
+    } else if (msg.content && msg.content.length > 30) {
+      currentStatus = '⚡ Transmitiendo respuesta...';
+    }
+
+    return {
+      ...msg,
+      content: (msg.content || '') + chunk.content,
+      statusText: currentStatus,
+      loading: true
+    };
+  }
+  if (chunk.event_type === 'permission') {
+    return {
+      ...msg,
+      permissionPrompt: chunk.content,
+      statusText: '⚠️ Esperando confirmación de permiso...',
+      loading: true
+    };
+  }
+  if (chunk.event_type === 'done') {
+    return {
+      ...msg,
+      loading: false,
+      permissionPrompt: null,
+      statusText: null,
+      duration: chunk.duration_seconds,
+      totalTokens: chunk.total_tokens,
+      inputTokens: chunk.input_tokens,
+      outputTokens: chunk.output_tokens
+    };
+  }
+  if (chunk.event_type === 'error') {
+    return {
+      ...msg,
+      content: (msg.content ? msg.content + '\n\n' : '') + `⚠️ [Error agy]: ${chunk.content}`,
+      loading: false,
+      permissionPrompt: null,
+      statusText: null,
+      isError: true
+    };
+  }
+  return msg;
+}

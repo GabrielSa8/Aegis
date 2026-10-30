@@ -1,5 +1,7 @@
 export * from './agentHelpers';
 export * from './useAgent';
+export * from './useAgentSessions';
+export * from './useAgentStream';
 export { default as ThoughtAccordion } from './ThoughtAccordion';
 export { default as AgentHeaderPortal } from './AgentHeaderPortal';
 export { default as SessionsDrawer } from './SessionsDrawer';

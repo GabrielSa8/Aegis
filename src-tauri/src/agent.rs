@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -17,6 +18,7 @@ fn get_stdin_map() -> &'static Arc<Mutex<HashMap<String, tokio::process::ChildSt
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AgentStreamChunk {
     pub stream_id: String,
+    pub seq: u64,
     pub event_type: String, // "init", "delta", "step", "permission", "done", "error"
     pub content: String,
     pub step_type: Option<String>,
@@ -224,8 +226,10 @@ pub async fn execute_agent_prompt(
     let stderr = child.stderr.take().ok_or("Fallo al capturar stderr")?;
 
     // Emitir evento "init" inmediato para confirmar que el agente está trabajando
+    let chunk_seq = Arc::new(AtomicU64::new(0));
     let init_chunk = AgentStreamChunk {
         stream_id: stream_id.clone(),
+        seq: chunk_seq.fetch_add(1, Ordering::SeqCst),
         event_type: "init".into(),
         content: "Iniciando motor de razonamiento y montando contexto...".into(),
         step_type: Some("init".into()),
@@ -240,6 +244,7 @@ pub async fn execute_agent_prompt(
     let app_stdout = app.clone();
     let stream_id_stdout = stream_id.clone();
     let home_stream = home.clone();
+    let chunk_seq_stdout = Arc::clone(&chunk_seq);
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout).lines();
         let mut captured_conv_id: Option<String> = None;
@@ -270,6 +275,7 @@ pub async fn execute_agent_prompt(
                                 if let Some(delta) = step.get("text_delta").and_then(|d| d.as_str()) {
                                     let chunk = AgentStreamChunk {
                                         stream_id: stream_id_stdout.clone(),
+                                        seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                                         event_type: "delta".into(),
                                         content: delta.to_string(),
                                         step_type: step_type.clone(),
@@ -292,6 +298,7 @@ pub async fn execute_agent_prompt(
                                             );
                                             let chunk = AgentStreamChunk {
                                                 stream_id: stream_id_stdout.clone(),
+                                                seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                                                 event_type: "delta".into(),
                                                 content: formatted_thinking,
                                                 step_type: Some("thinking".into()),
@@ -324,6 +331,7 @@ pub async fn execute_agent_prompt(
 
                                             let chunk = AgentStreamChunk {
                                                 stream_id: stream_id_stdout.clone(),
+                                                seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                                                 event_type: "delta".into(),
                                                 content: formatted_tool,
                                                 step_type: Some("tool".into()),
@@ -350,6 +358,7 @@ pub async fn execute_agent_prompt(
                                         );
                                         let chunk = AgentStreamChunk {
                                             stream_id: stream_id_stdout.clone(),
+                                            seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                                             event_type: "delta".into(),
                                             content: formatted_thinking,
                                             step_type: Some("thinking".into()),
@@ -376,6 +385,7 @@ pub async fn execute_agent_prompt(
 
                                 let chunk = AgentStreamChunk {
                                     stream_id: stream_id_stdout.clone(),
+                                    seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                                     event_type: "done".into(),
                                     content: "".into(),
                                     step_type: None,
@@ -408,6 +418,7 @@ pub async fn execute_agent_prompt(
 
                 let chunk = AgentStreamChunk {
                     stream_id: stream_id_stdout.clone(),
+                    seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
                     event_type,
                     content: format!("{}\n", line),
                     step_type: if is_permission_prompt { Some("permission_request".into()) } else { None },
@@ -426,6 +437,7 @@ pub async fn execute_agent_prompt(
     // Monitoreo de stderr y terminación
     let app_stderr = app.clone();
     let stream_id_stderr = stream_id.clone();
+    let chunk_seq_stderr = Arc::clone(&chunk_seq);
     tokio::spawn(async move {
         let mut reader = BufReader::new(stderr).lines();
         let mut err_buffer = String::new();
@@ -442,6 +454,7 @@ pub async fn execute_agent_prompt(
             if !exit_status.success() && !err_buffer.is_empty() {
                 let chunk = AgentStreamChunk {
                     stream_id: stream_id_stderr.clone(),
+                    seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
                     event_type: "error".into(),
                     content: err_buffer,
                     step_type: None,

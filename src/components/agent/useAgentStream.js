@@ -1,0 +1,308 @@
+import { useState, useEffect, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { reduceStreamChunk } from './agentHelpers';
+
+export function useAgentStream({
+  activeContext,
+  activeContextRef,
+  effortMode,
+  effortRef,
+  activeSessionIdRef,
+  sessions,
+  setSessions,
+  currentSessionId,
+  setCurrentSessionId
+}) {
+  const [messages, setMessages] = useState([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: 'Aegis Copilot táctico en línea. Conectado al agente local (`agy 1.4.8`). ¿Qué tarea ejecutamos?',
+      context: activeContext.label,
+      timestamp: 'Ahora'
+    }
+  ]);
+
+  const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [copiedId, setCopiedId] = useState(null);
+  const [expandThoughts, setExpandThoughts] = useState(false);
+  const viewportRef = useRef(null);
+
+  // Registro para deduplicación estricta de secuencias por stream
+  const lastProcessedSeqRef = useRef({});
+  const currentAccumulatorRef = useRef({});
+
+  // Animación reactiva de carga porcentual líquida
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      setLoadingProgress(14);
+      interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev < 45) return prev + Math.floor(Math.random() * 8) + 4;
+          if (prev < 78) return prev + Math.floor(Math.random() * 5) + 2;
+          if (prev < 94) return prev + Math.floor(Math.random() * 2) + 1;
+          return prev;
+        });
+      }, 350);
+    } else {
+      setLoadingProgress(100);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Atajo global Ctrl + O para alternar acordeón de razonamiento
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setExpandThoughts((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Auto-scroll al final en cada actualización de mensajes
+  useEffect(() => {
+    if (viewportRef.current) {
+      viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Procesador unificado y libre de mutaciones con deduplicación por seq
+  const handleStreamChunk = (chunk) => {
+    if (!chunk || !chunk.stream_id) return;
+
+    // Deduplicación estricta por número de secuencia de Rust
+    const maxSeq = lastProcessedSeqRef.current[chunk.stream_id] ?? -1;
+    if (chunk.seq !== undefined && chunk.seq <= maxSeq) {
+      return;
+    }
+    if (chunk.seq !== undefined) {
+      lastProcessedSeqRef.current[chunk.stream_id] = chunk.seq;
+    }
+
+    // Acumulación atómica y persistencia ejecutadas fuera de setMessages
+    if (chunk.event_type === 'delta') {
+      currentAccumulatorRef.current[chunk.stream_id] =
+        (currentAccumulatorRef.current[chunk.stream_id] || '') + chunk.content;
+    } else if (chunk.event_type === 'done') {
+      const finalContent = currentAccumulatorRef.current[chunk.stream_id] || '';
+      if (activeSessionIdRef.current && finalContent) {
+        invoke('sqlite_save_chat_message', {
+          message: {
+            id: chunk.stream_id,
+            sessionId: activeSessionIdRef.current,
+            role: 'assistant',
+            content: finalContent,
+            context: activeContextRef.current.label,
+            effort: effortRef.current,
+            createdAt: new Date().toISOString(),
+            durationSeconds: chunk.duration_seconds || null,
+            totalTokens: chunk.total_tokens || null,
+            inputTokens: chunk.input_tokens || null,
+            outputTokens: chunk.output_tokens || null
+          }
+        }).catch((err) => console.error('Error guardando mensaje en SQLite:', err));
+      }
+      delete currentAccumulatorRef.current[chunk.stream_id];
+      delete lastProcessedSeqRef.current[chunk.stream_id];
+    } else if (chunk.event_type === 'error') {
+      delete currentAccumulatorRef.current[chunk.stream_id];
+      delete lastProcessedSeqRef.current[chunk.stream_id];
+    }
+
+    // Actualización de estado React 100% pura y modular
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === chunk.stream_id ? reduceStreamChunk(msg, chunk) : msg))
+    );
+
+    if (chunk.event_type === 'done' || chunk.event_type === 'error') {
+      setLoading(false);
+    }
+  };
+
+  // Escucha blindada contra fugas en StrictMode y cambios de pestaña
+  useEffect(() => {
+    let isCancelled = false;
+    let unlistenFn = null;
+
+    listen('agent-stream', (event) => {
+      if (isCancelled) return;
+      handleStreamChunk(event.payload);
+    })
+      .then((fn) => {
+        if (isCancelled) {
+          fn();
+        } else {
+          unlistenFn = fn;
+        }
+      })
+      .catch((err) => console.error('Error suscribiendo a agent-stream:', err));
+
+    return () => {
+      isCancelled = true;
+      if (typeof unlistenFn === 'function') {
+        unlistenFn();
+      }
+    };
+  }, []);
+
+  const handlePermissionResponse = async (streamId, input) => {
+    try {
+      await invoke('send_agent_input', { streamId, input });
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === streamId
+            ? {
+                ...msg,
+                permissionPrompt: null,
+                statusText: input === 'y' ? '✅ Permiso concedido. Continuando...' : '❌ Permiso denegado por el usuario.'
+              }
+            : msg
+        )
+      );
+    } catch (e) {
+      console.error('Error enviando respuesta a stdin:', e);
+    }
+  };
+
+  const handleSend = async (customPrompt, currentPrompt, setPrompt) => {
+    const textToSend = customPrompt || currentPrompt;
+    if (!textToSend.trim() || loading) return;
+
+    let targetSessionId = currentSessionId;
+    if (!targetSessionId) {
+      const newSession = {
+        id: 'session_' + Date.now(),
+        title: textToSend.slice(0, 36) + (textToSend.length > 36 ? '...' : ''),
+        contextId: activeContext.id,
+        effort: effortMode,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      try {
+        await invoke('sqlite_save_chat_session', { session: newSession });
+        setSessions((prev) => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        targetSessionId = newSession.id;
+      } catch (e) {
+        console.error('Error auto-creando sesión:', e);
+      }
+    } else {
+      const curSess = sessions.find((s) => s.id === targetSessionId);
+      if (curSess && (curSess.title.startsWith('Sesión') || curSess.title === 'Sesión Táctica General')) {
+        const updatedTitle = textToSend.slice(0, 36) + (textToSend.length > 36 ? '...' : '');
+        const updated = { ...curSess, title: updatedTitle, updatedAt: new Date().toISOString() };
+        invoke('sqlite_save_chat_session', { session: updated }).catch(console.error);
+        setSessions((prev) => prev.map((s) => (s.id === targetSessionId ? updated : s)));
+      }
+    }
+
+    const streamId = 'stream_' + Date.now();
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const userMsg = {
+      id: 'usr_' + Date.now(),
+      role: 'user',
+      content: textToSend,
+      context: activeContext.label,
+      effort: effortMode,
+      timestamp: timeStr
+    };
+
+    if (targetSessionId) {
+      invoke('sqlite_save_chat_message', {
+        message: {
+          id: userMsg.id,
+          sessionId: targetSessionId,
+          role: 'user',
+          content: userMsg.content,
+          context: userMsg.context,
+          effort: userMsg.effort,
+          createdAt: new Date().toISOString(),
+          durationSeconds: null,
+          totalTokens: null,
+          inputTokens: null,
+          outputTokens: null
+        }
+      }).catch((e) => console.error('Error guardando mensaje user:', e));
+    }
+
+    const assistantPlaceholder = {
+      id: streamId,
+      role: 'assistant',
+      content: '',
+      context: activeContext.label,
+      effort: effortMode,
+      timestamp: timeStr,
+      loading: true,
+      statusText: 'Iniciando agente y montando contexto...'
+    };
+
+    setMessages((prev) => [...prev, userMsg, assistantPlaceholder]);
+    if (typeof setPrompt === 'function') setPrompt('');
+    setLoading(true);
+
+    try {
+      await invoke('execute_agent_prompt', {
+        prompt: textToSend,
+        contextId: activeContext.id,
+        contextPath: activeContext.path,
+        skills: activeContext.skills || [],
+        streamId,
+        effort: effortMode
+      });
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === streamId
+            ? {
+                ...m,
+                content: `Error al iniciar el agente en Aegis Core: ${err}`,
+                loading: false,
+                isError: true
+              }
+            : m
+        )
+      );
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const clearHistory = () => {
+    setMessages([
+      {
+        id: 'welcome_' + Date.now(),
+        role: 'assistant',
+        content: `Historial despejado. Entorno táctico listo (${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
+        context: activeContext.label,
+        timestamp: 'Ahora'
+      }
+    ]);
+  };
+
+  return {
+    messages,
+    setMessages,
+    loading,
+    loadingProgress,
+    copiedId,
+    copyToClipboard,
+    expandThoughts,
+    setExpandThoughts,
+    viewportRef,
+    handlePermissionResponse,
+    handleSend,
+    clearHistory
+  };
+}
