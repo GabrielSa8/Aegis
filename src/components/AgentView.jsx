@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import ContextManagerModal from './ContextManagerModal';
 import MacroManagerModal from './MacroManagerModal';
+import RightContextsDock from './navigation/RightContextsDock';
 import {
   useAgent,
   AgentHeaderPortal,
@@ -10,6 +12,24 @@ import {
 } from './agent';
 
 export default function AgentView({ zenMode, onToggleZenMode }) {
+  const [isRightDockPinned, setIsRightDockPinned] = useState(() => {
+    try {
+      return localStorage.getItem('aegis_right_dock_pinned') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleRightDockPin = () => {
+    setIsRightDockPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('aegis_right_dock_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const {
     contexts,
     selectedContextId,
@@ -61,7 +81,16 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       />
 
       {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: '0.5rem', position: 'relative', padding: '0.45rem 0.85rem' }}>
+      <div style={{
+        display: 'flex',
+        flex: 1,
+        minHeight: 0,
+        gap: '0.5rem',
+        position: 'relative',
+        padding: '0.45rem 0.85rem',
+        paddingRight: (!zenMode && isRightDockPinned) ? '62px' : '0.85rem',
+        transition: 'padding-right 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
+      }}>
         <SessionsDrawer
           isOpen={showSessionsDrawer}
           sessions={sessions}
@@ -82,6 +111,18 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           loadingProgress={loadingProgress}
         />
       </div>
+
+      {/* 🧭 Dock Derecho Táctico: Perfiles de Contexto de IA */}
+      {!zenMode && (
+        <RightContextsDock
+          contexts={contexts}
+          selectedContextId={selectedContextId}
+          onSelectContext={handleSelectContext}
+          onOpenContextModal={() => setShowContextModal(true)}
+          isPinned={isRightDockPinned}
+          onTogglePin={handleToggleRightDockPin}
+        />
+      )}
 
       {/* ⚡ Quick Macros Row */}
       <MacroDeck
