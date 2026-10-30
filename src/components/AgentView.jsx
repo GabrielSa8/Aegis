@@ -80,15 +80,15 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         messages={messages}
       />
 
-      {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}
+      {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log (Lienzo Borde a Borde) */}
       <div style={{
         display: 'flex',
         flex: 1,
         minHeight: 0,
-        gap: '0.5rem',
+        gap: '0',
         position: 'relative',
-        padding: '0.45rem 0.85rem',
-        paddingRight: (!zenMode && isRightDockPinned) ? '62px' : '0.85rem',
+        padding: '0',
+        paddingRight: (!zenMode && isRightDockPinned) ? '60px' : '0',
         transition: 'padding-right 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
       }}>
         <SessionsDrawer

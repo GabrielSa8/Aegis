@@ -14,7 +14,7 @@ export default function MacroDeck({
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '8px',
-      padding: '0.2rem 0.85rem 0.35rem 0.85rem',
+      padding: '0.3rem 1.75rem 0.4rem 1.75rem',
       flexShrink: 0
     }}>
       <div 
