@@ -50,21 +50,14 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
 
   return (
     <div className="terminal-stream-container">
-      {/* 🧭 Controles de Contexto y Esfuerzo Unificados en la Barra Superior */}
+      {/* 🧭 Controles de Esfuerzo, Razonamiento y Telemetría en la Barra Superior */}
       <AgentHeaderPortal
         portalTarget={portalTarget}
-        contexts={contexts}
-        selectedContextId={selectedContextId}
-        onSelectContext={handleSelectContext}
-        onOpenContextModal={() => setShowContextModal(true)}
         effortMode={effortMode}
         onSetEffortMode={setEffortMode}
         expandThoughts={expandThoughts}
         onToggleExpandThoughts={() => setExpandThoughts((prev) => !prev)}
-        showSessionsDrawer={showSessionsDrawer}
-        onToggleSessionsDrawer={() => setShowSessionsDrawer((prev) => !prev)}
-        sessionsCount={sessions.length}
-        onClearHistory={clearHistory}
+        messages={messages}
       />
 
       {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log */}

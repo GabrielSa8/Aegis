@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Minimize2 } from 'lucide-react';
 
 import TopHeader from './components/TopHeader';
+import LeftTabsDock from './components/navigation/LeftTabsDock';
 import AgentView from './components/AgentView';
 import FinancesView from './components/FinancesView';
 import VaultView from './components/VaultView';
@@ -21,6 +22,23 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState('nordic-moss');
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [isDockPinned, setIsDockPinned] = useState(() => {
+    try {
+      return localStorage.getItem('aegis_dock_pinned') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleDockPin = () => {
+    setIsDockPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('aegis_dock_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const applyUiScale = (scale) => {
     const s = Number(scale) || 1.0;
@@ -130,8 +148,6 @@ export default function App() {
       {!zenMode ? (
         <TopHeader 
           coreStatus={coreStatus} 
-          activeTab={activeTab === 'leisure' ? 'gaming' : activeTab} 
-          onSelectTab={setActiveTab}
           zenMode={zenMode}
           onToggleZenMode={() => setZenMode(!zenMode)}
           onOpenSettings={() => setActiveTab('settings')}
@@ -177,18 +193,38 @@ export default function App() {
         </button>
       ) : null}
 
-      {/* 🚀 Lienzo de Contenido Ultra-Limpio (95% Viewport Disponible) */}
-      <main style={{
+      {/* 🚀 Contenedor de Trabajo: Dock Izquierdo de Vistas + Lienzo Central */}
+      <div style={{
+        display: 'flex',
         flex: 1,
         minHeight: 0,
-        overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault') ? 'hidden' : 'auto',
-        overflowX: 'hidden',
-        padding: (zenMode || activeTab === 'settings' || activeTab === 'agent')
-          ? '0' 
-          : '0.65rem 1rem',
-        display: 'flex',
-        flexDirection: 'column'
+        width: '100%',
+        overflow: 'hidden',
+        position: 'relative'
       }}>
+        {!zenMode && (
+          <LeftTabsDock
+            activeTab={activeTab === 'leisure' ? 'gaming' : activeTab}
+            onSelectTab={setActiveTab}
+            isPinned={isDockPinned}
+            onTogglePin={handleToggleDockPin}
+          />
+        )}
+
+        {/* 🚀 Lienzo de Contenido Ultra-Limpio */}
+        <main style={{
+          flex: 1,
+          minHeight: 0,
+          marginLeft: (!zenMode && isDockPinned) ? '54px' : '0',
+          overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault') ? 'hidden' : 'auto',
+          overflowX: 'hidden',
+          padding: (zenMode || activeTab === 'settings' || activeTab === 'agent')
+            ? '0' 
+            : '0.65rem 1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'margin-left 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
+        }}>
         <ErrorBoundary key={activeTab} name={activeTab}>
           {activeTab === 'agent' && <AgentView zenMode={zenMode} onToggleZenMode={() => setZenMode(false)} />}
           {activeTab === 'finances' && <FinancesView />}
@@ -206,6 +242,7 @@ export default function App() {
           )}
         </ErrorBoundary>
       </main>
+      </div>
 
       {/* ⚙️ Modal Global de Ajustes y Temas (Fallback si se abre como popup) */}
       {showSettings && (

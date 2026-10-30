@@ -24,6 +24,15 @@ export function useAgent() {
 
   // Nivel de esfuerzo / modelo activo ('low' = Flash, 'high' = Profundo)
   const [effortMode, setEffortMode] = useState(activeContext.effort || 'low');
+  const effortRef = useRef(effortMode);
+  useEffect(() => {
+    effortRef.current = effortMode;
+  }, [effortMode]);
+
+  const activeContextRef = useRef(activeContext);
+  useEffect(() => {
+    activeContextRef.current = activeContext;
+  }, [activeContext]);
   const [showContextModal, setShowContextModal] = useState(false);
   const [operatorName, setOperatorName] = useState('Operador');
 
@@ -327,8 +336,8 @@ export function useAgent() {
                       sessionId: activeSessionIdRef.current,
                       role: 'assistant',
                       content: finalContent,
-                      context: activeContext.label,
-                      effort: effortMode,
+                      context: activeContextRef.current.label,
+                      effort: effortRef.current,
                       createdAt: new Date().toISOString(),
                       durationSeconds: chunk.duration_seconds || null,
                       totalTokens: chunk.total_tokens || null,
@@ -375,7 +384,7 @@ export function useAgent() {
     return () => {
       if (unlisten) unlisten();
     };
-  }, [activeContext.label, effortMode]);
+  }, []);
 
   // Auto-scroll al final en cada actualización de mensajes
   useEffect(() => {
@@ -508,7 +517,7 @@ export function useAgent() {
   const [portalTarget, setPortalTarget] = useState(() => (typeof document !== 'undefined' ? document.getElementById('top-header-slot') : null));
 
   useEffect(() => {
-    if (!portalTarget) {
+    if (!portalTarget || !portalTarget.isConnected) {
       const el = document.getElementById('top-header-slot');
       if (el) setPortalTarget(el);
     }
