@@ -103,6 +103,7 @@ export default function AgentView() {
           onNewSession={handleNewSession}
           onDeleteSession={handleDeleteSession}
           onClose={() => setShowSessionsDrawer(false)}
+          activeMessagesCount={messages.length}
         />
 
         <TerminalStreamViewport

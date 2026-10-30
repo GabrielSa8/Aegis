@@ -102,6 +102,7 @@ export default function AgentHeaderPortal({
 
       {/* 📜 Historial de Sesiones Tácticas */}
       <button
+        data-historial-toggle="true"
         onClick={onToggleSessionsDrawer}
         style={{
           display: 'flex',
@@ -123,10 +124,10 @@ export default function AgentHeaderPortal({
           outline: 'none',
           flexShrink: 0
         }}
-        title="Ver historial de sesiones de chat"
+        title="Historial de conversaciones"
       >
         <History size={14} color={showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)'} />
-        <span>Sesiones</span>
+        <span>Historial</span>
         <span style={{
           fontSize: '0.62rem',
           fontWeight: 700,

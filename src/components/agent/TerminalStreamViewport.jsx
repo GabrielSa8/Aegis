@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import TerminalMessageEntry from './TerminalMessageEntry';
 
-export default function TerminalStreamViewport({
+function TerminalStreamViewport({
   viewportRef,
   messages,
   operatorName,
@@ -30,3 +31,5 @@ export default function TerminalStreamViewport({
     </div>
   );
 }
+
+export default memo(TerminalStreamViewport);

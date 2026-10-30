@@ -480,6 +480,7 @@ pub struct ChatSession {
     pub effort: String,
     pub created_at: String,
     pub updated_at: String,
+    pub message_count: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -502,11 +503,18 @@ pub struct ChatMessage {
 pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
     let conn = crate::db::get_db_connection()?;
     let mut stmt = conn
-        .prepare("SELECT id, title, context_id, effort, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC")
+        .prepare(
+            "SELECT s.id, s.title, s.context_id, s.effort, s.created_at, s.updated_at, COUNT(m.id) as message_count
+             FROM chat_sessions s
+             LEFT JOIN chat_messages m ON s.id = m.session_id
+             GROUP BY s.id
+             ORDER BY s.updated_at DESC"
+        )
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
         .query_map([], |r| {
+            let count: u32 = r.get(6).unwrap_or(0);
             Ok(ChatSession {
                 id: r.get(0)?,
                 title: r.get(1)?,
@@ -514,6 +522,7 @@ pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
                 effort: r.get(3)?,
                 created_at: r.get(4)?,
                 updated_at: r.get(5)?,
+                message_count: Some(count),
             })
         })
         .map_err(|e| e.to_string())?;

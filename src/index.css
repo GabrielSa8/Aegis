@@ -1344,20 +1344,86 @@ select:focus-visible {
   height: 44px;
   display: flex;
   align-items: center;
-  transform: translateY(-36px) scale(0.96);
+  transform: translateY(-36px);
   transform-origin: top center;
   opacity: 0.85;
-  transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
 }
 
-/* ⚡ Salto dinámico elástico (Apple Spring Bounce) al entrar el mouse */
+/* ⚡ Dynamic Island activo al entrar el mouse o al abrir historial (Zero-Jitter Translation) */
 .dynamic-island-trigger:hover .dynamic-island-capsule,
-.dynamic-island-capsule.is-pinned {
-  transform: translateY(0) scale(1);
+.dynamic-island-capsule.is-pinned,
+body.aegis-dock-open .dynamic-island-capsule {
+  transform: translateY(0);
   opacity: 1;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 3px 16px color-mix(in srgb, var(--primary) 22%, transparent);
-  transition: transform 0.36s cubic-bezier(0.34, 1.48, 0.64, 1), opacity 0.2s ease, box-shadow 0.25s ease;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 2px 14px color-mix(in srgb, var(--primary) 20%, transparent);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
 }
+
+/* 🌊 Dock de Historial: 100% Fluido, Zero FOUC, Cero Parpadeo (CSS Transition GPU-Composited) */
+.sessions-drawer-panel {
+  position: fixed;
+  top: 50px;
+  left: 50%;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  max-height: min(400px, calc(100vh - 160px));
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--bg-card, #161a19) 98%, black);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-color));
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 95;
+  overflow: hidden;
+  opacity: 0;
+  transform: translate3d(-50%, -8px, 0);
+  pointer-events: none;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.12s ease;
+  will-change: transform, opacity;
+}
+
+.sessions-drawer-panel.is-open {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0);
+  pointer-events: auto;
+}
+
+/* 🌟 Botón Nuevo Chat en Dock de Historial: Iluminación, Glow Táctil y Elevación */
+.historial-new-btn {
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.16s ease, 
+              filter 0.16s ease;
+}
+
+.historial-new-btn:hover {
+  filter: brightness(1.28);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 85%, transparent), 
+              0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+.historial-new-btn:active {
+  transform: translateY(0) scale(0.96);
+  filter: brightness(0.95);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent) !important;
+}
+
+.historial-close-btn {
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.historial-close-btn:hover {
+  color: var(--text-high) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: scale(1.06);
+}
+
+.historial-close-btn:active {
+  transform: scale(0.92);
+}
+
+
 
 
 

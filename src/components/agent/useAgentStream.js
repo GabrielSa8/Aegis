@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { reduceStreamChunk } from './agentHelpers';
@@ -151,7 +151,7 @@ export function useAgentStream({
     };
   }, []);
 
-  const handlePermissionResponse = async (streamId, input) => {
+  const handlePermissionResponse = useCallback(async (streamId, input) => {
     try {
       await invoke('send_agent_input', { streamId, input });
       setMessages((prev) =>
@@ -168,7 +168,7 @@ export function useAgentStream({
     } catch (e) {
       console.error('Error enviando respuesta a stdin:', e);
     }
-  };
+  }, []);
 
   const handleSend = async (customPrompt, currentPrompt, setPrompt) => {
     const textToSend = customPrompt || currentPrompt;
@@ -273,23 +273,23 @@ export function useAgentStream({
     }
   };
 
-  const copyToClipboard = (text, id) => {
+  const copyToClipboard = useCallback((text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  }, []);
 
-  const clearHistory = () => {
+  const clearHistory = useCallback(() => {
     setMessages([
       {
         id: 'welcome_' + Date.now(),
         role: 'assistant',
-        content: `Historial despejado. Entorno táctico listo (${activeContext.label} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
-        context: activeContext.label,
+        content: `Historial despejado. Entorno táctico listo (${activeContext?.label || 'General'} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
+        context: activeContext?.label || 'General',
         timestamp: 'Ahora'
       }
     ]);
-  };
+  }, [activeContext?.label, effortMode]);
 
   return {
     messages,

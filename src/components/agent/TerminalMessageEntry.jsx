@@ -1,9 +1,10 @@
+import { memo } from 'react';
 import { Check, Copy, ShieldAlert, Cpu, Clock } from 'lucide-react';
 import MarkdownViewer from '../MarkdownViewer';
 import ThoughtAccordion from './ThoughtAccordion';
 import { parseThoughtBlocks, renderAsciiProgress } from './agentHelpers';
 
-export default function TerminalMessageEntry({
+function TerminalMessageEntry({
   message: m,
   operatorName,
   expandThoughts,
@@ -219,3 +220,5 @@ export default function TerminalMessageEntry({
     </div>
   );
 }
+
+export default memo(TerminalMessageEntry);

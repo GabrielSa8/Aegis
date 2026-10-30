@@ -112,3 +112,21 @@ export function reduceStreamChunk(msg, chunk) {
   }
   return msg;
 }
+
+export function formatRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+  const now = new Date();
+  const diffSec = Math.floor((now - date) / 1000);
+
+  if (diffSec < 45) return 'Ahora';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `hace ${diffMin}m`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `hace ${diffHour}h`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay === 1) return 'Ayer';
+  if (diffDay < 7) return `hace ${diffDay}d`;
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
