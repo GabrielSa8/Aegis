@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Send, RefreshCw } from 'lucide-react';
 
 export default function PromptInputBar({
@@ -10,10 +11,22 @@ export default function PromptInputBar({
   inputRef,
   onShortcutMacro
 }) {
+  // Ajuste elástico de altura según contenido multilínea
+  useEffect(() => {
+    if (inputRef && inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      const scrollH = inputRef.current.scrollHeight;
+      inputRef.current.style.height = `${Math.min(Math.max(scrollH, 22), 160)}px`;
+    }
+  }, [prompt, inputRef]);
+
   const handleKeyDown = (e) => {
-    // Enter para enviar
-    if (e.key === 'Enter' && !loading) {
-      onSubmit();
+    // Enter sin Shift envía la instrucción
+    if (e.key === 'Enter' && !e.shiftKey && !loading) {
+      e.preventDefault();
+      if (prompt.trim()) {
+        onSubmit();
+      }
       return;
     }
 
@@ -27,15 +40,17 @@ export default function PromptInputBar({
     }
   };
 
+  const isMultiline = prompt.includes('\n');
+
   return (
     <div className="terminal-input-bar">
-      <div className="terminal-prompt-chevron">
-        <span>&gt;</span>
+      <div className="terminal-prompt-chevron" title="Prompt">
+        <span>❯</span>
       </div>
 
-      <input
+      <textarea
         ref={inputRef}
-        type="text"
+        rows={1}
         value={prompt}
         onChange={(e) => onChangePrompt(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -45,45 +60,38 @@ export default function PromptInputBar({
             : `[${activeContextLabel} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}] Instrucción para el agente...`
         }
         disabled={loading}
-        style={{
-          flex: 1,
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text-high)',
-          fontSize: '0.86rem',
-          fontFamily: 'inherit'
-        }}
+        className="terminal-prompt-textarea custom-scrollbar"
       />
 
-      <span className="terminal-blinking-cursor" style={{ marginRight: '6px' }}>█</span>
-
-      <button
-        onClick={() => onSubmit()}
-        disabled={loading || !prompt.trim()}
-        className="btn btn-primary"
-        style={{
-          padding: '5px 14px',
-          fontSize: '0.74rem',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-      >
-        {loading ? (
-          <>
-            <RefreshCw size={12} className="spin" />
-            <span>Ejecutando...</span>
-          </>
-        ) : (
-          <>
-            <Send size={12} />
-            <span>Enviar</span>
-            <kbd className="tactical-kbd" style={{ background: 'rgba(0, 0, 0, 0.25)', color: 'inherit', border: 'none', boxShadow: 'none' }}>↵</kbd>
-          </>
+      <div className="terminal-input-actions">
+        {isMultiline && (
+          <span className="terminal-multiline-hint">
+            <kbd className="tactical-kbd" style={{ fontSize: '0.54rem', padding: '1px 3px' }}>Shift</kbd>
+            <span>+</span>
+            <kbd className="tactical-kbd" style={{ fontSize: '0.54rem', padding: '1px 3px' }}>↵</kbd>
+          </span>
         )}
-      </button>
+
+        <button
+          onClick={() => onSubmit()}
+          disabled={loading || !prompt.trim()}
+          className="terminal-send-btn"
+          title={isMultiline ? 'Enviar instrucción (Enter)' : 'Enviar instrucción'}
+        >
+          {loading ? (
+            <>
+              <RefreshCw size={12} className="spin" />
+              <span className="send-btn-label">Ejecutando...</span>
+            </>
+          ) : (
+            <>
+              <Send size={12} />
+              <span className="send-btn-label">Enviar</span>
+              <kbd className="tactical-kbd send-btn-kbd">↵</kbd>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
