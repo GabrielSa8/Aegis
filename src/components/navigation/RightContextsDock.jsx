@@ -176,10 +176,13 @@ export default function RightContextsDock({
             const isActive = ctx.id === selectedContextId;
             const stepRatio = idx / Math.max(contexts.length - 1, 1);
 
-            const stepColor = `color-mix(in srgb, var(--accent) ${Math.round(100 - stepRatio * 50)}%, var(--primary) ${Math.round(stepRatio * 50)}%)`;
+            // Recorrido al 100% del espectro dinámico entre acento y primario
+            const accentPct = Math.round((1 - stepRatio) * 100);
+            const primaryPct = 100 - accentPct;
+            const stepColor = `color-mix(in srgb, var(--accent) ${accentPct}%, var(--primary) ${primaryPct}%)`;
             const stepBg = isActive
-              ? `color-mix(in srgb, ${stepColor} 22%, var(--bg-card))`
-              : `color-mix(in srgb, ${stepColor} 4%, transparent)`;
+              ? `color-mix(in srgb, ${stepColor} 24%, var(--bg-card))`
+              : `color-mix(in srgb, ${stepColor} 8%, var(--bg-card))`;
 
             const isLast = idx === contexts.length - 1;
 
@@ -199,11 +202,12 @@ export default function RightContextsDock({
                   border: 'none',
                   borderRight: isActive
                     ? `4px solid ${stepColor}`
-                    : `4px solid color-mix(in srgb, ${stepColor} 30%, transparent)`,
+                    : `3.5px solid color-mix(in srgb, ${stepColor} 45%, transparent)`,
+                  boxShadow: isActive ? `-3px 0 12px color-mix(in srgb, ${stepColor} 35%, transparent)` : 'none',
                   borderBottom: isLast ? 'none' : '1px solid rgba(0, 0, 0, 0.35)',
                   color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  transition: 'background 0.15s ease, color 0.15s ease, border-right 0.15s ease',
+                  transition: 'background 0.15s ease, color 0.15s ease, border-right 0.15s ease, box-shadow 0.15s ease',
                   position: 'relative',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -212,7 +216,7 @@ export default function RightContextsDock({
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.background = `color-mix(in srgb, ${stepColor} 14%, var(--bg-card))`;
+                    e.currentTarget.style.background = `color-mix(in srgb, ${stepColor} 18%, var(--bg-card))`;
                     e.currentTarget.style.color = 'var(--text-high)';
                     e.currentTarget.style.borderRight = `4px solid ${stepColor}`;
                   }
@@ -221,7 +225,7 @@ export default function RightContextsDock({
                   if (!isActive) {
                     e.currentTarget.style.background = stepBg;
                     e.currentTarget.style.color = 'var(--text-muted)';
-                    e.currentTarget.style.borderRight = `4px solid color-mix(in srgb, ${stepColor} 30%, transparent)`;
+                    e.currentTarget.style.borderRight = `3.5px solid color-mix(in srgb, ${stepColor} 45%, transparent)`;
                   }
                 }}
               >
@@ -234,7 +238,7 @@ export default function RightContextsDock({
                 }}>
                   <Icon
                     size={18}
-                    color={isActive ? stepColor : `color-mix(in srgb, ${stepColor} 70%, var(--text-muted))`}
+                    color={isActive ? stepColor : `color-mix(in srgb, ${stepColor} 85%, var(--text-muted))`}
                   />
                 </div>
 
@@ -266,8 +270,11 @@ export default function RightContextsDock({
                         fontFamily: 'var(--font-mono)',
                         padding: '1px 4px',
                         borderRadius: '3px',
-                        background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.28)',
-                        color: isActive ? 'var(--text-high)' : 'var(--text-muted)'
+                        background: isActive 
+                          ? `color-mix(in srgb, ${stepColor} 30%, transparent)` 
+                          : `color-mix(in srgb, ${stepColor} 14%, rgba(0, 0, 0, 0.35))`,
+                        color: isActive ? 'var(--text-high)' : stepColor,
+                        border: `1px solid color-mix(in srgb, ${stepColor} 35%, transparent)`
                       }}>
                         {ctx.skills?.length || 0}sk
                       </span>

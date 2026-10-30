@@ -170,10 +170,13 @@ export default function LeftTabsDock({
             const isActive = activeTab === tab.id;
             const stepRatio = idx / (TABS.length - 1);
             
-            const stepColor = `color-mix(in srgb, var(--primary) ${Math.round(100 - stepRatio * 60)}%, var(--accent) ${Math.round(stepRatio * 60)}%)`;
+            // Recorrido al 100% del espectro dinámico entre primario y acento
+            const primaryPct = Math.round((1 - stepRatio) * 100);
+            const accentPct = 100 - primaryPct;
+            const stepColor = `color-mix(in srgb, var(--primary) ${primaryPct}%, var(--accent) ${accentPct}%)`;
             const stepBg = isActive 
-              ? `color-mix(in srgb, ${stepColor} 22%, var(--bg-card))` 
-              : `color-mix(in srgb, ${stepColor} 4%, transparent)`;
+              ? `color-mix(in srgb, ${stepColor} 24%, var(--bg-card))` 
+              : `color-mix(in srgb, ${stepColor} 8%, var(--bg-card))`;
 
             const isLast = idx === TABS.length - 1;
 
@@ -193,11 +196,12 @@ export default function LeftTabsDock({
                   border: 'none',
                   borderLeft: isActive 
                     ? `4px solid ${stepColor}` 
-                    : `4px solid color-mix(in srgb, ${stepColor} 30%, transparent)`,
+                    : `3.5px solid color-mix(in srgb, ${stepColor} 45%, transparent)`,
+                  boxShadow: isActive ? `3px 0 12px color-mix(in srgb, ${stepColor} 35%, transparent)` : 'none',
                   borderBottom: isLast ? 'none' : '1px solid rgba(0, 0, 0, 0.35)',
                   color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
                   cursor: 'pointer',
-                  transition: 'background 0.15s ease, color 0.15s ease, border-left 0.15s ease',
+                  transition: 'background 0.15s ease, color 0.15s ease, border-left 0.15s ease, box-shadow 0.15s ease',
                   position: 'relative',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -206,7 +210,7 @@ export default function LeftTabsDock({
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.background = `color-mix(in srgb, ${stepColor} 14%, var(--bg-card))`;
+                    e.currentTarget.style.background = `color-mix(in srgb, ${stepColor} 18%, var(--bg-card))`;
                     e.currentTarget.style.color = 'var(--text-high)';
                     e.currentTarget.style.borderLeft = `4px solid ${stepColor}`;
                   }
@@ -215,7 +219,7 @@ export default function LeftTabsDock({
                   if (!isActive) {
                     e.currentTarget.style.background = stepBg;
                     e.currentTarget.style.color = 'var(--text-muted)';
-                    e.currentTarget.style.borderLeft = `4px solid color-mix(in srgb, ${stepColor} 30%, transparent)`;
+                    e.currentTarget.style.borderLeft = `3.5px solid color-mix(in srgb, ${stepColor} 45%, transparent)`;
                   }
                 }}
               >
@@ -228,7 +232,7 @@ export default function LeftTabsDock({
                 }}>
                   <Icon 
                     size={18} 
-                    color={isActive ? stepColor : `color-mix(in srgb, ${stepColor} 70%, var(--text-muted))`} 
+                    color={isActive ? stepColor : `color-mix(in srgb, ${stepColor} 85%, var(--text-muted))`} 
                   />
                 </div>
 
@@ -258,9 +262,12 @@ export default function LeftTabsDock({
                       fontFamily: 'var(--font-mono)',
                       padding: '1px 5px',
                       borderRadius: '3px',
-                      background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.28)',
-                      color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
-                      opacity: isActive ? 1 : 0.65,
+                      background: isActive 
+                        ? `color-mix(in srgb, ${stepColor} 30%, transparent)` 
+                        : `color-mix(in srgb, ${stepColor} 14%, rgba(0, 0, 0, 0.35))`,
+                      color: isActive ? 'var(--text-high)' : stepColor,
+                      border: `1px solid color-mix(in srgb, ${stepColor} 35%, transparent)`,
+                      opacity: 1,
                       flexShrink: 0
                     }}>
                       {tab.shortcut}
