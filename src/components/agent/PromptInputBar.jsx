@@ -6,8 +6,27 @@ export default function PromptInputBar({
   onSubmit,
   loading,
   activeContextLabel,
-  effortMode
+  effortMode,
+  inputRef,
+  onShortcutMacro
 }) {
+  const handleKeyDown = (e) => {
+    // Enter para enviar
+    if (e.key === 'Enter' && !loading) {
+      onSubmit();
+      return;
+    }
+
+    // Atajos Ctrl + 1..9 para disparar macros desde el input
+    if (e.ctrlKey && !e.altKey && e.key >= '1' && e.key <= '9') {
+      const idx = parseInt(e.key, 10) - 1;
+      if (onShortcutMacro) {
+        e.preventDefault();
+        onShortcutMacro(idx, e.shiftKey);
+      }
+    }
+  };
+
   return (
     <div className="terminal-input-bar">
       <div className="terminal-prompt-chevron">
@@ -15,10 +34,11 @@ export default function PromptInputBar({
       </div>
 
       <input
+        ref={inputRef}
         type="text"
         value={prompt}
         onChange={(e) => onChangePrompt(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && !loading && onSubmit()}
+        onKeyDown={handleKeyDown}
         placeholder={
           loading
             ? 'Agente ejecutando instrucción...'

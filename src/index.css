@@ -1162,23 +1162,414 @@ select option:checked {
   user-select: none;
 }
 
+/* ⌨️ Terminal Command Deck Unificado (Macro Shelf + Prompt Bar) */
+.terminal-command-deck {
+  display: flex;
+  flex-direction: column;
+  margin: 0 1.75rem 0.75rem 1.75rem;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--bg-card, #161a19) 97%, black);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.terminal-command-deck:has(.terminal-input-bar input:focus) {
+  border-color: var(--border-focus);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 8px var(--primary-glow);
+}
+
+/* ⚡ Macro Shelf (Acoplado superior) */
+.terminal-macro-shelf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0.25rem 0.65rem;
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 45%, transparent);
+  min-height: 28px;
+}
+
+.macro-shelf-scroll {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.macro-shelf-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  opacity: 0.85;
+  user-select: none;
+  padding-right: 2px;
+}
+
+/* Macro Chip Táctico */
+.tactical-macro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  font-size: 0.70rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.tactical-macro-chip:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  color: var(--text-high);
+}
+
+.tactical-macro-chip:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.macro-chip-kbd {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  color: var(--primary);
+}
+
+.macro-chip-label {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* Badges de variables dinámicas */
+.macro-var-badge {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.macro-var-badge.var-clip {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.macro-var-badge.var-diff {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.macro-var-badge.var-nota {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.macro-var-badge.var-cwd {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.macro-chip-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 3px;
+  border-radius: 2px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: opacity 0.12s, color 0.12s, transform 0.12s;
+}
+
+.tactical-macro-chip:hover .macro-chip-play {
+  opacity: 0.9;
+  color: var(--primary);
+}
+
+.macro-chip-play:hover {
+  opacity: 1 !important;
+  transform: scale(1.15);
+}
+
+/* Botón Editar Macro */
+.macro-shelf-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.14s ease;
+  user-select: none;
+}
+
+.macro-shelf-edit-btn:hover {
+  border-color: var(--primary);
+  color: var(--text-high);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  box-shadow: 0 0 8px var(--primary-glow);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.macro-shelf-edit-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.macro-shelf-edit-btn.is-active {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow), inset 0 0 8px color-mix(in srgb, var(--primary) 15%, transparent);
+  transform: scale(1.03);
+  font-weight: 700;
+}
+
+.macro-shelf-edit-btn.is-active:hover {
+  box-shadow: 0 0 16px var(--primary-glow), inset 0 0 10px color-mix(in srgb, var(--primary) 22%, transparent);
+  transform: translateY(-1px) scale(1.04);
+}
+
+/* Botones de Inyección de Variables en el Editor de Macros */
+.macro-var-insert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.macro-var-insert-btn:hover {
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.2);
+}
+
+.macro-var-insert-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.macro-var-insert-btn.var-clip {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.macro-var-insert-btn.var-diff {
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.macro-var-insert-btn.var-nota {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.macro-var-insert-btn.var-cwd {
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+/* Macro Item Card en la Lista del Modal */
+.macro-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  gap: 10px;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.macro-card-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* 🧭 Botones Tácticos de Cabecera (Historial, Ver Raz., Vaciar) */
+.header-tactical-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.header-tactical-toggle:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text-high);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.header-tactical-toggle:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.header-tactical-toggle.is-active {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow), inset 0 0 8px color-mix(in srgb, var(--primary) 15%, transparent);
+  transform: scale(1.04);
+  font-weight: 700;
+}
+
+.header-tactical-toggle.is-active:hover {
+  box-shadow: 0 0 16px var(--primary-glow), inset 0 0 10px color-mix(in srgb, var(--primary) 22%, transparent);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.header-tactical-danger:hover {
+  border-color: var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+/* ⚡ Effort Laser Switch Táctico */
+.effort-switch-container {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 8px);
+  padding: 2px;
+  user-select: none;
+  min-width: 170px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.effort-switch-container:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.effort-laser-rail {
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.effort-laser-beam {
+  position: absolute;
+  bottom: 2px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary), 0 0 14px color-mix(in srgb, var(--primary) 70%, transparent);
+  will-change: left, right;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.effort-switch-tab {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 10px 5px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  outline: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  WebkitTapHighlightColor: transparent;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.effort-switch-tab:hover:not(.is-active) {
+  color: var(--text-high);
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.02);
+}
+
+.effort-switch-tab.is-active {
+  color: var(--primary);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 0 10px var(--primary-glow);
+  transform: scale(1.04);
+}
+
 .terminal-input-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: color-mix(in srgb, var(--bg-card) 95%, black);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  border-radius: 0;
   padding: 0.45rem 0.85rem;
-  margin: 0 1.75rem 0.75rem 1.75rem;
+  margin: 0;
   flex-shrink: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: none;
 }
 
-.terminal-input-bar:focus-within {
-  border-color: var(--border-focus);
+.terminal-input-bar input,
+.terminal-input-bar input:focus,
+.terminal-input-bar input:focus-visible {
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
 }
 
 .terminal-prompt-chevron {
@@ -1237,31 +1628,50 @@ select:focus-visible {
   }
 }
 
-/* 🔮 MODAL DE GESTIÓN DE CATEGORÍAS */
+/* 🔮 MODAL UNIVERSAL (60FPS GPU COMPOSITED - ZERO OVERLAY / ZERO DAMAGE / ZERO PARPADEO) */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(3, 7, 18, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .modal-content {
-  width: 90%;
-  max-width: 480px;
-  max-height: 85vh;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: calc(100vw - 32px);
+  max-width: 520px;
+  max-height: min(88vh, 680px);
   display: flex;
   flex-direction: column;
-  animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: color-mix(in srgb, var(--bg-card, #161a19) 98%, black);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border-color));
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 9999;
   overflow: hidden;
+  opacity: 0;
+  transform: translate3d(-50%, calc(-50% + 12px), 0) scale(0.97);
+  pointer-events: none;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 1, 1), 
+              opacity 0.14s ease, 
+              box-shadow 0.16s ease;
+  will-change: transform, opacity;
+}
+
+.modal-content.is-active {
+  opacity: 1;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 
+              0 0 0 1px color-mix(in srgb, var(--primary) 28%, rgba(255, 255, 255, 0.08)),
+              0 0 36px color-mix(in srgb, var(--primary) 8%, transparent);
+  pointer-events: auto;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.20s cubic-bezier(0.16, 1, 0.3, 1), 
+              box-shadow 0.24s ease;
 }
 
 .modal-header {

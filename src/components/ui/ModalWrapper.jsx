@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 const renderIcon = (iconItem, size = 16) => {
@@ -12,8 +12,8 @@ const renderIcon = (iconItem, size = 16) => {
 };
 
 /**
- * ModalWrapper — Contenedor modal táctico universal para Aegis.
- * Soporta cierre con ESC, clic en backdrop, portal seguro y animación nativa.
+ * ModalWrapper — Contenedor modal universal para Aegis.
+ * Renderizado 60/120fps GPU-composited sin backdrop-filter global ni daños de repintado Mesa (Zero Stutter / Cero Parpadeo).
  */
 export function ModalWrapper({
   isOpen = false,
@@ -28,156 +28,177 @@ export function ModalWrapper({
   className = '',
   bodyStyle = {}
 }) {
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (closeOnEsc && e.key === 'Escape' && onClose) {
-        e.stopPropagation();
-        onClose();
-      }
-    },
-    [closeOnEsc, onClose]
-  );
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isActive, setIsActive] = useState(false);
+  const modalRef = useRef(null);
 
+  // Sincronización de montaje y animación fluida con doble rAF (Zero FOUC / Cero Parpadeo)
   useEffect(() => {
+    let timer;
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      setShouldRender(true);
+      const animFrame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsActive(true);
+        });
+      });
+      return () => cancelAnimationFrame(animFrame);
+    } else {
+      setIsActive(false);
+      timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 170);
     }
-  }, [isOpen, handleKeyDown]);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Gestión de clics exteriores (Zero Fullscreen DOM Overlay) y teclado (Esc)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (e) => {
+      if (!closeOnBackdrop) return;
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        // Ignorar clics sobre disparadores de toggle explícitos
+        if (e.target.closest && e.target.closest('[data-modal-toggle], [data-macro-modal-toggle]')) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (closeOnEsc && e.key === 'Escape') {
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, closeOnBackdrop, closeOnEsc, onClose]);
+
+  if (!shouldRender) return null;
 
   const modalNode = (
     <div
-      className="modal-overlay"
-      onClick={closeOnBackdrop ? onClose : undefined}
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || 'Modal'}
+      className={`modal-content ${className} ${isActive ? 'is-active' : ''}`}
       style={{
-        zIndex: 9999,
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        animation: 'fadeIn 0.15s ease-out'
+        width: 'calc(100vw - 32px)',
+        maxWidth
       }}
     >
-      <div
-        className={`modal-content ${className}`}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth,
-          maxHeight: '90vh',
-          background: 'var(--bg-card, #12141a)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-lg, 8px)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}
-      >
-        {/* Cabecera Táctica */}
-        {(title || icon || onClose) && (
-          <div
-            className="modal-header"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 16px',
-              borderBottom: '1px solid var(--border-color)',
-              background: 'rgba(255, 255, 255, 0.02)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {icon && <span style={{ color: 'var(--primary)', fontSize: '15px', display: 'inline-flex', alignItems: 'center' }}>{renderIcon(icon, 16)}</span>}
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-main)',
-                  fontFamily: 'monospace'
-                }}
-              >
-                {title}
-              </h3>
-            </div>
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                title="Cerrar (Esc)"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-dim)',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  padding: '4px 6px',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#f87171';
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-dim)';
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Cuerpo del Modal */}
+      {/* Cabecera */}
+      {(title || icon || onClose) && (
         <div
-          className="modal-body custom-scrollbar"
+          className="modal-header"
           style={{
-            padding: '16px',
-            overflowY: 'auto',
-            flex: 1,
-            ...bodyStyle
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderBottom: '1px solid var(--border-color)',
+            background: 'rgba(255, 255, 255, 0.02)'
           }}
         >
-          {children}
-        </div>
-
-        {/* Pie opcional */}
-        {footer && (
-          <div
-            className="modal-footer"
-            style={{
-              padding: '10px 16px',
-              borderTop: '1px solid var(--border-color)',
-              background: 'rgba(0, 0, 0, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '8px'
-            }}
-          >
-            {footer}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {icon && (
+              <span style={{ color: 'var(--primary)', fontSize: '15px', display: 'inline-flex', alignItems: 'center' }}>
+                {renderIcon(icon, 16)}
+              </span>
+            )}
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '13px',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                color: 'var(--text-main)',
+                fontFamily: 'monospace'
+              }}
+            >
+              {title}
+            </h3>
           </div>
-        )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              title="Cerrar (Esc)"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-dim)',
+                cursor: 'pointer',
+                fontSize: '14px',
+                padding: '4px 6px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#f87171';
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--text-dim)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Cuerpo del Modal */}
+      <div
+        className="modal-body custom-scrollbar"
+        style={{
+          padding: '16px',
+          overflowY: 'auto',
+          flex: 1,
+          ...bodyStyle
+        }}
+      >
+        {children}
       </div>
+
+      {/* Pie opcional */}
+      {footer && (
+        <div
+          className="modal-footer"
+          style={{
+            padding: '10px 16px',
+            borderTop: '1px solid var(--border-color)',
+            background: 'rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px'
+          }}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   );
 
   return createPortal(modalNode, document.body);
 }
+
 export default ModalWrapper;

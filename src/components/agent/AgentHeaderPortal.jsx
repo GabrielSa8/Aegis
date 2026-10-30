@@ -63,30 +63,10 @@ export default function AgentHeaderPortal({
       {/* 🧠 Toggle Acordeón de Pensamiento (Ver Razonamiento) */}
       <button
         onClick={onToggleExpandThoughts}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '4px 8px',
-          borderRadius: 'var(--radius-sm, 8px)',
-          border: expandThoughts 
-            ? '1px solid color-mix(in srgb, var(--primary) 45%, transparent)' 
-            : '1px solid var(--border-color)',
-          background: expandThoughts 
-            ? 'color-mix(in srgb, var(--primary) 18%, transparent)' 
-            : 'rgba(255, 255, 255, 0.03)',
-          color: expandThoughts ? 'var(--primary)' : 'var(--text-muted)',
-          fontSize: '0.73rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-          outline: 'none',
-          boxShadow: 'none',
-          flexShrink: 0
-        }}
+        className={`header-tactical-toggle ${expandThoughts ? 'is-active' : ''}`}
         title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
       >
-        <Brain size={14} color={expandThoughts ? 'var(--primary)' : 'var(--text-muted)'} />
+        <Brain size={14} color="currentColor" />
         <span>{expandThoughts ? 'Ocultar Raz.' : 'Ver Raz.'}</span>
         <kbd style={{
           fontSize: '0.60rem',
@@ -104,36 +84,17 @@ export default function AgentHeaderPortal({
       <button
         data-historial-toggle="true"
         onClick={onToggleSessionsDrawer}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          padding: '4px 8px',
-          borderRadius: 'var(--radius-sm, 8px)',
-          border: showSessionsDrawer 
-            ? '1px solid color-mix(in srgb, var(--primary) 45%, transparent)' 
-            : '1px solid var(--border-color)',
-          background: showSessionsDrawer 
-            ? 'color-mix(in srgb, var(--primary) 18%, transparent)' 
-            : 'rgba(255, 255, 255, 0.03)',
-          color: showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)',
-          fontSize: '0.73rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-          outline: 'none',
-          flexShrink: 0
-        }}
+        className={`header-tactical-toggle ${showSessionsDrawer ? 'is-active' : ''}`}
         title="Historial de conversaciones"
       >
-        <History size={14} color={showSessionsDrawer ? 'var(--primary)' : 'var(--text-muted)'} />
+        <History size={14} color="currentColor" />
         <span>Historial</span>
         <span style={{
           fontSize: '0.62rem',
           fontWeight: 700,
           padding: '1px 5px',
           borderRadius: '10px',
-          background: showSessionsDrawer ? 'var(--primary)' : 'rgba(255, 255, 255, 0.08)',
+          background: showSessionsDrawer ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)',
           color: showSessionsDrawer ? '#000' : 'var(--text-muted)',
           fontFamily: 'var(--font-mono, monospace)',
           lineHeight: 1
@@ -145,32 +106,7 @@ export default function AgentHeaderPortal({
       {/* 🗑️ Vaciar Chat Activo */}
       <button
         onClick={onClearHistory}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '4px 8px',
-          borderRadius: 'var(--radius-sm, 8px)',
-          border: '1px solid var(--border-color)',
-          background: 'rgba(255, 255, 255, 0.03)',
-          color: 'var(--text-muted)',
-          fontSize: '0.73rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-          outline: 'none',
-          flexShrink: 0
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent) 70%, transparent)';
-          e.currentTarget.style.color = 'var(--text-high)';
-          e.currentTarget.style.background = 'color-mix(in srgb, var(--accent) 12%, transparent)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-color)';
-          e.currentTarget.style.color = 'var(--text-muted)';
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-        }}
+        className="header-tactical-toggle header-tactical-danger"
         title="Vaciar conversación activa / Limpiar chat"
       >
         <Trash2 size={13} />

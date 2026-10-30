@@ -1,41 +1,40 @@
-import { useState } from 'react';
-import { Plus, Trash2, Edit3, Save, RotateCcw, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, RotateCcw, Sliders } from 'lucide-react';
 import { ModalWrapper, TacticalButton } from './ui';
+import MacroEditorForm from './agent/MacroEditorForm';
+import MacroItemCard from './agent/MacroItemCard';
 
 export const DEFAULT_MACROS = [
   { id: 'm1', label: 'Auditar Git', text: 'Revisa status de git y ramas locales de los repositorios vigilados.' },
-  { id: 'm2', label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' },
-  { id: 'm3', label: 'Generar Flashcards', text: 'Analiza la última nota de estudio o certificación y genera 3 flashcards atómicas.' },
-  { id: 'm4', label: 'Revisar Pendientes', text: 'Inspecciona las tareas pendientes del proyecto activo y prioriza las 3 más críticas.' }
+  { id: 'm2', label: 'Analizar Diff', text: 'Analiza los siguientes cambios del repositorio y resume el impacto:\n{{diff}}' },
+  { id: 'm3', label: 'Pegar Clip', text: 'Revisa, corrige o comenta el código pegado desde el portapapeles:\n{{clip}}' },
+  { id: 'm4', label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' }
 ];
 
-export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacros }) {
+export default function MacroManagerModal({ isOpen, onClose, macros = [], onSaveMacros }) {
   const [editingId, setEditingId] = useState(null);
-  const [editLabel, setEditLabel] = useState('');
-  const [editText, setEditText] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [newLabel, setNewLabel] = useState('');
-  const [newText, setNewText] = useState('');
 
-  if (!isOpen) return null;
+  // Sincronización de estado interno al cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      setEditingId(null);
+      setIsCreating(false);
+    }
+  }, [isOpen]);
 
   const handleStartEdit = (macro) => {
     setEditingId(macro.id);
-    setEditLabel(macro.label);
-    setEditText(macro.text);
     setIsCreating(false);
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditLabel('');
-    setEditText('');
   };
 
-  const handleSaveEdit = (id) => {
-    if (!editLabel.trim() || !editText.trim()) return;
+  const handleSaveEdit = (id, label, text) => {
     const updated = macros.map((m) =>
-      m.id === id ? { ...m, label: editLabel.trim(), text: editText.trim() } : m
+      m.id === id ? { ...m, label, text } : m
     );
     onSaveMacros(updated);
     handleCancelEdit();
@@ -46,16 +45,13 @@ export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacro
     onSaveMacros(updated);
   };
 
-  const handleCreate = () => {
-    if (!newLabel.trim() || !newText.trim()) return;
+  const handleCreate = (label, text) => {
     const newMacro = {
       id: `m_${Date.now()}`,
-      label: newLabel.trim(),
-      text: newText.trim()
+      label,
+      text
     };
     onSaveMacros([...macros, newMacro]);
-    setNewLabel('');
-    setNewText('');
     setIsCreating(false);
   };
 
@@ -73,7 +69,7 @@ export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacro
         icon={<RotateCcw size={12} />}
         onClick={handleResetDefaults}
       >
-        Restaurar Predeterminados
+        Restaurar predeterminados
       </TacticalButton>
       <TacticalButton
         variant="primary"
@@ -89,204 +85,64 @@ export default function MacroManagerModal({ isOpen, onClose, macros, onSaveMacro
     <ModalWrapper
       isOpen={isOpen}
       onClose={onClose}
-      title="Administrador de Macros Tácticos"
-      icon={<Sparkles size={16} />}
-      maxWidth="560px"
+      title="Administrador de macros"
+      icon={<Sliders size={16} />}
+      maxWidth="580px"
       footer={footer}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
-          Configura atajos predefinidos para instrucciones recurrentes del agente IA. Se ejecutan con un clic o atajo numérico.
-        </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', margin: 0, flex: 1, minWidth: '220px' }}>
+            Atajos e inserción de variables (<code style={{ color: 'var(--primary)', fontSize: '0.70rem' }}>&#123;&#123;clip&#125;&#125;</code>, <code style={{ color: 'var(--primary)', fontSize: '0.70rem' }}>&#123;&#123;diff&#125;&#125;</code>, <code style={{ color: 'var(--primary)', fontSize: '0.70rem' }}>&#123;&#123;nota&#125;&#125;</code>, <code style={{ color: 'var(--primary)', fontSize: '0.70rem' }}>&#123;&#123;cwd&#125;&#125;</code>).
+          </p>
 
-        {/* Formulario de creación */}
-        {isCreating ? (
-          <div style={{
-            padding: '10px',
-            background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid var(--primary)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>
-              + Nuevo Macro Táctico
-            </span>
-            <input
-              type="text"
-              placeholder="Etiqueta corta (ej. Auditar Git)"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              style={{
-                fontSize: '0.75rem',
-                padding: '6px 10px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-main)',
-                outline: 'none'
-              }}
-            />
-            <textarea
-              placeholder="Instrucción detallada para el agente..."
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-              rows={3}
-              style={{
-                fontSize: '0.75rem',
-                padding: '6px 10px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-main)',
-                outline: 'none',
-                resize: 'none'
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-              <TacticalButton
-                variant="ghost"
-                size="xs"
-                onClick={() => setIsCreating(false)}
-              >
-                Cancelar
-              </TacticalButton>
-              <TacticalButton
-                variant="primary"
-                size="xs"
-                icon={<Save size={12} />}
-                onClick={handleCreate}
-              >
-                Guardar
-              </TacticalButton>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {!isCreating && (
             <TacticalButton
               variant="terminal"
               size="xs"
               icon={<Plus size={12} />}
-              onClick={() => setIsCreating(true)}
+              onClick={() => {
+                setEditingId(null);
+                setIsCreating(true);
+              }}
             >
-              Nuevo Macro
+              Nueva macro
             </TacticalButton>
-          </div>
+          )}
+        </div>
+
+        {/* Formulario de creación activa */}
+        {isCreating && (
+          <MacroEditorForm
+            isCreating={true}
+            onSave={handleCreate}
+            onCancel={() => setIsCreating(false)}
+          />
         )}
 
         {/* Lista de macros */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '45vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '48vh', overflowY: 'auto' }}>
           {macros.map((macro, idx) => {
-            const isEditingThis = editingId === macro.id;
-
-            if (isEditingThis) {
+            if (editingId === macro.id) {
               return (
-                <div
+                <MacroEditorForm
                   key={macro.id}
-                  style={{
-                    padding: '10px',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={editLabel}
-                    onChange={(e) => setEditLabel(e.target.value)}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '4px 8px',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: 'var(--radius-sm)',
-                      color: 'var(--text-main)',
-                      outline: 'none'
-                    }}
-                  />
-                  <textarea
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    rows={2}
-                    style={{
-                      fontSize: '0.75rem',
-                      padding: '4px 8px',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: 'var(--radius-sm)',
-                      color: 'var(--text-main)',
-                      outline: 'none',
-                      resize: 'none'
-                    }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                    <TacticalButton
-                      variant="ghost"
-                      size="xs"
-                      onClick={handleCancelEdit}
-                    >
-                      Cancelar
-                    </TacticalButton>
-                    <TacticalButton
-                      variant="primary"
-                      size="xs"
-                      icon={<Save size={12} />}
-                      onClick={() => handleSaveEdit(macro.id)}
-                    >
-                      Guardar
-                    </TacticalButton>
-                  </div>
-                </div>
+                  initialLabel={macro.label}
+                  initialText={macro.text}
+                  onSave={(label, text) => handleSaveEdit(macro.id, label, text)}
+                  onCancel={handleCancelEdit}
+                />
               );
             }
 
             return (
-              <div
+              <MacroItemCard
                 key={macro.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)',
-                  gap: '10px'
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="tactical-kbd" style={{ fontSize: '0.58rem' }}>{idx + 1}</span>
-                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                      {macro.label}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {macro.text}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <TacticalButton
-                    variant="ghost"
-                    size="xs"
-                    icon={<Edit3 size={12} />}
-                    onClick={() => handleStartEdit(macro)}
-                    title="Editar macro"
-                  />
-                  <TacticalButton
-                    variant="danger"
-                    size="xs"
-                    icon={<Trash2 size={12} />}
-                    onClick={() => handleDelete(macro.id)}
-                    title="Eliminar macro"
-                  />
-                </div>
-              </div>
+                macro={macro}
+                idx={idx}
+                onEdit={handleStartEdit}
+                onDelete={handleDelete}
+              />
             );
           })}
         </div>

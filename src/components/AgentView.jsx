@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import ContextManagerModal from './ContextManagerModal';
 import MacroManagerModal from './MacroManagerModal';
 import RightContextsDock from './navigation/RightContextsDock';
@@ -8,7 +8,8 @@ import {
   SessionsDrawer,
   TerminalStreamViewport,
   MacroDeck,
-  PromptInputBar
+  PromptInputBar,
+  interpolateMacroText
 } from './agent';
 
 export default function AgentView() {
@@ -68,6 +69,26 @@ export default function AgentView() {
     portalTarget
   } = useAgent();
 
+  const promptInputRef = useRef(null);
+
+  const handleSelectMacro = (macroText) => {
+    setPrompt(macroText);
+    setTimeout(() => {
+      promptInputRef.current?.focus();
+    }, 20);
+  };
+
+  const handleShortcutMacro = async (idx, isShift) => {
+    if (!macros[idx]) return;
+    const target = macros[idx];
+    const resolvedText = await interpolateMacroText(target.text, activeContext);
+    if (isShift) {
+      handleSend(resolvedText);
+    } else {
+      handleSelectMacro(resolvedText);
+    }
+  };
+
   return (
     <div className="terminal-stream-container">
       {/* 🧭 Controles de Esfuerzo, Razonamiento, Sesiones y Telemetría en la Barra Superior */}
@@ -95,6 +116,7 @@ export default function AgentView() {
         paddingRight: isRightDockPinned ? '60px' : '0',
         transition: 'padding-right 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
       }}>
+        {/* 🗄️ Historial de Sesiones Flotante (Drawer Centrado bajo la Isla) */}
         <SessionsDrawer
           isOpen={showSessionsDrawer}
           sessions={sessions}
@@ -106,6 +128,7 @@ export default function AgentView() {
           activeMessagesCount={messages.length}
         />
 
+        {/* 📜 Terminal Output Viewport con Scroll Automático */}
         <TerminalStreamViewport
           viewportRef={viewportRef}
           messages={messages}
@@ -128,23 +151,29 @@ export default function AgentView() {
         onTogglePin={handleToggleRightDockPin}
       />
 
-      {/* ⚡ Quick Macros Row */}
-      <MacroDeck
-        macros={macros}
-        loading={loading}
-        onExecuteMacro={handleSend}
-        onOpenMacroModal={() => setShowMacroModal(true)}
-      />
+      {/* ⌨️ Terminal Command Deck: Macro Shelf + Prompt Input Bar */}
+      <div className="terminal-command-deck">
+        <MacroDeck
+          macros={macros}
+          loading={loading}
+          onSelectMacro={handleSelectMacro}
+          onExecuteMacro={handleSend}
+          onToggleMacroModal={() => setShowMacroModal((prev) => !prev)}
+          isMacroModalOpen={showMacroModal}
+          activeContext={activeContext}
+        />
 
-      {/* ⌨️ Terminal Command Input Deck */}
-      <PromptInputBar
-        prompt={prompt}
-        onChangePrompt={setPrompt}
-        onSubmit={handleSend}
-        loading={loading}
-        activeContextLabel={activeContext.label}
-        effortMode={effortMode}
-      />
+        <PromptInputBar
+          inputRef={promptInputRef}
+          prompt={prompt}
+          onChangePrompt={setPrompt}
+          onSubmit={handleSend}
+          loading={loading}
+          activeContextLabel={activeContext.label}
+          effortMode={effortMode}
+          onShortcutMacro={handleShortcutMacro}
+        />
+      </div>
 
       {/* ⚙️ Modal Administrador de Contextos */}
       <ContextManagerModal
