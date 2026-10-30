@@ -81,7 +81,9 @@ export default function LeftTabsDock({
         zIndex: 90,
         width: triggerWidth,
         pointerEvents: 'auto',
-        transition: 'width 0.25s ease'
+        transition: isHovered
+          ? 'width 0.32s cubic-bezier(0.34, 1.4, 0.64, 1)'
+          : 'width 0.22s cubic-bezier(0.25, 1, 0.5, 1)'
       }}
     >
       <aside
