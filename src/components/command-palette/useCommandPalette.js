@@ -7,7 +7,6 @@ export function useCommandPalette({
   isOpen,
   onClose,
   onSelectTab,
-  onToggleZenMode,
   onOpenSettings,
   onThemeChange
 }) {
@@ -31,7 +30,6 @@ export function useCommandPalette({
 
   const baseCommands = getBaseCommands({
     onSelectTab,
-    onToggleZenMode,
     onOpenSettings,
     onThemeChange,
     onClose

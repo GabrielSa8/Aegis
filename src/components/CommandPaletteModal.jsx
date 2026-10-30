@@ -6,7 +6,6 @@ export default function CommandPaletteModal({
   isOpen,
   onClose,
   onSelectTab,
-  onToggleZenMode,
   onOpenSettings,
   onThemeChange
 }) {
@@ -23,7 +22,6 @@ export default function CommandPaletteModal({
     isOpen,
     onClose,
     onSelectTab,
-    onToggleZenMode,
     onOpenSettings,
     onThemeChange
   });

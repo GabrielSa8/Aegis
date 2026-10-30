@@ -1,4 +1,4 @@
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
 
 export default function SessionsDrawer({
   isOpen,
@@ -6,24 +6,29 @@ export default function SessionsDrawer({
   currentSessionId,
   onSelectSession,
   onNewSession,
-  onDeleteSession
+  onDeleteSession,
+  onClose
 }) {
   if (!isOpen) return null;
 
   return (
     <div style={{
       width: '240px',
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)',
+      background: 'var(--bg-surface)',
+      borderRight: '1px solid var(--border-color)',
+      borderTop: 'none',
+      borderBottom: 'none',
+      borderLeft: 'none',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      zIndex: 10,
+      paddingTop: '3.25rem'
     }}>
       {/* Header del Drawer */}
       <div style={{
-        padding: '0.45rem 0.65rem',
+        padding: '0.55rem 0.75rem',
         borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
@@ -32,17 +37,54 @@ export default function SessionsDrawer({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <MessageSquare size={13} color="var(--primary)" />
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-high)' }}>Sesiones</span>
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-high)' }}>Sesiones</span>
+          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>({sessions.length})</span>
         </div>
-        <button
-          onClick={onNewSession}
-          className="btn btn-primary"
-          style={{ padding: '2px 7px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '3px' }}
-          title="Iniciar nueva sesión táctica"
-        >
-          <Plus size={11} />
-          <span>Nueva</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            onClick={onNewSession}
+            style={{
+              padding: '3px 8px',
+              fontSize: '0.66rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              borderRadius: 'var(--radius-sm, 6px)',
+              background: 'var(--primary)',
+              color: '#000',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            title="Iniciar nueva sesión táctica"
+          >
+            <Plus size={11} />
+            <span>Nueva</span>
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                width: '22px',
+                height: '22px',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                borderRadius: '4px'
+              }}
+              title="Cerrar panel de sesiones"
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-high)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Lista de sesiones */}

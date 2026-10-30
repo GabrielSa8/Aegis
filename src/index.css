@@ -1098,7 +1098,7 @@ select option:checked {
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 1.25rem 1.75rem;
+  padding: 3.25rem 1.75rem 1.25rem 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

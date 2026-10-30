@@ -8,14 +8,12 @@ import {
   Gamepad2, 
   Palette, 
   Settings, 
-  Zap, 
-  Minimize2
+  Zap
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
 export function getBaseCommands({
   onSelectTab,
-  onToggleZenMode,
   onOpenSettings,
   onThemeChange,
   onClose
@@ -32,7 +30,6 @@ export function getBaseCommands({
     { id: 'nav-settings', title: 'Ir a Sistema & Configuración Soberana', category: 'Navegación', icon: Settings, shortcut: 'Alt + 8', action: () => { onSelectTab('settings'); onClose(); } },
 
     // ⚡ Acciones Tácticas
-    { id: 'act-zen', title: 'Alternar Modo Zen (Pantalla Completa)', category: 'Acciones', icon: Minimize2, shortcut: 'Alt + Z', action: () => { onToggleZenMode(); onClose(); } },
     { id: 'act-settings', title: 'Abrir Ajustes Globales & Flota', category: 'Acciones', icon: Settings, shortcut: 'Ctrl + ,', action: () => { onOpenSettings(); onClose(); } },
     { 
       id: 'act-purge', 

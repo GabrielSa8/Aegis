@@ -1,12 +1,10 @@
-import { Plus, Minimize2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export default function MacroDeck({
   macros,
   loading,
   onExecuteMacro,
-  onOpenMacroModal,
-  zenMode,
-  onToggleZenMode
+  onOpenMacroModal
 }) {
   return (
     <div style={{
@@ -49,20 +47,6 @@ export default function MacroDeck({
           <span>Editar</span>
         </button>
       </div>
-
-      {/* 🪟 Zen mode toggle */}
-      {zenMode && (
-        <button
-          onClick={onToggleZenMode}
-          className="terminal-btn"
-          title="Restaurar barra de navegación (Escape o Alt + Z)"
-          style={{ flexShrink: 0 }}
-        >
-          <Minimize2 size={12} color="var(--primary)" />
-          <span>Restaurar Barra</span>
-          <kbd className="tactical-kbd">Esc</kbd>
-        </button>
-      )}
     </div>
   );
 }

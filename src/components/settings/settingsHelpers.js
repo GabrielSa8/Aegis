@@ -64,10 +64,10 @@ export const BILLING_LINKS = [
 export const MASTER_SHORTCUTS = [
   { key: 'Alt + 1..8', desc: 'Navegación instantánea entre pestañas de Aegis' },
   { key: 'Ctrl + K', desc: 'Abrir Paleta de Comandos Omnibar & Buscador' },
-  { key: 'Alt + Z', desc: 'Modo Zen: Ocultar barra superior para 100% de pantalla' },
+  { key: 'Ctrl + O', desc: 'Alternar vista de pensamiento y herramientas del Agente' },
   { key: 'Ctrl + B', desc: 'Alternar panel lateral de carpetas en Bóveda' },
   { key: 'Ctrl + ,', desc: 'Acceso directo a este Centro de Configuración' },
-  { key: 'Esc', desc: 'Cerrar modales, búsqueda o restaurar de Modo Zen' }
+  { key: 'Esc', desc: 'Cerrar modales o búsqueda activa' }
 ];
 
 export const SECTIONS = [

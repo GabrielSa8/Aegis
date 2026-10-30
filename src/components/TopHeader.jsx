@@ -2,16 +2,12 @@ import { useState } from 'react';
 import { 
   ShieldCheck,
   Search, 
-  Maximize2, 
-  Minimize2, 
   Settings,
   Pin,
   PinOff
 } from 'lucide-react';
 
 export default function TopHeader({ 
-  zenMode,
-  onToggleZenMode,
   onOpenSettings,
   onOpenCommandPalette
 }) {
@@ -103,7 +99,7 @@ export default function TopHeader({
         {/* Separador */}
         <div style={{ width: '1px', height: '18px', background: 'var(--border-color)', opacity: 0.6, flexShrink: 0 }} />
 
-        {/* 📡 Acciones Globales: Búsqueda, Agrandar Pantalla (Zen), Opciones, Pin */}
+        {/* 📡 Acciones Globales: Búsqueda y Ajustes */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           {/* Command shortcut (Ctrl + K) */}
           <button 
@@ -133,30 +129,6 @@ export default function TopHeader({
           >
             <Search size={12} />
             <kbd style={{ fontFamily: 'inherit', color: 'var(--text-high)', fontSize: '0.64rem' }}>Ctrl+K</kbd>
-          </button>
-
-          {/* Agrandar Pantalla / Modo Zen (Alt + Z) */}
-          <button
-            onClick={onToggleZenMode}
-            title={zenMode ? 'Salir de Pantalla Completa (Alt + Z)' : 'Agrandar Pantalla / Modo Zen (Alt + Z)'}
-            style={{
-              background: zenMode ? 'color-mix(in srgb, #34d399 18%, transparent)' : 'rgba(255, 255, 255, 0.03)',
-              border: `1px solid ${zenMode ? '#34d399' : 'var(--border-color)'}`,
-              borderRadius: 'var(--radius-sm, 8px)',
-              padding: '4px 9px',
-              color: zenMode ? '#34d399' : 'var(--text-muted)',
-              fontSize: '0.74rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-high)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = zenMode ? '#34d399' : 'var(--text-muted)'; }}
-          >
-            {zenMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span>{zenMode ? 'Normal' : 'Agrandar'}</span>
           </button>
 
           {/* Opciones / Ajustes (Ctrl + ,) */}

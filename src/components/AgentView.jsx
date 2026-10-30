@@ -11,7 +11,7 @@ import {
   PromptInputBar
 } from './agent';
 
-export default function AgentView({ zenMode, onToggleZenMode }) {
+export default function AgentView() {
   const [isRightDockPinned, setIsRightDockPinned] = useState(() => {
     try {
       return localStorage.getItem('aegis_right_dock_pinned') === 'true';
@@ -70,13 +70,17 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
 
   return (
     <div className="terminal-stream-container">
-      {/* 🧭 Controles de Esfuerzo, Razonamiento y Telemetría en la Barra Superior */}
+      {/* 🧭 Controles de Esfuerzo, Razonamiento, Sesiones y Telemetría en la Barra Superior */}
       <AgentHeaderPortal
         portalTarget={portalTarget}
         effortMode={effortMode}
         onSetEffortMode={setEffortMode}
         expandThoughts={expandThoughts}
         onToggleExpandThoughts={() => setExpandThoughts((prev) => !prev)}
+        showSessionsDrawer={showSessionsDrawer}
+        onToggleSessionsDrawer={() => setShowSessionsDrawer((prev) => !prev)}
+        sessionsCount={sessions.length}
+        onClearHistory={clearHistory}
         messages={messages}
       />
 
@@ -88,7 +92,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         gap: '0',
         position: 'relative',
         padding: '0',
-        paddingRight: (!zenMode && isRightDockPinned) ? '60px' : '0',
+        paddingRight: isRightDockPinned ? '60px' : '0',
         transition: 'padding-right 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
       }}>
         <SessionsDrawer
@@ -98,6 +102,7 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
           onSelectSession={selectSession}
           onNewSession={handleNewSession}
           onDeleteSession={handleDeleteSession}
+          onClose={() => setShowSessionsDrawer(false)}
         />
 
         <TerminalStreamViewport
@@ -113,16 +118,14 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
       </div>
 
       {/* 🧭 Dock Derecho Táctico: Perfiles de Contexto de IA */}
-      {!zenMode && (
-        <RightContextsDock
-          contexts={contexts}
-          selectedContextId={selectedContextId}
-          onSelectContext={handleSelectContext}
-          onOpenContextModal={() => setShowContextModal(true)}
-          isPinned={isRightDockPinned}
-          onTogglePin={handleToggleRightDockPin}
-        />
-      )}
+      <RightContextsDock
+        contexts={contexts}
+        selectedContextId={selectedContextId}
+        onSelectContext={handleSelectContext}
+        onOpenContextModal={() => setShowContextModal(true)}
+        isPinned={isRightDockPinned}
+        onTogglePin={handleToggleRightDockPin}
+      />
 
       {/* ⚡ Quick Macros Row */}
       <MacroDeck
@@ -130,8 +133,6 @@ export default function AgentView({ zenMode, onToggleZenMode }) {
         loading={loading}
         onExecuteMacro={handleSend}
         onOpenMacroModal={() => setShowMacroModal(true)}
-        zenMode={zenMode}
-        onToggleZenMode={onToggleZenMode}
       />
 
       {/* ⌨️ Terminal Command Input Deck */}
