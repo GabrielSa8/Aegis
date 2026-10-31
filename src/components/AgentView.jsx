@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { consumePendingMacro, onMacroQueued } from './agent/macroBus';
 import ContextManagerModal from './ContextManagerModal';
 import MacroManagerModal from './MacroManagerModal';
 import RightContextsDock from './navigation/RightContextsDock';
@@ -82,6 +83,22 @@ export default function AgentView() {
       promptInputRef.current?.focus();
     }, 20);
   };
+
+  const runMacroRef = useRef(null);
+  runMacroRef.current = async ({ macro, send }) => {
+    const text = await interpolateMacroText(macro.text, activeContext);
+    if (send) handleSend(text);
+    else handleSelectMacro(text);
+  };
+
+  useEffect(() => {
+    const drain = () => {
+      const p = consumePendingMacro();
+      if (p) runMacroRef.current(p);
+    };
+    drain();
+    return onMacroQueued(drain);
+  }, []);
 
   const handleShortcutMacro = async (idx, isShift) => {
     if (!macros[idx]) return;

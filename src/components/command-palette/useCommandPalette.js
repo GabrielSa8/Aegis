@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Play } from 'lucide-react';
+import { DEFAULT_MACROS } from '../MacroManagerModal';
+import { loadMacros, queueMacro } from '../agent/macroBus';
 import { invoke } from '@tauri-apps/api/core';
 import { getBaseCommands } from './commandHelpers';
 
@@ -46,7 +48,21 @@ export function useCommandPalette({
     }
   }));
 
-  const allItems = [...baseCommands, ...noteCommands];
+  const macroCommands = isOpen
+    ? loadMacros(DEFAULT_MACROS).map((m) => ({
+        id: 'macro-' + m.id,
+        title: `Macro: ${m.label}`,
+        category: 'Macros · ↵ insertar · ⇧↵ enviar',
+        icon: Play,
+        action: (opts) => {
+          queueMacro(m, Boolean(opts?.shift));
+          onSelectTab('agent');
+          onClose();
+        }
+      }))
+    : [];
+
+  const allItems = [...baseCommands, ...macroCommands, ...noteCommands];
 
   const filtered = allItems.filter((item) => {
     const q = query.toLowerCase().trim();
@@ -64,7 +80,7 @@ export function useCommandPalette({
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filtered[selectedIndex]) {
-        filtered[selectedIndex].action();
+        filtered[selectedIndex].action({ shift: e.shiftKey });
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
