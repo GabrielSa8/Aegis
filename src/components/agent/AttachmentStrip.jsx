@@ -1,9 +1,11 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import ImageLightbox from './ImageLightbox';
 import { X, FileText } from 'lucide-react';
 
 const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
 function AttachmentStrip({ attachments, onRemove }) {
+  const [zoomed, setZoomed] = useState(null);
   if (!attachments.length) return null;
   return (
     <div
@@ -30,7 +32,7 @@ function AttachmentStrip({ attachments, onRemove }) {
           }}
         >
           {a.previewUrl ? (
-            <img src={a.previewUrl} alt={a.name} style={{ height: 38, borderRadius: 4, display: 'block' }} />
+            <img src={a.previewUrl} alt={a.name} onClick={() => setZoomed(a)} style={{ height: 38, borderRadius: 4, display: 'block', cursor: 'zoom-in' }} />
           ) : (
             <>
               <FileText size={13} color="var(--primary)" />
@@ -61,6 +63,7 @@ function AttachmentStrip({ attachments, onRemove }) {
           </button>
         </div>
       ))}
+      {zoomed && <ImageLightbox src={zoomed.previewUrl} alt={zoomed.name} onClose={() => setZoomed(null)} />}
     </div>
   );
 }

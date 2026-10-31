@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react';
+import MarkdownImage from './MarkdownImage';
 
 /**
  * Parseo e inspección de YAML Frontmatter (estilo Obsidian)
@@ -92,11 +93,16 @@ export function parseFrontmatter(rawMarkdown) {
 export function formatInline(str, onNavigateNote) {
   if (!str) return str;
 
-  const tokenRegex = /(\[\[.*?\]\]|`.*?`|\*\*.*?\*\*)/g;
+  const tokenRegex = /(!\[[^\]]*\]\([^)\s]+\)|\[\[.*?\]\]|`.*?`|\*\*.*?\*\*)/g;
   const parts = str.split(tokenRegex);
 
   return parts.map((part, i) => {
     if (!part) return null;
+
+    const img = part.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (img && /^(https?:|data:image|blob:|file:\/\/|\/)/i.test(img[2])) {
+      return <MarkdownImage key={i} src={img[2]} alt={img[1]} />;
+    }
 
     if (part.startsWith('[[') && part.endsWith(']]')) {
       const inner = part.slice(2, -2);
