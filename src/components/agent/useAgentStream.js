@@ -53,6 +53,8 @@ export function useAgentStream({
   // Registro para deduplicación estricta de secuencias por stream
   const lastProcessedSeqRef = useRef({});
   const currentAccumulatorRef = useRef({});
+  const cancelledStreamsRef = useRef(new Set());
+  const activeStreamIdRef = useRef(null);
 
   // Animación reactiva de carga porcentual líquida
   useEffect(() => {
@@ -95,6 +97,8 @@ export function useAgentStream({
   // Procesador unificado y libre de mutaciones con deduplicación por seq
   const handleStreamChunk = (chunk) => {
     if (!chunk || !chunk.stream_id) return;
+
+    if (cancelledStreamsRef.current.has(chunk.stream_id)) return;
 
     // Deduplicación estricta por número de secuencia de Rust
     const maxSeq = lastProcessedSeqRef.current[chunk.stream_id] ?? -1;
@@ -268,6 +272,7 @@ export function useAgentStream({
     setMessages((prev) => [...prev, userMsg, assistantPlaceholder]);
     if (typeof setPrompt === 'function') setPrompt('');
     setLoading(true);
+    activeStreamIdRef.current = streamId;
 
     try {
       await invoke('execute_agent_prompt', {
@@ -295,6 +300,28 @@ export function useAgentStream({
       setLoading(false);
     }
   };
+
+  const handleStop = useCallback(async () => {
+    const id = activeStreamIdRef.current;
+    if (!id) return;
+    activeStreamIdRef.current = null;
+    cancelledStreamsRef.current.add(id);
+    invoke('cancel_agent_stream', { streamId: id }).catch(console.error);
+    delete currentAccumulatorRef.current[id];
+    delete lastProcessedSeqRef.current[id];
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              loading: false,
+              content: (m.content ? m.content + '\n\n' : '') + '> [!WARNING]\n> ⏹ Interrumpido por el usuario.'
+            }
+          : m
+      )
+    );
+    setLoading(false);
+  }, []);
 
   const copyToClipboard = useCallback((text, id) => {
     navigator.clipboard.writeText(text);
@@ -328,6 +355,7 @@ export function useAgentStream({
     viewportRef,
     handlePermissionResponse,
     handleSend,
+    handleStop,
     clearHistory
   };
 }

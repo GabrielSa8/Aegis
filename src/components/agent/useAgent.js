@@ -156,6 +156,7 @@ export function useAgent() {
     agentType,
     handlePermissionResponse: streamManager.handlePermissionResponse,
     handleSend: (customPrompt, effortOverride) => streamManager.handleSend(customPrompt, prompt, setPrompt, effortOverride),
+    handleStop: streamManager.handleStop,
     clearHistory: streamManager.clearHistory,
     macros,
     showMacroModal,

@@ -65,6 +65,7 @@ export default function AgentView() {
     agentType,
     handlePermissionResponse,
     handleSend,
+    handleStop,
     clearHistory,
     macros,
     showMacroModal,
@@ -178,6 +179,7 @@ export default function AgentView() {
           prompt={prompt}
           onChangePrompt={setPrompt}
           onSubmit={handleSend}
+          onStop={handleStop}
           loading={loading}
           activeContextLabel={activeContext.label}
           effortMode={effortMode}

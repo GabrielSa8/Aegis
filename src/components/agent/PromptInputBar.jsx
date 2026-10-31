@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, RefreshCw, Paperclip } from 'lucide-react';
+import { Send, Square, Paperclip } from 'lucide-react';
 import { useAttachments, appendAttachmentRefs } from './useAttachments';
 import AttachmentStrip from './AttachmentStrip';
 import ReferenceBadgeStrip from './ReferenceBadgeStrip';
@@ -16,6 +16,7 @@ export default function PromptInputBar({
   prompt,
   onChangePrompt,
   onSubmit,
+  onStop,
   loading,
   activeContextLabel,
   effortMode,
@@ -90,6 +91,15 @@ export default function PromptInputBar({
     handlePaste,
     uploadAll
   } = useAttachments(activeContext?.id);
+
+  useEffect(() => {
+    if (!loading || !onStop) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onStop();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [loading, onStop]);
 
   const handleSubmit = async (customText) => {
     const textToSend = customText !== undefined ? customText : prompt;
@@ -298,15 +308,17 @@ export default function PromptInputBar({
         />
 
         <button
-          onClick={() => handleSubmit()}
-          disabled={loading || (!prompt.trim() && !attachments.length)}
+          onClick={() => (loading ? onStop?.() : handleSubmit())}
+          disabled={!loading && !prompt.trim() && !attachments.length}
           className="terminal-send-btn"
-          title={isMultiline ? 'Enviar instrucción (Enter)' : 'Enviar instrucción'}
+          style={loading ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : undefined}
+          title={loading ? 'Interrumpir (Esc)' : isMultiline ? 'Enviar instrucción (Enter)' : 'Enviar instrucción'}
         >
           {loading ? (
             <>
-              <RefreshCw size={12} className="spin" />
-              <span className="send-btn-label">Ejecutando...</span>
+              <Square size={12} />
+              <span className="send-btn-label">Detener</span>
+              <kbd className="tactical-kbd send-btn-kbd">Esc</kbd>
             </>
           ) : (
             <>

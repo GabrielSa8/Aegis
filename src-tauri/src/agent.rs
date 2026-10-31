@@ -11,6 +11,25 @@ use tokio::sync::Mutex;
 
 static AGENT_STDIN_MAP: OnceLock<Arc<Mutex<HashMap<String, tokio::process::ChildStdin>>>> = OnceLock::new();
 
+static AGENT_PID_MAP: OnceLock<Arc<Mutex<HashMap<String, u32>>>> = OnceLock::new();
+
+fn get_pid_map() -> &'static Arc<Mutex<HashMap<String, u32>>> {
+    AGENT_PID_MAP.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+/// Interrumpe el agente activo (SIGTERM al grupo de procesos).
+#[tauri::command]
+pub async fn cancel_agent_stream(stream_id: String) -> Result<(), String> {
+    let pid = get_pid_map().lock().await.remove(&stream_id);
+    get_stdin_map().lock().await.remove(&stream_id);
+    let pid = pid.ok_or_else(|| format!("No hay proceso activo para {}", stream_id))?;
+    let _ = std::process::Command::new("kill")
+        .arg("-TERM")
+        .arg(format!("-{}", pid))
+        .status();
+    Ok(())
+}
+
 fn get_stdin_map() -> &'static Arc<Mutex<HashMap<String, tokio::process::ChildStdin>>> {
     AGENT_STDIN_MAP.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
 }
@@ -226,10 +245,16 @@ pub async fn execute_agent_prompt(
     cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
+    #[cfg(unix)]
+    cmd.process_group(0);
 
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("Error iniciando agente ({:?}): {}", agent_binary, e))?;
+
+    if let Some(pid) = child.id() {
+        get_pid_map().lock().await.insert(stream_id.clone(), pid);
+    }
 
     if let Some(stdin) = child.stdin.take() {
         let map = get_stdin_map();
@@ -462,6 +487,7 @@ pub async fn execute_agent_prompt(
 
         let map = get_stdin_map();
         map.lock().await.remove(&stream_id_stderr);
+        get_pid_map().lock().await.remove(&stream_id_stderr);
 
         let status = child.wait().await;
         if let Ok(exit_status) = status {
