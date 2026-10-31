@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -198,6 +198,80 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    let mut chain: Vec<String> = Vec::new();
+    if let Some(c) = cfg.as_ref() {
+        for e in c.fallback_entries.iter().filter(|e| e.engine == agent_type) {
+            let m = e.model.trim();
+            if !m.is_empty() && Some(m) != model.as_deref().map(str::trim) && !chain.iter().any(|x| x == m) {
+                chain.push(m.to_string());
+            }
+        }
+    }
+
+    let ctx = AttemptCtx {
+        app,
+        agent_binary,
+        prompt,
+        effort,
+        ctx_workspace,
+        context_path,
+        home,
+        stream_id: stream_id.clone(),
+        chunk_seq: Arc::new(AtomicU64::new(0)),
+    };
+    spawn_attempt(ctx, model, chain).await?;
+    Ok(format!("Stream iniciado ({})", stream_id))
+}
+
+
+#[derive(Clone)]
+struct AttemptCtx {
+    app: AppHandle,
+    agent_binary: String,
+    prompt: String,
+    effort: Option<String>,
+    ctx_workspace: std::path::PathBuf,
+    context_path: Option<String>,
+    home: String,
+    stream_id: String,
+    chunk_seq: Arc<AtomicU64>,
+}
+
+/// Detecta errores de cuota/rate-limit (429) del proveedor en un fragmento de salida.
+fn is_quota_error(text: &str) -> bool {
+    let t = text.to_lowercase();
+    t.contains("resource_exhausted")
+        || t.contains("code 429")
+        || t.contains("quota reached")
+        || t.contains("quota exceeded")
+        || t.contains("rate limit")
+        || t.contains("rate_limit")
+        || t.contains("too many requests")
+}
+
+fn emit_tracked(app: &AppHandle, chunk: AgentStreamChunk, emitted: &AtomicBool, done: &AtomicBool) {
+    match chunk.event_type.as_str() {
+        "delta" => emitted.store(true, Ordering::SeqCst),
+        "done" => done.store(true, Ordering::SeqCst),
+        _ => {}
+    }
+    let _ = app.emit("agent-stream", chunk);
+}
+
+type AttemptFuture = std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>;
+
+/// Lanza un intento del agente con `model`; `remaining` es la cadena de fallback restante.
+fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>) -> AttemptFuture {
+    Box::pin(async move {
+    let app = ctx.app.clone();
+    let agent_binary = ctx.agent_binary.clone();
+    let prompt = ctx.prompt.clone();
+    let effort = ctx.effort.clone();
+    let ctx_workspace = ctx.ctx_workspace.clone();
+    let context_path = ctx.context_path.clone();
+    let home = ctx.home.clone();
+    let stream_id = ctx.stream_id.clone();
+
     let mut cmd = Command::new(&agent_binary);
     cmd.arg("-p")
         .arg(&prompt)
@@ -265,7 +339,11 @@ pub async fn execute_agent_prompt(
     let stderr = child.stderr.take().ok_or("Fallo al capturar stderr")?;
 
     // Emitir evento "init" inmediato para confirmar que el agente está trabajando
-    let chunk_seq = Arc::new(AtomicU64::new(0));
+    let chunk_seq = Arc::clone(&ctx.chunk_seq);
+    let has_fallback = !remaining.is_empty();
+    let quota_hit = Arc::new(AtomicBool::new(false));
+    let emitted = Arc::new(AtomicBool::new(false));
+    let done_emitted = Arc::new(AtomicBool::new(false));
     let init_chunk = AgentStreamChunk {
         stream_id: stream_id.clone(),
         seq: chunk_seq.fetch_add(1, Ordering::SeqCst),
@@ -284,6 +362,9 @@ pub async fn execute_agent_prompt(
     let stream_id_stdout = stream_id.clone();
     let home_stream = home.clone();
     let chunk_seq_stdout = Arc::clone(&chunk_seq);
+    let quota_stdout = Arc::clone(&quota_hit);
+    let emitted_stdout = Arc::clone(&emitted);
+    let done_stdout = Arc::clone(&done_emitted);
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout).lines();
         let mut captured_conv_id: Option<String> = None;
@@ -292,6 +373,11 @@ pub async fn execute_agent_prompt(
         while let Ok(Some(line)) = reader.next_line().await {
             if line.trim().is_empty() {
                 continue;
+            }
+
+            // Cuota agotada: solo cuenta mientras el usuario aún no vio contenido (reintento seguro)
+            if !emitted_stdout.load(Ordering::SeqCst) && is_quota_error(&line) {
+                quota_stdout.store(true, Ordering::SeqCst);
             }
 
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
@@ -323,7 +409,7 @@ pub async fn execute_agent_prompt(
                                         output_tokens: None,
                                         total_tokens: None,
                                     };
-                                    let _ = app_stdout.emit("agent-stream", chunk);
+                                    let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
                                 }
 
                                 // 2. Captura y streaming de razonamiento interno (Chain of Thought)
@@ -346,7 +432,7 @@ pub async fn execute_agent_prompt(
                                                 output_tokens: None,
                                                 total_tokens: None,
                                             };
-                                            let _ = app_stdout.emit("agent-stream", chunk);
+                                            let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
                                         }
                                     }
                                 }
@@ -379,14 +465,17 @@ pub async fn execute_agent_prompt(
                                                 output_tokens: None,
                                                 total_tokens: None,
                                             };
-                                            let _ = app_stdout.emit("agent-stream", chunk);
+                                            let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
                                         }
                                     }
                                 }
                             }
                         }
                         "result" => {
-                            if let Some(res) = val.get("result") {
+                            let suppress_done = has_fallback
+                                && quota_stdout.load(Ordering::SeqCst)
+                                && !emitted_stdout.load(Ordering::SeqCst);
+                            if let Some(res) = val.get("result").filter(|_| !suppress_done) {
                                 // Barrido final de pensamientos antes de emitir done
                                 if let Some(ref cid) = captured_conv_id {
                                     let thoughts = extract_unseen_thoughts(&home_stream, cid, &mut processed_thinking_steps).await;
@@ -406,7 +495,7 @@ pub async fn execute_agent_prompt(
                                             output_tokens: None,
                                             total_tokens: None,
                                         };
-                                        let _ = app_stdout.emit("agent-stream", chunk);
+                                        let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
                                     }
                                 }
 
@@ -433,7 +522,7 @@ pub async fn execute_agent_prompt(
                                     output_tokens,
                                     total_tokens,
                                 };
-                                let _ = app_stdout.emit("agent-stream", chunk);
+                                let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
                                 let map = get_stdin_map();
                                 map.lock().await.remove(&stream_id_stdout);
                             }
@@ -442,6 +531,9 @@ pub async fn execute_agent_prompt(
                     }
                 }
             } else {
+                if has_fallback && !emitted_stdout.load(Ordering::SeqCst) && is_quota_error(&line) {
+                    continue;
+                }
                 // Detectar si el CLI está solicitando confirmación interactiva (Human-in-the-loop)
                 let is_permission_prompt = line.contains("[y/N]")
                     || line.contains("[Y/n]")
@@ -466,7 +558,7 @@ pub async fn execute_agent_prompt(
                     output_tokens: None,
                     total_tokens: None,
                 };
-                let _ = app_stdout.emit("agent-stream", chunk);
+                let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
             }
         }
         let map = get_stdin_map();
@@ -477,6 +569,11 @@ pub async fn execute_agent_prompt(
     let app_stderr = app.clone();
     let stream_id_stderr = stream_id.clone();
     let chunk_seq_stderr = Arc::clone(&chunk_seq);
+    let quota_stderr = Arc::clone(&quota_hit);
+    let emitted_stderr = Arc::clone(&emitted);
+    let done_stderr = Arc::clone(&done_emitted);
+    let ctx_retry = ctx.clone();
+    let model_failed = model.clone();
     tokio::spawn(async move {
         let mut reader = BufReader::new(stderr).lines();
         let mut err_buffer = String::new();
@@ -490,6 +587,44 @@ pub async fn execute_agent_prompt(
         get_pid_map().lock().await.remove(&stream_id_stderr);
 
         let status = child.wait().await;
+
+        // Fallback Chain: cuota agotada sin contenido previo -> mismo prompt con el siguiente modelo
+        let quota = quota_stderr.load(Ordering::SeqCst) || is_quota_error(&err_buffer);
+        if quota && !emitted_stderr.load(Ordering::SeqCst) && !done_stderr.load(Ordering::SeqCst) {
+            if let Some((next, rest)) = remaining.split_first() {
+                let notice = AgentStreamChunk {
+                    stream_id: stream_id_stderr.clone(),
+                    seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                    event_type: "delta".into(),
+                    content: format!(
+                        "> [!WARNING]\n> Cuota agotada en `{}`. Reintentando con `{}`…\n\n",
+                        model_failed.as_deref().unwrap_or("modelo activo"),
+                        next
+                    ),
+                    step_type: None,
+                    duration_seconds: None,
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                };
+                let _ = app_stderr.emit("agent-stream", notice);
+                if let Err(e) = spawn_attempt(ctx_retry, Some(next.clone()), rest.to_vec()).await {
+                    let fail = AgentStreamChunk {
+                        stream_id: stream_id_stderr.clone(),
+                        seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                        event_type: "error".into(),
+                        content: e,
+                        step_type: None,
+                        duration_seconds: None,
+                        input_tokens: None,
+                        output_tokens: None,
+                        total_tokens: None,
+                    };
+                    let _ = app_stderr.emit("agent-stream", fail);
+                }
+                return;
+            }
+        }
         if let Ok(exit_status) = status {
             if !exit_status.success() && !err_buffer.is_empty() {
                 let chunk = AgentStreamChunk {
@@ -508,7 +643,8 @@ pub async fn execute_agent_prompt(
         }
     });
 
-    Ok(format!("Stream iniciado ({})", stream_id))
+    Ok(())
+    })
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -960,4 +1096,16 @@ pub fn list_workspace_files(root: String, query: String) -> Result<Vec<String>, 
     }
     results.sort();
     Ok(results)
+}
+
+#[cfg(test)]
+mod fallback_tests {
+    use super::is_quota_error;
+
+    #[test]
+    fn detects_quota_errors() {
+        assert!(is_quota_error("generating and executing: RESOURCE_EXHAUSTED (code 429): Individual quota reached."));
+        assert!(is_quota_error("Error: Too Many Requests"));
+        assert!(!is_quota_error("Hola, aquí está tu respuesta"));
+    }
 }

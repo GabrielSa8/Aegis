@@ -1,5 +1,6 @@
 import { Gauge, ExternalLink } from 'lucide-react';
 import { BILLING_LINKS } from './settingsHelpers';
+import FallbackChainSection from './FallbackChainSection';
 
 export default function AiBudgetSection({ config, setConfig, updateTokenBudget, onOpenExternal }) {
   if (!config) return null;
@@ -43,6 +44,8 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
           />
         </div>
       )}
+
+      <FallbackChainSection config={config} setConfig={setConfig} />
 
       {/* Presupuesto de Tokens */}
       <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>

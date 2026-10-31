@@ -91,6 +91,12 @@ fn default_ui_scale() -> f32 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FallbackEntry {
+    pub engine: String,
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AegisConfig {
     pub vault_path: String,
@@ -106,6 +112,10 @@ pub struct AegisConfig {
     pub profile: UserProfile,
     #[serde(default)]
     pub token_budget: TokenBudgetConfig,
+    /// Cadena global de respaldo (orden de prioridad) ante 429/cuota agotada.
+    /// Solo se usan las entradas cuyo motor coincide con el motor activo.
+    #[serde(default)]
+    pub fallback_entries: Vec<FallbackEntry>,
     #[serde(default)]
     pub notifications: NotificationsConfig,
 }
@@ -149,6 +159,7 @@ pub fn default_config() -> AegisConfig {
         git_repos,
         profile: UserProfile::default(),
         token_budget: TokenBudgetConfig::default(),
+        fallback_entries: Vec::new(),
         notifications: NotificationsConfig::default(),
     }
 }
