@@ -1,0 +1,263 @@
+import React, { memo } from 'react';
+import { Activity, Clock, ShieldCheck, Zap, Brain, Sparkles } from 'lucide-react';
+
+const FAMILY_ICONS = {
+  'Gemini Models': Zap,
+  'Claude and GPT models': Sparkles,
+  'Gemini 4 Argon': Brain
+};
+
+const FAMILY_BADGES = {
+  'Gemini Models': 'Flash & Low Latency',
+  'Claude and GPT models': 'Sonnet & Open-Weights',
+  'Gemini 4 Argon': 'Razonamiento Profundo'
+};
+
+function getBarGradient(percent) {
+  if (percent >= 50) {
+    return {
+      background: 'linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%)',
+      shadow: '0 0 10px rgba(16, 185, 129, 0.4)',
+      badgeColor: '#10b981',
+      badgeBg: 'rgba(16, 185, 129, 0.12)',
+      badgeBorder: 'rgba(16, 185, 129, 0.3)'
+    };
+  }
+  if (percent >= 20) {
+    return {
+      background: 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%)',
+      shadow: '0 0 10px rgba(245, 158, 11, 0.4)',
+      badgeColor: '#f59e0b',
+      badgeBg: 'rgba(245, 158, 11, 0.12)',
+      badgeBorder: 'rgba(245, 158, 11, 0.3)'
+    };
+  }
+  return {
+    background: 'linear-gradient(90deg, #ef4444 0%, #f87171 50%, #ef4444 100%)',
+    shadow: '0 0 10px rgba(239, 68, 68, 0.4)',
+    badgeColor: '#ef4444',
+    badgeBg: 'rgba(239, 68, 68, 0.12)',
+    badgeBorder: 'rgba(239, 68, 68, 0.3)'
+  };
+}
+
+function UsageQuotaCard({ quotas = [] }) {
+  // Agrupar por familia de modelos
+  const groups = {};
+  for (const q of quotas) {
+    if (!groups[q.family]) groups[q.family] = [];
+    groups[q.family].push(q);
+  }
+
+  return (
+    <div
+      style={{
+        margin: '8px 0',
+        borderRadius: 'var(--radius-md, 8px)',
+        background: 'rgba(19, 23, 29, 0.75)',
+        border: '1px solid var(--border-color)',
+        borderLeft: '4px solid var(--primary)',
+        backdropFilter: 'blur(14px)',
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.28)'
+      }}
+    >
+      {/* Cabecera Táctica de la Tarjeta */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              padding: '4px',
+              borderRadius: '5px',
+              background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Activity size={14} color="var(--primary)" />
+          </div>
+          <div>
+            <span
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: 'var(--text-high)',
+                letterSpacing: '0.02em',
+                textTransform: 'uppercase'
+              }}
+            >
+              Cuotas y Telemetría del Proveedor
+            </span>
+            <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
+              Suscripción activa · Google Antigravity
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'var(--primary)',
+              boxShadow: '0 0 8px var(--primary)',
+              animation: 'pulse 2s infinite'
+            }}
+          />
+          <span
+            style={{
+              fontSize: '0.64rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono, monospace)',
+              color: 'var(--primary)',
+              letterSpacing: '0.04em'
+            }}
+          >
+            [ EN VIVO ]
+          </span>
+        </div>
+      </div>
+
+      {/* Lista de Grupos y Barras Líquidas */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {Object.entries(groups).map(([family, qList]) => {
+          const FamilyIcon = FAMILY_ICONS[family] || Zap;
+          const badgeText = FAMILY_BADGES[family] || 'Modelos';
+
+          return (
+            <div
+              key={family}
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                borderRadius: '6px',
+                padding: '9px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FamilyIcon size={13} color="var(--primary)" />
+                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                    {family}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '0.60rem',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: 'var(--text-muted)',
+                    fontFamily: 'var(--font-mono, monospace)'
+                  }}
+                >
+                  {badgeText}
+                </span>
+              </div>
+
+              {/* Renglones de Límites */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {qList.map((item, idx) => {
+                  const styleConfig = getBarGradient(item.percent);
+
+                  return (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontSize: '0.70rem'
+                        }}
+                      >
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                          {item.limitType}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {item.reset && (
+                            <span
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.62rem'
+                              }}
+                            >
+                              <Clock size={10} />
+                              <span>{item.reset}</span>
+                            </span>
+                          )}
+
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              fontWeight: 700,
+                              fontSize: '0.68rem',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: styleConfig.badgeBg,
+                              border: `1px solid ${styleConfig.badgeBorder}`,
+                              color: styleConfig.badgeColor
+                            }}
+                          >
+                            {item.percent}% restante
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ⚡ Barra de Carga Líquida con Shimmer de Aegis */}
+                      <div className="liquid-progress-container" style={{ height: '6px' }}>
+                        <div
+                          className="liquid-progress-fill"
+                          style={{
+                            width: `${Math.max(2, Math.min(100, item.percent))}%`,
+                            background: styleConfig.background,
+                            boxShadow: styleConfig.shadow
+                          }}
+                        >
+                          <div className="liquid-progress-shimmer" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Pie de Página */}
+      <div
+        style={{
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          paddingTop: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.64rem',
+          color: 'var(--text-muted)'
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <ShieldCheck size={11} color="var(--primary)" />
+          <span>Límites de sesión calculados en ventanas móviles de protección de cuota.</span>
+        </span>
+        <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>/usage</span>
+      </div>
+    </div>
+  );
+}
+
+export default memo(UsageQuotaCard);

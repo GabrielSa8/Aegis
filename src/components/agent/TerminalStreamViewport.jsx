@@ -9,7 +9,8 @@ function TerminalStreamViewport({
   copiedId,
   onCopy,
   onPermissionResponse,
-  loadingProgress
+  loadingProgress,
+  onSelectModel
 }) {
   return (
     <div 
@@ -26,6 +27,7 @@ function TerminalStreamViewport({
           onCopy={onCopy}
           onPermissionResponse={onPermissionResponse}
           loadingProgress={loadingProgress}
+          onSelectModel={onSelectModel}
         />
       ))}
     </div>

@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import MermaidRenderer from './MermaidRenderer';
+import ArtifactDrawerModal from './agent/ArtifactDrawerModal';
 import {
   parseFrontmatter,
   formatInline,
   FrontmatterCard,
   CalloutCard,
   CodeBlock,
+  DiffBlock,
+  StepsBlock,
   MarkdownTable,
   TaskCheckboxItem
 } from './markdown';
 
 export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, onTagClick }) {
+  const [activeArtifact, setActiveArtifact] = useState(null);
   const { frontmatter, content: cleanContent } = useMemo(() => parseFrontmatter(content), [content]);
 
   // Desglosar contenido en bloques (código vs mermaid vs texto regular)
@@ -37,6 +41,18 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
       if (lang === 'mermaid') {
         result.push({
           type: 'mermaid',
+          code,
+          startIndex: match.index
+        });
+      } else if (lang === 'diff') {
+        result.push({
+          type: 'diff',
+          code,
+          startIndex: match.index
+        });
+      } else if (lang === 'steps' || lang === 'timeline' || lang === 'plan') {
+        result.push({
+          type: 'steps',
           code,
           startIndex: match.index
         });
@@ -277,7 +293,15 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
       {frontmatter && <FrontmatterCard frontmatter={frontmatter} onTagClick={onTagClick} />}
       {segments.map((seg, idx) => {
         if (seg.type === 'mermaid') {
-          return <MermaidRenderer key={`mermaid-${idx}`} chart={seg.code} />;
+          return <MermaidRenderer key={`mermaid-${idx}`} chart={seg.code} onExpand={setActiveArtifact} />;
+        }
+
+        if (seg.type === 'diff') {
+          return <DiffBlock key={`diff-${idx}`} code={seg.code} onExpand={setActiveArtifact} />;
+        }
+
+        if (seg.type === 'steps') {
+          return <StepsBlock key={`steps-${idx}`} code={seg.code} />;
         }
 
         if (seg.type === 'code') {
@@ -286,12 +310,20 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
               key={`code-${idx}`}
               code={seg.code}
               lang={seg.lang}
+              onExpand={setActiveArtifact}
             />
           );
         }
 
         return renderTextSegment(seg, idx);
       })}
+
+      {/* Drawer / Modal Flotante de Artefactos (Fase 1.3) */}
+      <ArtifactDrawerModal
+        isOpen={Boolean(activeArtifact)}
+        onClose={() => setActiveArtifact(null)}
+        artifact={activeArtifact}
+      />
     </div>
   );
 }

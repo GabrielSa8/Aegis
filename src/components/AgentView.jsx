@@ -59,6 +59,10 @@ export default function AgentView() {
     handleNewSession,
     handleDeleteSession,
     messages,
+    setMessages,
+    activeModel,
+    setActiveModel,
+    agentType,
     handlePermissionResponse,
     handleSend,
     clearHistory,
@@ -103,6 +107,11 @@ export default function AgentView() {
         sessionsCount={sessions.length}
         onClearHistory={clearHistory}
         messages={messages}
+        activeModel={activeModel}
+        onSelectModel={setActiveModel}
+        agentType={agentType}
+        onInjectSystemMessage={(msg) => setMessages((prev) => [...prev, msg])}
+        activeContext={activeContext}
       />
 
       {/* 💬 Central Workspace: Sessions Drawer + Terminal Message Log (Lienzo Borde a Borde) */}
@@ -138,6 +147,7 @@ export default function AgentView() {
           onCopy={copyToClipboard}
           onPermissionResponse={handlePermissionResponse}
           loadingProgress={loadingProgress}
+          onSelectModel={setActiveModel}
         />
       </div>
 
@@ -172,6 +182,17 @@ export default function AgentView() {
           activeContextLabel={activeContext.label}
           effortMode={effortMode}
           onShortcutMacro={handleShortcutMacro}
+          onClearHistory={clearHistory}
+          onSetEffortMode={setEffortMode}
+          messages={messages}
+          activeContext={activeContext}
+          contexts={contexts}
+          onSelectContext={handleSelectContext}
+          currentSessionId={currentSessionId}
+          activeModel={activeModel}
+          onSelectModel={setActiveModel}
+          agentType={agentType}
+          onInjectSystemMessage={(msg) => setMessages((prev) => [...prev, msg])}
         />
       </div>
 

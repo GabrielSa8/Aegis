@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Brain, History, Trash2, Cpu } from 'lucide-react';
 import EffortLaserSwitch from './EffortLaserSwitch';
+import ModelSelectorDropdown from './ModelSelectorDropdown';
 
 export default function AgentHeaderPortal({
   portalTarget,
@@ -13,7 +14,12 @@ export default function AgentHeaderPortal({
   onToggleSessionsDrawer,
   sessionsCount = 0,
   onClearHistory,
-  messages = []
+  messages = [],
+  activeModel,
+  onSelectModel,
+  agentType,
+  onInjectSystemMessage,
+  activeContext
 }) {
   // 🎯 Resolución síncrona y estable del slot en el DOM
   const targetEl = (portalTarget && portalTarget.isConnected)
@@ -59,6 +65,16 @@ export default function AgentHeaderPortal({
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       {/* ⚡ Toggle de Modo de Trabajo (Efecto Oruga / Stretch-and-Contract) */}
       <EffortLaserSwitch effortMode={effortMode} onSetEffortMode={onSetEffortMode} />
+
+      {/* 🤖 Selector Táctico de Modelo del Motor según Proveedor */}
+      <ModelSelectorDropdown
+        activeModel={activeModel}
+        onSelectModel={onSelectModel}
+        onSetEffortMode={onSetEffortMode}
+        agentType={agentType}
+        onInjectSystemMessage={onInjectSystemMessage}
+        activeContext={activeContext}
+      />
 
       {/* 🧠 Toggle Acordeón de Pensamiento (Ver Razonamiento) */}
       <button

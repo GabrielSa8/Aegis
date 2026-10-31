@@ -35,13 +35,17 @@ export function useAgent() {
   const [showContextModal, setShowContextModal] = useState(false);
   const [operatorName, setOperatorName] = useState('Operador');
   const [prompt, setPrompt] = useState('');
+  const [agentType, setAgentType] = useState('agy');
 
-  // Carga reactiva de perfil soberano
+  // Carga reactiva de perfil soberano y proveedor configurado
   useEffect(() => {
     invoke('get_aegis_config')
       .then((cfg) => {
         if (cfg?.profile?.name) {
           setOperatorName(cfg.profile.name);
+        }
+        if (cfg?.agentType) {
+          setAgentType(cfg.agentType);
         }
       })
       .catch((e) => console.error('Error cargando perfil en AgentView:', e));
@@ -146,8 +150,12 @@ export function useAgent() {
     handleNewSession: sessionsManager.handleNewSession,
     handleDeleteSession: sessionsManager.handleDeleteSession,
     messages: streamManager.messages,
+    setMessages: streamManager.setMessages,
+    activeModel: streamManager.activeModel,
+    setActiveModel: streamManager.setActiveModel,
+    agentType,
     handlePermissionResponse: streamManager.handlePermissionResponse,
-    handleSend: (customPrompt) => streamManager.handleSend(customPrompt, prompt, setPrompt),
+    handleSend: (customPrompt, effortOverride) => streamManager.handleSend(customPrompt, prompt, setPrompt, effortOverride),
     clearHistory: streamManager.clearHistory,
     macros,
     showMacroModal,

@@ -116,6 +116,7 @@ pub async fn execute_agent_prompt(
     skills: Option<Vec<String>>,
     stream_id: String,
     effort: Option<String>,
+    model: Option<String>,
 ) -> Result<String, String> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let cfg = crate::config::get_aegis_config().ok();
@@ -184,9 +185,22 @@ pub async fn execute_agent_prompt(
         .arg("--output-format")
         .arg("stream-json");
 
+    // Inyección de modelo específico del proveedor si está seleccionado
+    if let Some(ref m) = model {
+        let clean = m.trim();
+        if !clean.is_empty() {
+            cmd.arg("--model").arg(clean);
+        }
+    }
+
     // Inyección de nivel de esfuerzo/razonamiento (low para flash, high para profundo)
+    // Si el id del modelo ya trae intensidad (-low/-medium/-high), --effort entra en conflicto y se omite.
+    let model_has_level = model.as_deref().map_or(false, |m| {
+        let m = m.trim();
+        m.ends_with("-low") || m.ends_with("-medium") || m.ends_with("-high")
+    });
     if let Some(ref eff) = effort {
-        if !eff.trim().is_empty() {
+        if !eff.trim().is_empty() && !model_has_level {
             cmd.arg("--effort").arg(eff.trim());
         }
     }
@@ -651,3 +665,273 @@ pub fn sqlite_save_chat_message(message: ChatMessage) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenUsageTelemetry {
+    pub session_tokens: u64,
+    pub session_messages: usize,
+    pub five_hour_tokens: u64,
+    pub five_hour_limit: u64,
+    pub five_hour_percent_remaining: f32,
+    pub five_hour_resets_in_minutes: u32,
+    pub weekly_tokens: u64,
+    pub weekly_limit: u64,
+    pub weekly_percent_remaining: f32,
+    pub weekly_resets_day: String,
+}
+
+#[tauri::command]
+pub fn sqlite_get_token_usage_telemetry(session_id: Option<String>) -> Result<TokenUsageTelemetry, String> {
+    let conn = crate::db::get_db_connection()?;
+    let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+
+    let weekly_limit = if cfg.token_budget.weekly_limit > 0 {
+        cfg.token_budget.weekly_limit
+    } else {
+        500_000
+    };
+
+    let five_hour_limit = if cfg.token_budget.daily_limit > 0 {
+        std::cmp::max((cfg.token_budget.daily_limit as f64 * 0.5) as u64, 50_000)
+    } else {
+        100_000
+    };
+
+    // 1. Tokens en la ventana de 5 horas
+    let five_hour_tokens: u64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(CASE WHEN total_tokens IS NOT NULL AND total_tokens > 0 THEN total_tokens ELSE LENGTH(content) / 4 END), 0)
+             FROM chat_messages
+             WHERE created_at >= datetime('now', '-5 hours')",
+            [],
+            |r| {
+                let v: i64 = r.get(0)?;
+                Ok(v.max(0) as u64)
+            },
+        )
+        .unwrap_or(0);
+
+    let five_hour_resets_in_minutes: u32 = conn
+        .query_row(
+            "SELECT CAST(MAX(1, 300 - (strftime('%s', 'now') - strftime('%s', created_at)) / 60) AS INTEGER)
+             FROM chat_messages
+             WHERE created_at >= datetime('now', '-5 hours')
+             ORDER BY created_at ASC LIMIT 1",
+            [],
+            |r| {
+                let m: i64 = r.get(0)?;
+                Ok(m.max(1) as u32)
+            },
+        )
+        .unwrap_or(300);
+
+    // 2. Tokens en la ventana semanal (7 días)
+    let weekly_tokens: u64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(CASE WHEN total_tokens IS NOT NULL AND total_tokens > 0 THEN total_tokens ELSE LENGTH(content) / 4 END), 0)
+             FROM chat_messages
+             WHERE created_at >= datetime('now', '-7 days')",
+            [],
+            |r| {
+                let v: i64 = r.get(0)?;
+                Ok(v.max(0) as u64)
+            },
+        )
+        .unwrap_or(0);
+
+    // 3. Tokens de la sesión activa
+    let (session_tokens, session_messages): (u64, usize) = if let Some(ref sid) = session_id {
+        conn.query_row(
+            "SELECT COALESCE(SUM(CASE WHEN total_tokens IS NOT NULL AND total_tokens > 0 THEN total_tokens ELSE LENGTH(content) / 4 END), 0),
+                    COUNT(id)
+             FROM chat_messages
+             WHERE session_id = ?1",
+            rusqlite::params![sid],
+            |r| {
+                let tok: i64 = r.get(0)?;
+                let count: i64 = r.get(1)?;
+                Ok((tok.max(0) as u64, count.max(0) as usize))
+            },
+        )
+        .unwrap_or((0, 0))
+    } else {
+        (0, 0)
+    };
+
+    let five_hour_percent_remaining = if five_hour_limit > 0 {
+        let rem = five_hour_limit.saturating_sub(five_hour_tokens);
+        ((rem as f64 / five_hour_limit as f64) * 100.0) as f32
+    } else {
+        100.0
+    };
+
+    let weekly_percent_remaining = if weekly_limit > 0 {
+        let rem = weekly_limit.saturating_sub(weekly_tokens);
+        ((rem as f64 / weekly_limit as f64) * 100.0) as f32
+    } else {
+        100.0
+    };
+
+    Ok(TokenUsageTelemetry {
+        session_tokens,
+        session_messages,
+        five_hour_tokens,
+        five_hour_limit,
+        five_hour_percent_remaining,
+        five_hour_resets_in_minutes,
+        weekly_tokens,
+        weekly_limit,
+        weekly_percent_remaining,
+        weekly_resets_day: "Domingo 00:00".to_string(),
+    })
+}
+
+#[tauri::command]
+pub fn execute_provider_command(command: String) -> Result<String, String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let cfg = crate::config::get_aegis_config().ok();
+    let agent_type = cfg.as_ref().map(|c| c.agent_type.as_str()).unwrap_or("agy");
+    let custom_cmd = cfg.as_ref().and_then(|c| c.agent_custom_cmd.clone());
+
+    let agent_binary = match agent_type {
+        "claude" => "claude".to_string(),
+        "ollama" => "ollama".to_string(),
+        "custom" => custom_cmd.unwrap_or_else(|| "agy".to_string()),
+        _ => {
+            let local_agy = Path::new(&home).join(".local/bin/agy");
+            if local_agy.exists() {
+                local_agy.to_string_lossy().to_string()
+            } else if Path::new("/usr/local/bin/agy").exists() {
+                "/usr/local/bin/agy".to_string()
+            } else {
+                "agy".to_string()
+            }
+        }
+    };
+
+    let output = std::process::Command::new(&agent_binary)
+        .arg("-p")
+        .arg(&command)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| format!("Error ejecutando comando en {}: {}", agent_binary, e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if !output.status.success() && stdout.trim().is_empty() {
+        return Err(if !stderr.trim().is_empty() {
+            stderr
+        } else {
+            format!("Comando falló con status {:?}", output.status)
+        });
+    }
+
+    Ok(if !stdout.trim().is_empty() { stdout } else { stderr })
+}
+
+
+/// Guarda un adjunto (imagen/archivo) en el workspace del contexto y devuelve su ruta absoluta.
+#[tauri::command]
+pub fn save_attachment(
+    context_id: Option<String>,
+    name: String,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    const MAX_BYTES: usize = 25 * 1024 * 1024;
+    if data.len() > MAX_BYTES {
+        return Err("Adjunto excede 25 MB".to_string());
+    }
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let ctx = context_id.unwrap_or_else(|| "general".to_string());
+    let dir = Path::new(&home)
+        .join(".local/share/aegis/contexts")
+        .join(&ctx)
+        .join("attachments");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    // Sanitiza el nombre: solo el basename, sin separadores ni caracteres de control
+    let base = Path::new(&name)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "adjunto".to_string());
+    let safe: String = base
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' })
+        .collect();
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let path = dir.join(format!("{}_{}", stamp, safe));
+    std::fs::write(&path, data).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Copia un archivo soltado (ruta nativa) al workspace del contexto. Devuelve (ruta, tamaño).
+#[tauri::command]
+pub fn import_attachment(
+    context_id: Option<String>,
+    source_path: String,
+) -> Result<(String, u64), String> {
+    let src = Path::new(&source_path);
+    let meta = std::fs::metadata(src).map_err(|e| e.to_string())?;
+    if !meta.is_file() {
+        return Err("Solo se admiten archivos".to_string());
+    }
+    let data = std::fs::read(src).map_err(|e| e.to_string())?;
+    let name = src
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "adjunto".to_string());
+    let size = data.len() as u64;
+    let path = save_attachment(context_id, name, data)?;
+    Ok((path, size))
+}
+
+/// Lista archivos del workspace (rutas relativas) que coinciden con `query`; base del autocompletado `@file:`.
+#[tauri::command]
+pub fn list_workspace_files(root: String, query: String) -> Result<Vec<String>, String> {
+    const MAX_RESULTS: usize = 30;
+    const MAX_SCANNED: usize = 20_000;
+    const MAX_DEPTH: usize = 6;
+    const SKIP_DIRS: [&str; 5] = ["node_modules", "target", "dist", "build", "__pycache__"];
+
+    let base = Path::new(&root);
+    if !base.is_dir() {
+        return Err("Directorio de workspace inválido".to_string());
+    }
+    let needle = query.trim().to_lowercase();
+    let mut results = Vec::new();
+    let mut scanned = 0usize;
+    let mut stack = vec![(base.to_path_buf(), 0usize)];
+
+    while let Some((dir, depth)) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        for entry in entries.flatten() {
+            scanned += 1;
+            if scanned > MAX_SCANNED || results.len() >= MAX_RESULTS {
+                return Ok(results);
+            }
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') {
+                continue;
+            }
+            if path.is_dir() {
+                if depth < MAX_DEPTH && !SKIP_DIRS.contains(&name.as_str()) {
+                    stack.push((path, depth + 1));
+                }
+                continue;
+            }
+            let rel = path.strip_prefix(base).unwrap_or(&path).to_string_lossy().to_string();
+            if needle.is_empty() || rel.to_lowercase().contains(&needle) {
+                results.push(rel);
+            }
+        }
+    }
+    results.sort();
+    Ok(results)
+}

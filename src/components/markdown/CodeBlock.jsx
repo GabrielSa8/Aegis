@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { useState, memo } from 'react';
+import { Copy, Check, Maximize2 } from 'lucide-react';
 
-export default function CodeBlock({ code, lang }) {
+function CodeBlock({ code, lang, onExpand }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -12,7 +12,7 @@ export default function CodeBlock({ code, lang }) {
 
   return (
     <div style={{
-      background: '#0a0d0c',
+      background: 'var(--bg-main, #0f1211)',
       border: '1px solid var(--border-color)',
       borderRadius: 'var(--radius-md)',
       overflow: 'hidden',
@@ -29,22 +29,45 @@ export default function CodeBlock({ code, lang }) {
         color: 'var(--text-muted)'
       }}>
         <span style={{ fontWeight: 600, textTransform: 'uppercase' }}>{lang || 'code'}</span>
-        <button
-          onClick={handleCopy}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: 'transparent',
-            border: 'none',
-            color: copied ? '#34d399' : 'var(--text-muted)',
-            cursor: 'pointer',
-            fontSize: '0.65rem'
-          }}
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          <span>{copied ? 'Copiado' : 'Copiar'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'transparent',
+              border: 'none',
+              color: copied ? 'var(--primary)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '0.65rem'
+            }}
+          >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            <span>{copied ? 'Copiado' : 'Copiar'}</span>
+          </button>
+
+          {onExpand && (
+            <button
+              onClick={() => onExpand({ type: 'code', content: code, lang, title: `Código: ${lang || 'raw'}` })}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                padding: '2px 5px',
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.65rem'
+              }}
+              title="Expandir código a pantalla completa (Esc)"
+            >
+              <Maximize2 size={11} color="var(--primary)" />
+            </button>
+          )}
+        </div>
       </div>
       <pre style={{
         margin: 0,
@@ -53,10 +76,12 @@ export default function CodeBlock({ code, lang }) {
         fontSize: '0.78rem',
         fontFamily: 'monospace',
         lineHeight: '1.5',
-        color: '#e2e8f0'
+        color: 'var(--text-high)'
       }}>
         {code}
       </pre>
     </div>
   );
 }
+
+export default memo(CodeBlock);

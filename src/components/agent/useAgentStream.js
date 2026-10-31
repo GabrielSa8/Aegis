@@ -28,7 +28,27 @@ export function useAgentStream({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [copiedId, setCopiedId] = useState(null);
   const [expandThoughts, setExpandThoughts] = useState(false);
+  const [activeModel, setActiveModel] = useState(() => {
+    try {
+      return localStorage.getItem('aegis_active_model') || null;
+    } catch {
+      return null;
+    }
+  });
   const viewportRef = useRef(null);
+
+  const handleSetActiveModel = useCallback((newModel) => {
+    setActiveModel(newModel);
+    try {
+      if (newModel) {
+        localStorage.setItem('aegis_active_model', newModel);
+      } else {
+        localStorage.removeItem('aegis_active_model');
+      }
+    } catch (e) {
+      console.warn('Error persistiendo modelo activo:', e);
+    }
+  }, []);
 
   // Registro para deduplicación estricta de secuencias por stream
   const lastProcessedSeqRef = useRef({});
@@ -170,9 +190,11 @@ export function useAgentStream({
     }
   }, []);
 
-  const handleSend = async (customPrompt, currentPrompt, setPrompt) => {
+  const handleSend = async (customPrompt, currentPrompt, setPrompt, effortOverride) => {
     const textToSend = customPrompt || currentPrompt;
     if (!textToSend.trim() || loading) return;
+
+    const sendEffort = effortOverride || effortMode;
 
     let targetSessionId = currentSessionId;
     if (!targetSessionId) {
@@ -180,7 +202,7 @@ export function useAgentStream({
         id: 'session_' + Date.now(),
         title: textToSend.slice(0, 36) + (textToSend.length > 36 ? '...' : ''),
         contextId: activeContext.id,
-        effort: effortMode,
+        effort: sendEffort,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -210,7 +232,7 @@ export function useAgentStream({
       role: 'user',
       content: textToSend,
       context: activeContext.label,
-      effort: effortMode,
+      effort: sendEffort,
       timestamp: timeStr
     };
 
@@ -237,7 +259,7 @@ export function useAgentStream({
       role: 'assistant',
       content: '',
       context: activeContext.label,
-      effort: effortMode,
+      effort: sendEffort,
       timestamp: timeStr,
       loading: true,
       statusText: 'Iniciando agente y montando contexto...'
@@ -254,7 +276,8 @@ export function useAgentStream({
         contextPath: activeContext.path,
         skills: activeContext.skills || [],
         streamId,
-        effort: effortMode
+        effort: sendEffort,
+        model: activeModel || null
       });
     } catch (err) {
       setMessages((prev) =>
@@ -294,6 +317,8 @@ export function useAgentStream({
   return {
     messages,
     setMessages,
+    activeModel,
+    setActiveModel: handleSetActiveModel,
     loading,
     loadingProgress,
     copiedId,
