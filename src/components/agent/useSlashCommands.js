@@ -251,6 +251,31 @@ export function useSlashCommands({
         return;
       }
 
+      // H2. Hermes Cortex (/cortex)
+      if (cmdId === 'cortex' || cmdText === '/cortex') {
+        try {
+          const telemetry = await invoke('cortex_get_telemetry');
+          onInjectSystemMessage?.({
+            id: 'sys_cortex_' + Date.now(),
+            role: 'assistant',
+            cardType: 'cortex',
+            cardData: telemetry,
+            content: '',
+            context: activeContext?.label || 'General',
+            timestamp: 'Ahora'
+          });
+        } catch (err) {
+          onInjectSystemMessage?.({
+            id: 'sys_cortex_' + Date.now(),
+            role: 'assistant',
+            content: `> [!WARNING]\n> Error consultando Hermes Cortex: ${err}`,
+            context: activeContext?.label || 'General',
+            timestamp: 'Ahora'
+          });
+        }
+        return;
+      }
+
       // I. Pegar portapapeles (/clip)
       if (cmdId === 'clip' || cmdText === '/clip') {
         try {

@@ -135,6 +135,12 @@ export function useAgentStream({
       delete currentAccumulatorRef.current[chunk.stream_id];
       delete lastProcessedSeqRef.current[chunk.stream_id];
     } else if (chunk.event_type === 'error') {
+      invoke('cortex_record_signal', {
+        prompt: chunk.content || 'error',
+        contextLabel: activeContextRef.current?.label || 'General',
+        isError: true,
+        activeSkills: activeContextRef.current?.skills || []
+      }).catch(() => {});
       delete currentAccumulatorRef.current[chunk.stream_id];
       delete lastProcessedSeqRef.current[chunk.stream_id];
     }
@@ -273,6 +279,31 @@ export function useAgentStream({
     if (typeof setPrompt === 'function') setPrompt('');
     setLoading(true);
     activeStreamIdRef.current = streamId;
+
+    // Hermes Cortex: logger silencioso de hábitos (0 tokens) + disparo de propuesta al cruzar umbral
+    invoke('cortex_record_signal', {
+      prompt: textToSend,
+      contextLabel: activeContext.label || 'General',
+      isError: false,
+      activeSkills: activeContext.skills || []
+    })
+      .then((proposal) => {
+        if (proposal) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'cortex_prop_' + Date.now(),
+              role: 'assistant',
+              cardType: 'cortex',
+              cardData: { proposals: [proposal], topHabits: [], totalEvents: proposal.hitCount },
+              content: '',
+              context: activeContext.label,
+              timestamp: timeStr
+            }
+          ]);
+        }
+      })
+      .catch(() => {});
 
     try {
       await invoke('execute_agent_prompt', {

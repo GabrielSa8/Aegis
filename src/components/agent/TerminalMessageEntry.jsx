@@ -3,7 +3,7 @@ import { Check, Copy, ShieldAlert } from 'lucide-react';
 import MarkdownViewer from '../MarkdownViewer';
 import ThoughtAccordion from './ThoughtAccordion';
 import { parseThoughtBlocks, renderAsciiProgress } from './agentHelpers';
-import { UsageQuotaCard, ModelInspectionCard, CreditsCard, SkillsCard } from './cards';
+import { UsageQuotaCard, ModelInspectionCard, CreditsCard, SkillsCard, CortexCard } from './cards';
 import { useSmoothStream } from './useSmoothStream';
 
 function TerminalMessageEntry({
@@ -22,9 +22,9 @@ function TerminalMessageEntry({
   // Suavizado dinámico de la respuesta mediante interpolación líquida rAF
   const smoothContent = useSmoothStream(m.content, isStreaming);
 
-  const { thoughts, cleanContent } = !isUser
+  const { thoughts, cleanContent, activeSkills = [] } = !isUser
     ? parseThoughtBlocks(smoothContent)
-    : { thoughts: '', cleanContent: m.content };
+    : { thoughts: '', cleanContent: m.content, activeSkills: [] };
 
   return (
     <div className={`zen-stream-entry ${isUser ? 'is-user' : 'is-assistant'}`}>
@@ -55,6 +55,31 @@ function TerminalMessageEntry({
               {m.effort === 'high' ? 'profundo' : 'flash'}
             </span>
           )}
+
+          {!isUser &&
+            activeSkills.map((sk) => (
+              <span
+                key={sk.name}
+                className="zen-meta-tag"
+                title={
+                  sk.read
+                    ? `Skill activa y leída (SKILL.md aplicado): ${sk.name}`
+                    : `Skill disponible en el perfil de contexto: ${sk.name}`
+                }
+                style={{
+                  color: sk.read ? 'var(--primary)' : 'var(--text-muted)',
+                  borderColor: sk.read
+                    ? 'color-mix(in srgb, var(--primary) 45%, transparent)'
+                    : 'var(--border-color)',
+                  background: sk.read
+                    ? 'color-mix(in srgb, var(--primary) 12%, transparent)'
+                    : 'transparent',
+                  fontWeight: sk.read ? 700 : 500
+                }}
+              >
+                🧩 {sk.name}{sk.read ? ' ✓' : ''}
+              </span>
+            ))}
 
           {!isUser && (
             <span className={`zen-meta-status ${m.isError ? 'status-err' : m.loading ? 'status-run' : 'status-ok'}`}>
@@ -125,6 +150,10 @@ function TerminalMessageEntry({
 
           {!isUser && m.cardType === 'skills' && (
             <SkillsCard cardData={m.cardData} />
+          )}
+
+          {!isUser && m.cardType === 'cortex' && (
+            <CortexCard cardData={m.cardData} />
           )}
 
           {/* Barra de progreso de inferencia durante ejecución */}

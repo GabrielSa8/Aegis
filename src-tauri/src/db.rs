@@ -161,6 +161,30 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             last_played TEXT,
             created_at TEXT NOT NULL
         );
+
+        -- Tablas v2.1.6: Hermes Cortex (Logger de Hábitos y Auto-Evolución)
+        CREATE TABLE IF NOT EXISTS cortex_habits (
+            topic TEXT PRIMARY KEY,
+            category TEXT NOT NULL,
+            hit_count INTEGER NOT NULL DEFAULT 1,
+            error_count INTEGER NOT NULL DEFAULT 0,
+            sample_prompt TEXT,
+            last_context TEXT,
+            updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS cortex_proposals (
+            id TEXT PRIMARY KEY,
+            topic TEXT NOT NULL,
+            title TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            skill_slug TEXT NOT NULL,
+            skill_markdown TEXT NOT NULL,
+            profile_note TEXT NOT NULL,
+            hit_count INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'dismissed'
+            created_at TEXT NOT NULL
+        );
         ",
     )
     .map_err(|e| format!("Error inicializando tablas SQLite: {}", e))?;

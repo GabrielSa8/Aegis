@@ -67,6 +67,30 @@ pub async fn send_agent_input(stream_id: String, input: String) -> Result<(), St
     }
 }
 
+/// Extrae nombres de skills cuyos `SKILL.md` fueron abiertos en un bloque JSON de tool_calls o parámetros.
+fn detect_read_skills(raw: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = raw;
+    while let Some(idx) = rest.find("/skills/") {
+        let after = &rest[idx + 8..];
+        if let Some(slash) = after.find('/') {
+            let name = &after[..slash];
+            let tail = &after[slash..];
+            if !name.is_empty()
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+                && tail.starts_with("/SKILL.md")
+                && !out.iter().any(|s| s == name)
+            {
+                out.push(name.to_string());
+            }
+        }
+        rest = after;
+    }
+    out
+}
+
 async fn extract_unseen_thoughts(
     home: &str,
     conv_id: &str,
@@ -93,11 +117,16 @@ async fn extract_unseen_thoughts(
             let step_idx = entry.get("step_index").and_then(|i| i.as_i64()).unwrap_or(-1);
             if step_idx >= 0 && !processed_steps.contains(&step_idx) {
                 let mut thinking_text = entry.get("thinking").and_then(|t| t.as_str()).map(|s| s.to_string());
+                let mut tool_calls_str = entry.get("tool_calls").map(|tc| tc.to_string());
 
                 let is_truncated = entry
                     .get("truncated_fields")
                     .and_then(|tf| tf.as_array())
-                    .map(|arr| arr.iter().any(|v| v.as_str() == Some("thinking")))
+                    .map(|arr| {
+                        arr.iter().any(|v| {
+                            v.as_str() == Some("thinking") || v.as_str() == Some("tool_calls")
+                        })
+                    })
                     .unwrap_or(false);
 
                 if is_truncated {
@@ -108,17 +137,32 @@ async fn extract_unseen_thoughts(
                                 if let Some(ft) = full_entry.get("thinking").and_then(|t| t.as_str()) {
                                     thinking_text = Some(ft.to_string());
                                 }
+                                if let Some(tc) = full_entry.get("tool_calls") {
+                                    tool_calls_str = Some(tc.to_string());
+                                }
                             }
                         }
                     }
                 }
 
+                let mut step_recorded = false;
                 if let Some(th) = thinking_text {
                     let trimmed = th.trim();
                     if !trimmed.is_empty() {
-                        processed_steps.insert(step_idx);
+                        step_recorded = true;
                         new_thoughts.push(trimmed.to_string());
                     }
+                }
+
+                if let Some(tc_raw) = tool_calls_str {
+                    for sk in detect_read_skills(&tc_raw) {
+                        step_recorded = true;
+                        new_thoughts.push(format!("🧩 [Skill Leída: {}]", sk));
+                    }
+                }
+
+                if step_recorded {
+                    processed_steps.insert(step_idx);
                 }
             }
         }
@@ -168,6 +212,21 @@ pub async fn execute_agent_prompt(
         .join(&ctx_name);
     let skills_dir = ctx_workspace.join(".agents/skills");
 
+    let mut mounted_skills: Vec<String> = Vec::new();
+    let mut auto_cortex_skills: Vec<String> = Vec::new();
+    let global_skills_dir = Path::new(&home).join(".agents/skills");
+    let prompt_norm: String = prompt
+        .chars()
+        .map(|c| match c {
+            'á' | 'Á' => 'a',
+            'é' | 'É' => 'e',
+            'í' | 'Í' => 'i',
+            'ó' | 'Ó' => 'o',
+            'ú' | 'Ú' => 'u',
+            _ => c.to_ascii_lowercase(),
+        })
+        .collect();
+
     if let Err(e) = std::fs::create_dir_all(&skills_dir) {
         eprintln!("Aegis Context Warning: no se pudo crear skills_dir: {}", e);
     } else {
@@ -180,9 +239,8 @@ pub async fn execute_agent_prompt(
             }
         }
 
-        // Crear symlinks únicamente para las skills seleccionadas en Aegis
+        // 1. Crear symlinks para las skills seleccionadas en el perfil de Aegis
         if let Some(ref selected_skills) = skills {
-            let global_skills_dir = Path::new(&home).join(".agents/skills");
             for skill in selected_skills {
                 let clean = skill.trim();
                 if clean.is_empty() {
@@ -193,8 +251,46 @@ pub async fn execute_agent_prompt(
                 if src.exists() {
                     #[cfg(unix)]
                     let _ = std::os::unix::fs::symlink(&src, &dst);
+                    if !mounted_skills.iter().any(|s| s == clean) {
+                        mounted_skills.push(clean.to_string());
+                    }
                 }
             }
+        }
+
+        // 2. Auto-montar skills `cortex-<tema>` si el prompt menciona `<tema>`
+        if let Ok(entries) = std::fs::read_dir(&global_skills_dir) {
+            for entry in entries.flatten() {
+                let fname = entry.file_name().to_string_lossy().to_string();
+                if let Some(topic) = fname.strip_prefix("cortex-") {
+                    let topic_space = topic.replace('-', " ");
+                    if !topic.is_empty()
+                        && (prompt_norm.contains(topic) || prompt_norm.contains(&topic_space))
+                    {
+                        let dst = skills_dir.join(&fname);
+                        if !dst.exists() {
+                            #[cfg(unix)]
+                            let _ = std::os::unix::fs::symlink(entry.path(), &dst);
+                        }
+                        if !auto_cortex_skills.contains(&fname) {
+                            auto_cortex_skills.push(fname);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Si se auto-activó alguna skill de Hermes Cortex para este tema, inyectar su síntesis
+    let mut effective_prompt = prompt.clone();
+    for c_skill in &auto_cortex_skills {
+        let md_path = global_skills_dir.join(c_skill).join("SKILL.md");
+        if let Ok(md_content) = std::fs::read_to_string(&md_path) {
+            effective_prompt.push_str(&format!(
+                "\n\n[Contexto de Skill Activa `{}`]:\n{}",
+                c_skill,
+                md_content.trim()
+            ));
         }
     }
 
@@ -211,13 +307,15 @@ pub async fn execute_agent_prompt(
     let ctx = AttemptCtx {
         app,
         agent_binary,
-        prompt,
+        prompt: effective_prompt,
         effort,
         ctx_workspace,
         context_path,
         home,
         stream_id: stream_id.clone(),
         chunk_seq: Arc::new(AtomicU64::new(0)),
+        mounted_skills,
+        auto_cortex_skills,
     };
     spawn_attempt(ctx, model, chain).await?;
     Ok(format!("Stream iniciado ({})", stream_id))
@@ -235,6 +333,8 @@ struct AttemptCtx {
     home: String,
     stream_id: String,
     chunk_seq: Arc<AtomicU64>,
+    mounted_skills: Vec<String>,
+    auto_cortex_skills: Vec<String>,
 }
 
 /// Detecta errores de cuota/rate-limit (429) del proveedor en un fragmento de salida.
@@ -357,6 +457,29 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     };
     let _ = app.emit("agent-stream", init_chunk);
 
+    // Emitir telemetría de skills montadas en el contexto y auto-activadas por Hermes Cortex
+    if !ctx.mounted_skills.is_empty() || !ctx.auto_cortex_skills.is_empty() {
+        let mut lines = Vec::new();
+        if !ctx.mounted_skills.is_empty() {
+            lines.push(format!("🧩 [Skills Montadas: {}]", ctx.mounted_skills.join(", ")));
+        }
+        for cs in &ctx.auto_cortex_skills {
+            lines.push(format!("🧩 [Skill Leída: {}]", cs));
+        }
+        let skills_chunk = AgentStreamChunk {
+            stream_id: stream_id.clone(),
+            seq: chunk_seq.fetch_add(1, Ordering::SeqCst),
+            event_type: "delta".into(),
+            content: format!("<thought>\n{}\n</thought>\n", lines.join("\n")),
+            step_type: Some("thinking".into()),
+            duration_seconds: None,
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        };
+        let _ = app.emit("agent-stream", skills_chunk);
+    }
+
     // Streaming de stdout
     let app_stdout = app.clone();
     let stream_id_stdout = stream_id.clone();
@@ -449,9 +572,20 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
                                             let output_str = tool_info.get("output").and_then(|o| o.as_str()).unwrap_or("");
                                             let duration = step.get("duration_seconds").and_then(|d| d.as_f64()).unwrap_or(0.0);
 
+                                            let read_skills = detect_read_skills(&params_str);
+                                            let skill_tag = if read_skills.is_empty() {
+                                                String::new()
+                                            } else {
+                                                read_skills
+                                                    .iter()
+                                                    .map(|s| format!("\n🧩 [Skill Leída: {}]", s))
+                                                    .collect::<Vec<_>>()
+                                                    .join("")
+                                            };
+
                                             let formatted_tool = format!(
-                                                "<thought>\n⚙️ [Herramienta: {} ({:.2}s)]\nParámetros:\n{}\n\nResultado:\n{}\n</thought>\n",
-                                                tool_name, duration, params_str.trim(), output_str.trim()
+                                                "<thought>\n⚙️ [Herramienta: {} ({:.2}s)]{}\nParámetros:\n{}\n\nResultado:\n{}\n</thought>\n",
+                                                tool_name, duration, skill_tag, params_str.trim(), output_str.trim()
                                             );
 
                                             let chunk = AgentStreamChunk {

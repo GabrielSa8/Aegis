@@ -31,6 +31,14 @@ export const COMMON_SYSTEM_COMMANDS = [
     desc: 'Inserta los cambios recientes sin confirmar del workspace',
     icon: 'GitCompare',
     category: 'Código'
+  },
+  {
+    id: 'cortex',
+    command: '/cortex',
+    label: 'Hermes Cortex (Auto-Evolución)',
+    desc: 'Inspecciona patrones de hábitos (0 tokens) y propuestas soberanas de skills',
+    icon: 'Brain',
+    category: 'Agente'
   }
 ];
 

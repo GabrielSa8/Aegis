@@ -1,4 +1,5 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Zap, Brain, Check, AlertCircle } from 'lucide-react';
 import { AVAILABLE_SKILLS } from './contextConstants';
 
@@ -8,6 +9,19 @@ export function ContextEditorPane({
   onToggleSkill,
   errorMsg
 }) {
+  const [skillsCatalog, setSkillsCatalog] = useState(AVAILABLE_SKILLS);
+
+  useEffect(() => {
+    invoke('get_skills_catalog')
+      .then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          const names = list.map((s) => s.name || s).filter(Boolean);
+          const merged = Array.from(new Set([...names, ...AVAILABLE_SKILLS])).sort();
+          setSkillsCatalog(merged);
+        }
+      })
+      .catch(() => {});
+  }, []);
   return (
     <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem', flex: 1 }}>
       {errorMsg && (
@@ -120,8 +134,8 @@ export function ContextEditorPane({
           <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)', margin: 0 }}>
             Skills Vinculadas al Perfil ({activeCtx.skills?.length || 0} activas)
           </label>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-            Catálogo local de 20 skills
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            Catálogo local de {skillsCatalog.length} skills
           </span>
         </div>
 
@@ -133,12 +147,12 @@ export function ContextEditorPane({
             maxHeight: '170px',
             overflowY: 'auto',
             padding: '8px',
-            background: 'rgba(0, 0, 0, 0.25)',
+            background: 'color-mix(in srgb, var(--bg-main) 65%, transparent)',
             border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-md)'
           }}
         >
-          {AVAILABLE_SKILLS.map((skill) => {
+          {skillsCatalog.map((skill) => {
             const isChecked = (activeCtx.skills || []).includes(skill);
             return (
               <button
@@ -149,9 +163,11 @@ export function ContextEditorPane({
                   fontSize: '0.7rem',
                   padding: '4px 8px',
                   borderRadius: 'var(--radius-sm)',
-                  background: isChecked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                  border: isChecked ? '1px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.08)',
-                  color: isChecked ? '#a7f3d0' : 'var(--text-muted)',
+                  background: isChecked
+                    ? 'color-mix(in srgb, var(--primary) 18%, transparent)'
+                    : 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
+                  border: isChecked ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                  color: isChecked ? 'var(--primary)' : 'var(--text-muted)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -159,7 +175,7 @@ export function ContextEditorPane({
                   transition: 'var(--transition)'
                 }}
               >
-                {isChecked && <Check size={11} color="#10b981" />}
+                {isChecked && <Check size={11} color="var(--primary)" />}
                 <span>{skill}</span>
               </button>
             );

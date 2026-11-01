@@ -10,7 +10,7 @@ export function renderAsciiProgress(percent, length = 18) {
 }
 
 export function parseThoughtBlocks(rawContent) {
-  if (!rawContent) return { thoughts: '', cleanContent: '' };
+  if (!rawContent) return { thoughts: '', cleanContent: '', activeSkills: [] };
 
   const thoughtRegex = /<(?:thought|thinking|think)>([\s\S]*?)<\/(?:thought|thinking|think)>/gi;
   const thoughts = [];
@@ -40,9 +40,39 @@ export function parseThoughtBlocks(rawContent) {
     cleanContent = cleanContent.slice(0, lastOpenIndex);
   }
 
+  const joinedThoughts = thoughts.join('\n\n');
+  const skillsMap = new Map();
+
+  // 1. Skills montadas en el workspace del contexto activo
+  const mountedRe = /\[Skills Montadas:\s*([^\]]+)\]/g;
+  let mMatch;
+  while ((mMatch = mountedRe.exec(joinedThoughts)) !== null) {
+    for (const raw of mMatch[1].split(',')) {
+      const s = raw.trim();
+      if (s && !skillsMap.has(s)) skillsMap.set(s, false);
+    }
+  }
+
+  // 2. Skills cuyo SKILL.md fue leído/invocado en el turno
+  const readRe = /\[Skill Leída:\s*([^\]]+)\]/g;
+  let rMatch;
+  while ((rMatch = readRe.exec(joinedThoughts)) !== null) {
+    const s = rMatch[1].trim();
+    if (s) skillsMap.set(s, true);
+  }
+
+  const pathRe = /\/skills\/([a-zA-Z0-9_-]+)\/SKILL\.md/g;
+  let pMatch;
+  while ((pMatch = pathRe.exec(joinedThoughts)) !== null) {
+    skillsMap.set(pMatch[1], true);
+  }
+
+  const activeSkills = Array.from(skillsMap.entries()).map(([name, read]) => ({ name, read }));
+
   return {
-    thoughts: thoughts.join('\n\n'),
-    cleanContent: cleanContent.trim()
+    thoughts: joinedThoughts,
+    cleanContent: cleanContent.trim(),
+    activeSkills
   };
 }
 

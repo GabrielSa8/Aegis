@@ -6,6 +6,7 @@ mod finances;
 mod sentinel;
 mod leisure;
 mod config;
+mod cortex;
 
 #[tauri::command]
 fn ping() -> String {
@@ -95,7 +96,10 @@ pub fn run() {
             leisure::sqlite_get_custom_games,
             leisure::sqlite_save_custom_game,
             leisure::sqlite_delete_custom_game,
-            leisure::sqlite_record_game_session
+            leisure::sqlite_record_game_session,
+            cortex::cortex_record_signal,
+            cortex::cortex_get_telemetry,
+            cortex::cortex_resolve_proposal
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
