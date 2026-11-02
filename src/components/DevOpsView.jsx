@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { 
   useDevOps, 
+  useModpacks,
   DevOpsHeader, 
   GitFleetSection, 
   SkillsArsenalSection, 
@@ -9,6 +10,8 @@ import {
   RepoInspectorModal, 
   AddRepoModal,
   RepoDeleteModal,
+  ModpackManagerModal,
+  InstallSkillModal,
   DevOpsToast 
 } from './devops';
 
@@ -29,6 +32,13 @@ export default function DevOpsView() {
     activeSkillModal,
     skillMarkdown,
     loadingSkillMd,
+    isInstallSkillModalOpen,
+    setIsInstallSkillModalOpen,
+    handleOpenSkill,
+    handleCloseSkill,
+    handleSaveSkillMarkdown,
+    handleInstallSkill,
+    handleDeleteSkill,
     activeRepoInspector,
     repoDetails,
     loadingRepoDetails,
@@ -40,8 +50,6 @@ export default function DevOpsView() {
     isAddRepoModalOpen,
     setIsAddRepoModalOpen,
     fetchDevOpsData,
-    handleOpenSkill,
-    handleCloseSkill,
     handleOpenRepoInspector,
     handleCloseRepoInspector,
     handleFetchRepo,
@@ -56,6 +64,21 @@ export default function DevOpsView() {
     handleCreateFleetRepo,
     showToast
   } = useDevOps();
+
+  // Gestión de Modpacks / Meta-Skills
+  const {
+    modpacks,
+    isModpackModalOpen,
+    editingModpack,
+    handleToggleMaster,
+    handleToggleSubSkill,
+    handleSaveModpack,
+    handleDeleteModpack,
+    handleActivateInAgent,
+    handleOpenCreateModal,
+    handleOpenEditModal,
+    handleCloseModal: handleCloseModpackModal
+  } = useModpacks({ showToast });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.85rem', overflowY: 'auto' }}>
@@ -100,19 +123,47 @@ export default function DevOpsView() {
         actionLoading={actionLoading}
       />
 
-      {/* ⚡ Arsenal Activo (~/.agents/skills/) */}
+      {/* ⚡ Arsenal Activo & Modpacks (~/.agents/skills/) */}
       <SkillsArsenalSection
         skills={filteredSkills}
+        modpacks={modpacks}
         skillSearch={skillSearch}
         onOpenSkill={handleOpenSkill}
+        onDeleteSkill={handleDeleteSkill}
+        onToggleModpackMaster={handleToggleMaster}
+        onToggleModpackSubSkill={handleToggleSubSkill}
+        onActivateModpackInAgent={handleActivateInAgent}
+        onOpenInstallModal={() => setIsInstallSkillModalOpen(true)}
+        onOpenCreateModpackModal={handleOpenCreateModal}
+        onEditModpack={handleOpenEditModal}
+        onDeleteModpack={handleDeleteModpack}
       />
 
-      {/* 📖 MODAL: Lector de Manual SKILL.md */}
+      {/* 📖 MODAL: Lector y Editor de Manual SKILL.md */}
       <SkillManualModal
         skill={activeSkillModal}
         markdown={skillMarkdown}
         loading={loadingSkillMd}
         onClose={handleCloseSkill}
+        onSave={handleSaveSkillMarkdown}
+        onDelete={handleDeleteSkill}
+      />
+
+      {/* 📦 MODAL: Gestor de Modpacks (Crear / Editar) */}
+      <ModpackManagerModal
+        isOpen={isModpackModalOpen}
+        onClose={handleCloseModpackModal}
+        initialData={editingModpack}
+        availableSkills={skills}
+        onSave={handleSaveModpack}
+      />
+
+      {/* 📥 MODAL: Instalar Skill del Ecosistema */}
+      <InstallSkillModal
+        isOpen={isInstallSkillModalOpen}
+        onClose={() => setIsInstallSkillModalOpen(false)}
+        onInstall={handleInstallSkill}
+        actionLoading={actionLoading}
       />
 
       {/* ➕ MODAL: Gestor de Repositorios (Vincular / Crear) */}

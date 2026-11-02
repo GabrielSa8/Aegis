@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useSkillLifecycle } from './useSkillLifecycle';
 
 /**
- * useDevOps — Custom Hook para telemetría DevOps, flota Git y arsenal de skills.
- * Aísla toda la lógica de estado y llamadas Tauri IPC de la capa de presentación.
+ * useDevOps — Custom Hook orquestador para telemetría DevOps, flota Git y habilidades.
+ * Arquitectura modular estricta alineada a la Doctrina Anti-Monolitos.
  */
 export function useDevOps() {
   const [repos, setRepos] = useState([]);
@@ -12,26 +13,19 @@ export function useDevOps() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filtro de búsqueda para habilidades
   const [skillSearch, setSkillSearch] = useState('');
 
-  // Modal de lectura de SKILL.md
-  const [activeSkillModal, setActiveSkillModal] = useState(null);
-  const [skillMarkdown, setSkillMarkdown] = useState('');
-  const [loadingSkillMd, setLoadingSkillMd] = useState(false);
-
-  // Modal / Drawer de Inspector de Repositorio en Vivo
+  // Inspector de Repositorio en Vivo
   const [activeRepoInspector, setActiveRepoInspector] = useState(null);
   const [repoDetails, setRepoDetails] = useState(null);
   const [loadingRepoDetails, setLoadingRepoDetails] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState('diff'); // 'diff' | 'commits'
-  const [actionLoading, setActionLoading] = useState(null); // 'fetch-<id>' | 'pull-<id>' | 'branch-<id>'
+  const [inspectorTab, setInspectorTab] = useState('diff');
+  const [actionLoading, setActionLoading] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedHash, setCopiedHash] = useState(null);
 
-  // Modal para Añadir / Crear Repositorios
+  // Modales de Repos
   const [isAddRepoModalOpen, setIsAddRepoModalOpen] = useState(false);
-  // Modal para Desvincular / Eliminar Repositorio
   const [repoToDelete, setRepoToDelete] = useState(null);
 
   const showToast = useCallback((msg, isError = false) => {
@@ -62,26 +56,13 @@ export function useDevOps() {
     fetchDevOpsData();
   }, [fetchDevOpsData]);
 
-  const handleOpenSkill = useCallback(async (skill) => {
-    setActiveSkillModal(skill);
-    setLoadingSkillMd(true);
-    try {
-      const content = await invoke('read_skill_markdown', { skillId: skill.id });
-      setSkillMarkdown(content);
-    } catch (err) {
-      console.error('Error leyendo manual SKILL.md:', err);
-      setSkillMarkdown(`Error al leer manual: ${err}`);
-    } finally {
-      setLoadingSkillMd(false);
-    }
-  }, []);
+  // Hook desacoplado para ciclo de vida de skills
+  const skillLifecycle = useSkillLifecycle({
+    showToast,
+    onSkillsChanged: fetchDevOpsData
+  });
 
-  const handleCloseSkill = useCallback(() => {
-    setActiveSkillModal(null);
-    setSkillMarkdown('');
-  }, []);
-
-  // Abrir inspector detallado de repositorio
+  // Operaciones de Inspector de Repositorio
   const handleOpenRepoInspector = useCallback(async (repo) => {
     setActiveRepoInspector(repo);
     setLoadingRepoDetails(true);
@@ -102,7 +83,6 @@ export function useDevOps() {
     setRepoDetails(null);
   }, []);
 
-  // Ejecutar git fetch
   const handleFetchRepo = useCallback(async (repo, e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     setActionLoading(`fetch-${repo.id}`);
@@ -122,7 +102,6 @@ export function useDevOps() {
     }
   }, [showToast, fetchDevOpsData, activeRepoInspector]);
 
-  // Ejecutar git pull
   const handlePullRepo = useCallback(async (repo, e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     setActionLoading(`pull-${repo.id}`);
@@ -142,7 +121,6 @@ export function useDevOps() {
     }
   }, [showToast, fetchDevOpsData, activeRepoInspector]);
 
-  // Cambiar de rama local (git checkout)
   const handleSwitchBranch = useCallback(async (branchName) => {
     if (!activeRepoInspector || !branchName) return;
     setActionLoading(`branch-${activeRepoInspector.id}`);
@@ -163,7 +141,6 @@ export function useDevOps() {
     }
   }, [activeRepoInspector, showToast, fetchDevOpsData]);
 
-  // Abrir repo en Cursor, VS Code o Terminal
   const handleOpenInEditor = useCallback(async (repo, editor, e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     try {
@@ -176,7 +153,6 @@ export function useDevOps() {
     }
   }, [showToast]);
 
-  // Copiar hash de commit
   const handleCopyHash = useCallback((hash, e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     navigator.clipboard.writeText(hash);
@@ -184,7 +160,6 @@ export function useDevOps() {
     setTimeout(() => setCopiedHash(null), 2000);
   }, []);
 
-  // Vincular repo local existente
   const handleAddFleetRepo = useCallback(async ({ name, path, role, warning }) => {
     setActionLoading('add-repo');
     try {
@@ -201,7 +176,6 @@ export function useDevOps() {
     }
   }, [showToast, fetchDevOpsData]);
 
-  // Desvincular / Eliminar repo de la flota (seguro o destructivo)
   const handleDeleteRepo = useCallback(async (repo, { deleteLocal, deleteRemote }) => {
     setActionLoading(`delete-${repo.id}`);
     try {
@@ -224,7 +198,6 @@ export function useDevOps() {
     }
   }, [showToast, activeRepoInspector]);
 
-  // Crear e inicializar nuevo repositorio
   const handleCreateFleetRepo = useCallback(async ({ parentDir, name, role, warning, initCommit, createGithub, isPrivate }) => {
     setActionLoading('create-repo');
     try {
@@ -266,22 +239,19 @@ export function useDevOps() {
     skillSearch,
     setSkillSearch,
     filteredSkills,
-    activeSkillModal,
-    skillMarkdown,
-    loadingSkillMd,
     activeRepoInspector,
     repoDetails,
     loadingRepoDetails,
     inspectorTab,
     setInspectorTab,
-    actionLoading,
+    actionLoading: actionLoading || skillLifecycle.actionLoading,
     toastMessage,
     copiedHash,
     isAddRepoModalOpen,
     setIsAddRepoModalOpen,
+    repoToDelete,
+    setRepoToDelete,
     fetchDevOpsData,
-    handleOpenSkill,
-    handleCloseSkill,
     handleOpenRepoInspector,
     handleCloseRepoInspector,
     handleFetchRepo,
@@ -290,10 +260,19 @@ export function useDevOps() {
     handleOpenInEditor,
     handleCopyHash,
     handleAddFleetRepo,
-    repoToDelete,
-    setRepoToDelete,
     handleDeleteRepo,
     handleCreateFleetRepo,
+    // Delegados de Skills
+    activeSkillModal: skillLifecycle.activeSkillModal,
+    skillMarkdown: skillLifecycle.skillMarkdown,
+    loadingSkillMd: skillLifecycle.loadingSkillMd,
+    isInstallSkillModalOpen: skillLifecycle.isInstallSkillModalOpen,
+    setIsInstallSkillModalOpen: skillLifecycle.setIsInstallSkillModalOpen,
+    handleOpenSkill: skillLifecycle.handleOpenSkill,
+    handleCloseSkill: skillLifecycle.handleCloseSkill,
+    handleSaveSkillMarkdown: skillLifecycle.handleSaveSkillMarkdown,
+    handleInstallSkill: skillLifecycle.handleInstallSkill,
+    handleDeleteSkill: skillLifecycle.handleDeleteSkill,
     showToast
   };
 }

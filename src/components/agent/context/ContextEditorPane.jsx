@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Zap, Brain, Check, AlertCircle } from 'lucide-react';
+import { Zap, Brain, AlertCircle } from 'lucide-react';
 import { AVAILABLE_SKILLS } from './contextConstants';
+import { ContextSkillsSection } from './ContextSkillsSection';
 
 export function ContextEditorPane({
   activeCtx,
@@ -22,6 +23,7 @@ export function ContextEditorPane({
       })
       .catch(() => {});
   }, []);
+
   return (
     <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem', flex: 1 }}>
       {errorMsg && (
@@ -89,14 +91,14 @@ export function ContextEditorPane({
               gap: '8px',
               padding: '8px 12px',
               borderRadius: 'var(--radius-md)',
-              background: activeCtx.effort === 'low' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+              background: activeCtx.effort === 'low' ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'rgba(255, 255, 255, 0.02)',
               border: activeCtx.effort === 'low' ? '1px solid var(--primary)' : '1px solid var(--border-color)',
               cursor: 'pointer',
               color: 'var(--text-high)',
               textAlign: 'left'
             }}
           >
-            <Zap size={16} color="#10b981" />
+            <Zap size={16} color="var(--primary)" />
             <div>
               <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>⚡ Flash (Rápido)</div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Consultas y comandos ágiles</div>
@@ -112,14 +114,14 @@ export function ContextEditorPane({
               gap: '8px',
               padding: '8px 12px',
               borderRadius: 'var(--radius-md)',
-              background: activeCtx.effort === 'high' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255, 255, 255, 0.02)',
-              border: activeCtx.effort === 'high' ? '1px solid #a855f7' : '1px solid var(--border-color)',
+              background: activeCtx.effort === 'high' ? 'color-mix(in srgb, var(--secondary) 15%, transparent)' : 'rgba(255, 255, 255, 0.02)',
+              border: activeCtx.effort === 'high' ? '1px solid var(--secondary)' : '1px solid var(--border-color)',
               cursor: 'pointer',
               color: 'var(--text-high)',
               textAlign: 'left'
             }}
           >
-            <Brain size={16} color="#a855f7" />
+            <Brain size={16} color="var(--secondary)" />
             <div>
               <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>🧠 Profundo (Thinking)</div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Análisis exhaustivo y refactor</div>
@@ -128,60 +130,13 @@ export function ContextEditorPane({
         </div>
       </div>
 
-      {/* Skills Vinculadas */}
-      <div className="form-group" style={{ margin: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)', margin: 0 }}>
-            Skills Vinculadas al Perfil ({activeCtx.skills?.length || 0} activas)
-          </label>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-            Catálogo local de {skillsCatalog.length} skills
-          </span>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '6px',
-            maxHeight: '170px',
-            overflowY: 'auto',
-            padding: '8px',
-            background: 'color-mix(in srgb, var(--bg-main) 65%, transparent)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)'
-          }}
-        >
-          {skillsCatalog.map((skill) => {
-            const isChecked = (activeCtx.skills || []).includes(skill);
-            return (
-              <button
-                key={skill}
-                type="button"
-                onClick={() => onToggleSkill(skill)}
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '4px 8px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: isChecked
-                    ? 'color-mix(in srgb, var(--primary) 18%, transparent)'
-                    : 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
-                  border: isChecked ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                  color: isChecked ? 'var(--primary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'var(--transition)'
-                }}
-              >
-                {isChecked && <Check size={11} color="var(--primary)" />}
-                <span>{skill}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Selector Dual de Habilidades: Por Modpack o Sueltas */}
+      <ContextSkillsSection
+        skillsCatalog={skillsCatalog}
+        activeSkills={activeCtx.skills || []}
+        onToggleSkill={onToggleSkill}
+        onUpdateActive={onUpdateActive}
+      />
     </div>
   );
 }

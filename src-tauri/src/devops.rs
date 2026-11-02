@@ -621,6 +621,73 @@ pub fn read_skill_markdown(skill_id: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn save_skill_markdown(skill_id: String, content: String) -> Result<(), String> {
+    if skill_id.contains('/') || skill_id.contains('\\') || skill_id.contains("..") {
+        return Err("Identificador de habilidad inválido".into());
+    }
+
+    let p = get_skills_dir().join(&skill_id).join("SKILL.md");
+    if !p.exists() {
+        return Err(format!("Manual SKILL.md no encontrado para {}", skill_id));
+    }
+
+    fs::write(p, content).map_err(|e| format!("Error guardando SKILL.md: {}", e))
+}
+
+#[tauri::command]
+pub fn delete_agent_skill(skill_id: String) -> Result<(), String> {
+    if skill_id.contains('/') || skill_id.contains('\\') || skill_id.contains("..") || skill_id.trim().is_empty() {
+        return Err("Identificador de habilidad inválido".into());
+    }
+
+    let skills_dir = get_skills_dir();
+    let p = skills_dir.join(&skill_id);
+    if !p.exists() || !p.is_dir() {
+        return Err(format!("Directorio de habilidad '{}' no encontrado", skill_id));
+    }
+
+    // Doble verificación: debe contener SKILL.md
+    if !p.join("SKILL.md").exists() {
+        return Err("La carpeta no contiene un archivo SKILL.md válido".into());
+    }
+
+    fs::remove_dir_all(&p).map_err(|e| format!("Error eliminando habilidad: {}", e))
+}
+
+#[tauri::command]
+pub fn install_agent_skill(package_name: String) -> Result<String, String> {
+    let clean_pkg = package_name.trim();
+    if clean_pkg.is_empty() || clean_pkg.contains(';') || clean_pkg.contains('&') || clean_pkg.contains('|') || clean_pkg.contains('>') || clean_pkg.contains('<') {
+        return Err("Nombre o repositorio de paquete inválido".into());
+    }
+
+    let skills_dir = get_skills_dir();
+    if !skills_dir.exists() {
+        let _ = fs::create_dir_all(&skills_dir);
+    }
+
+    let output = Command::new("npx")
+        .args(["-y", "skills", "add", clean_pkg, "-y"])
+        .current_dir(&skills_dir)
+        .output()
+        .map_err(|e| format!("Fallo ejecutando npx skills add: {}", e))?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(if stdout.trim().is_empty() {
+            format!("Habilidad '{}' instalada con éxito", clean_pkg)
+        } else {
+            stdout.trim().to_string()
+        })
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let combined = if stderr.trim().is_empty() { stdout } else { stderr };
+        Err(format!("Error instalando habilidad: {}", combined.trim()))
+    }
+}
+
+#[tauri::command]
 pub fn get_github_workflow_runs(repo_path: String) -> Result<Vec<GitHubWorkflowRun>, String> {
     let p = Path::new(&repo_path);
     if !p.exists() {
