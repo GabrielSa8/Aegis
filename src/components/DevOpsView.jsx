@@ -3,8 +3,10 @@ import { AlertCircle } from 'lucide-react';
 import { 
   useDevOps, 
   useModpacks,
+  useDevDaemons,
   DevOpsHeader, 
   GitFleetSection, 
+  DevDaemonsSection,
   SkillsArsenalSection, 
   SkillManualModal, 
   RepoInspectorModal, 
@@ -12,6 +14,8 @@ import {
   RepoDeleteModal,
   ModpackManagerModal,
   InstallSkillModal,
+  CreateContainerModal,
+  ContainerLogsModal,
   DevOpsToast 
 } from './devops';
 
@@ -80,6 +84,34 @@ export default function DevOpsView() {
     handleCloseModal: handleCloseModpackModal
   } = useModpacks({ showToast });
 
+  // Radar de Daemons y Servicios de Desarrollo (Fase 4.4)
+  const {
+    daemons,
+    loading: loadingDaemons,
+    refreshing: refreshingDaemons,
+    actionLoadingId: daemonActionLoadingId,
+    isCreateContainerOpen,
+    setIsCreateContainerOpen,
+    activeLogsContainer,
+    containerLogs,
+    loadingLogs,
+    fetchDaemons,
+    handleRestartAdb,
+    handleToggleContainer,
+    handleCreateContainer,
+    handleDeleteContainer,
+    handleOpenLogs,
+    handleRefreshLogs,
+    handleCloseLogs,
+    handleStopProcess,
+    handleOpenUrl
+  } = useDevDaemons({ showToast });
+
+  const handleGlobalRefresh = () => {
+    fetchDevOpsData();
+    fetchDaemons(true);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.85rem', overflowY: 'auto' }}>
       {/* 🧭 Barra Superior de Control DevOps */}
@@ -88,8 +120,8 @@ export default function DevOpsView() {
         skillCount={skills.length}
         skillSearch={skillSearch}
         onSearchChange={setSkillSearch}
-        onRefresh={fetchDevOpsData}
-        refreshing={refreshing}
+        onRefresh={handleGlobalRefresh}
+        refreshing={refreshing || refreshingDaemons}
       />
 
       {/* ⚠️ Mensaje de error si falla */}
@@ -121,6 +153,22 @@ export default function DevOpsView() {
         onRequestDelete={setRepoToDelete}
         onOpenAddModal={() => setIsAddRepoModalOpen(true)}
         actionLoading={actionLoading}
+      />
+
+      {/* 📡 Radar de Daemons y Servicios de Desarrollo (Fase 4.4) */}
+      <DevDaemonsSection
+        daemons={daemons}
+        loading={loadingDaemons}
+        refreshing={refreshingDaemons}
+        actionLoadingId={daemonActionLoadingId}
+        onRefresh={fetchDaemons}
+        onRestartAdb={handleRestartAdb}
+        onToggleContainer={handleToggleContainer}
+        onOpenCreateContainer={() => setIsCreateContainerOpen(true)}
+        onViewContainerLogs={handleOpenLogs}
+        onDeleteContainer={handleDeleteContainer}
+        onStopProcess={handleStopProcess}
+        onOpenUrl={handleOpenUrl}
       />
 
       {/* ⚡ Arsenal Activo & Modpacks (~/.agents/skills/) */}
@@ -200,6 +248,23 @@ export default function DevOpsView() {
         onCopyHash={handleCopyHash}
         actionLoading={actionLoading}
         showToast={showToast}
+      />
+
+      {/* 🐳 MODAL: Crear Contenedor Podman/Docker */}
+      <CreateContainerModal
+        isOpen={isCreateContainerOpen}
+        onClose={() => setIsCreateContainerOpen(false)}
+        onCreate={handleCreateContainer}
+        actionLoadingId={daemonActionLoadingId}
+      />
+
+      {/* 📋 MODAL: Visor de Logs de Contenedor */}
+      <ContainerLogsModal
+        container={activeLogsContainer}
+        logs={containerLogs}
+        loading={loadingLogs}
+        onClose={handleCloseLogs}
+        onRefresh={handleRefreshLogs}
       />
 
       {/* 🔔 Toast Flotante de Notificaciones */}

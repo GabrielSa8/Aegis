@@ -1189,3 +1189,579 @@ pub fn delete_fleet_repo(
 
     Ok(messages.join(". "))
 }
+
+// ==========================================
+// FASE 4.4: RADAR DE DAEMONS Y SERVICIOS DEV
+// ==========================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DevAdbDevice {
+    pub id: String,
+    pub state: String,
+    pub model: String,
+    pub is_emulator: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DevAdbStatus {
+    pub server_running: bool,
+    pub binary_path: Option<String>,
+    pub devices: Vec<DevAdbDevice>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DevContainer {
+    pub id: String,
+    pub name: String,
+    pub image: String,
+    pub status: String,
+    pub state: String,
+    pub ports: String,
+    pub runtime: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DevListeningPort {
+    pub port: u16,
+    pub protocol: String,
+    pub pid: Option<u32>,
+    pub process_name: String,
+    pub cmdline: String,
+    pub is_system: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DevDaemonsRadar {
+    pub adb: DevAdbStatus,
+    pub containers: Vec<DevContainer>,
+    pub listening_ports: Vec<DevListeningPort>,
+    pub sam_cli_installed: bool,
+    pub sam_version: Option<String>,
+    pub container_runtime: Option<String>,
+}
+
+fn resolve_adb_binary() -> Option<PathBuf> {
+    if let Ok(out) = Command::new("which").arg("adb").output() {
+        if out.status.success() {
+            let p = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !p.is_empty() {
+                return Some(PathBuf::from(p));
+            }
+        }
+    }
+
+    if let Ok(ah) = std::env::var("ANDROID_HOME") {
+        let p = PathBuf::from(ah).join("platform-tools").join("adb");
+        if p.exists() {
+            return Some(p);
+        }
+    }
+
+    let default_sdk = expand_tilde("~/Android/Sdk/platform-tools/adb");
+    let p = PathBuf::from(default_sdk);
+    if p.exists() {
+        return Some(p);
+    }
+
+    None
+}
+
+fn get_adb_telemetry(adb_bin: &Option<PathBuf>) -> DevAdbStatus {
+    let Some(bin) = adb_bin else {
+        return DevAdbStatus {
+            server_running: false,
+            binary_path: None,
+            devices: Vec::new(),
+        };
+    };
+
+    let bin_str = bin.to_string_lossy().to_string();
+    let out = Command::new(&bin_str).args(["devices", "-l"]).output();
+
+    match out {
+        Ok(res) if res.status.success() => {
+            let stdout = String::from_utf8_lossy(&res.stdout);
+            let mut devices = Vec::new();
+            for line in stdout.lines() {
+                let l = line.trim();
+                if l.is_empty() || l.starts_with("List of devices") || l.starts_with('*') {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split_whitespace().collect();
+                if parts.is_empty() {
+                    continue;
+                }
+                let id = parts[0].to_string();
+                let state = parts.get(1).unwrap_or(&"unknown").to_string();
+                let is_emulator = id.starts_with("emulator-");
+                let mut model = id.clone();
+                for part in parts.iter().skip(2) {
+                    if let Some(m) = part.strip_prefix("model:") {
+                        model = m.replace('_', " ");
+                        break;
+                    }
+                }
+                devices.push(DevAdbDevice {
+                    id,
+                    state,
+                    model,
+                    is_emulator,
+                });
+            }
+            DevAdbStatus {
+                server_running: true,
+                binary_path: Some(bin_str),
+                devices,
+            }
+        }
+        _ => DevAdbStatus {
+            server_running: false,
+            binary_path: Some(bin_str),
+            devices: Vec::new(),
+        },
+    }
+}
+
+#[derive(Deserialize)]
+struct PodmanPortItem {
+    #[serde(default)]
+    container_port: Option<u16>,
+    #[serde(default)]
+    host_port: Option<u16>,
+    #[serde(default)]
+    protocol: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PodmanContainerItem {
+    #[serde(rename = "Id")]
+    id: String,
+    #[serde(rename = "Names")]
+    names: Option<Vec<String>>,
+    #[serde(rename = "Image")]
+    image: String,
+    #[serde(rename = "State")]
+    state: Option<String>,
+    #[serde(rename = "Status")]
+    status: Option<String>,
+    #[serde(rename = "Ports")]
+    ports: Option<Vec<PodmanPortItem>>,
+}
+
+fn get_containers_telemetry() -> (Option<String>, Vec<DevContainer>) {
+    let runtimes = ["podman", "docker"];
+    for runtime in runtimes {
+        if let Ok(out) = Command::new(runtime).args(["ps", "-a", "--format", "json"]).output() {
+            if out.status.success() {
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                if let Ok(items) = serde_json::from_str::<Vec<PodmanContainerItem>>(&stdout) {
+                    let mut list = Vec::new();
+                    for item in items {
+                        let short_id = if item.id.len() > 12 {
+                            item.id[..12].to_string()
+                        } else {
+                            item.id
+                        };
+                        let name = item.names
+                            .and_then(|n| n.into_iter().next())
+                            .unwrap_or_else(|| short_id.clone());
+                        let name_clean = name.trim_start_matches('/').to_string();
+
+                        let mut port_str = String::new();
+                        if let Some(ports) = item.ports {
+                            let mut port_entries = Vec::new();
+                            for p in ports {
+                                if let (Some(hp), Some(cp)) = (p.host_port, p.container_port) {
+                                    let proto = p.protocol.unwrap_or_else(|| "tcp".into());
+                                    port_entries.push(format!("{}:{}->{}", hp, cp, proto));
+                                }
+                            }
+                            port_str = port_entries.join(", ");
+                        }
+
+                        list.push(DevContainer {
+                            id: short_id,
+                            name: name_clean,
+                            image: item.image,
+                            status: item.status.unwrap_or_else(|| "Unknown".into()),
+                            state: item.state.unwrap_or_else(|| "unknown".into()),
+                            ports: port_str,
+                            runtime: runtime.to_string(),
+                        });
+                    }
+                    return (Some(runtime.to_string()), list);
+                }
+            }
+        }
+    }
+    (None, Vec::new())
+}
+
+fn get_dev_listening_ports() -> Vec<DevListeningPort> {
+    let mut ports: Vec<DevListeningPort> = Vec::new();
+
+    // 1. Escaneo con lsof para procesos de usuario y desarrollo activos
+    if let Ok(out) = Command::new("lsof").args(["-iTCP", "-sTCP:LISTEN", "-P", "-n"]).output() {
+        if out.status.success() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            for line in stdout.lines().skip(1) {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() < 9 {
+                    continue;
+                }
+                let proc_name = parts[0].to_string();
+                let pid = parts[1].parse::<u32>().ok();
+                let name_col = parts[8];
+                let port_num = if let Some(idx) = name_col.rfind(':') {
+                    name_col[idx + 1..].parse::<u16>().ok()
+                } else {
+                    None
+                };
+
+                let Some(port) = port_num else { continue; };
+
+                let mut cmdline = proc_name.clone();
+                if let Some(p) = pid {
+                    if let Ok(bytes) = fs::read(format!("/proc/{}/cmdline", p)) {
+                        let args: Vec<String> = bytes
+                            .split(|&b| b == 0)
+                            .filter(|s| !s.is_empty())
+                            .map(|s| String::from_utf8_lossy(s).to_string())
+                            .collect();
+                        if !args.is_empty() {
+                            cmdline = args.join(" ");
+                        }
+                    }
+                }
+
+                if !ports.iter().any(|p| p.port == port && p.pid == pid) {
+                    ports.push(DevListeningPort {
+                        port,
+                        protocol: "tcp".into(),
+                        pid,
+                        process_name: proc_name,
+                        cmdline,
+                        is_system: false,
+                    });
+                }
+            }
+        }
+    }
+
+    // 2. Escaneo con ss -tlnp para capturar sockets de sistema y complementar
+    if let Ok(out) = Command::new("ss").args(["-tlnp"]).output() {
+        if out.status.success() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            for line in stdout.lines().skip(1) {
+                let cols: Vec<&str> = line.split_whitespace().collect();
+                if cols.len() < 4 {
+                    continue;
+                }
+                let local_addr = cols[3];
+                let port_part = if let Some(last_colon) = local_addr.rfind(':') {
+                    &local_addr[last_colon + 1..]
+                } else {
+                    continue;
+                };
+
+                let Ok(port_num) = port_part.parse::<u16>() else { continue; };
+
+                // Si ya fue capturado con PID válido vía lsof, evitar duplicados
+                if ports.iter().any(|p| p.port == port_num && p.pid.is_some()) {
+                    continue;
+                }
+
+                let rest = cols[4..].join(" ");
+                let mut pid: Option<u32> = None;
+                let mut proc_name = String::new();
+
+                if let Some(users_idx) = rest.find("users:((") {
+                    let proc_str = &rest[users_idx + 9..];
+                    if let Some(first_quote) = proc_str.find('"') {
+                        if let Some(end_quote) = proc_str[first_quote + 1..].find('"') {
+                            proc_name = proc_str[first_quote + 1..first_quote + 1 + end_quote].to_string();
+                        }
+                    }
+                    if let Some(pid_idx) = proc_str.find("pid=") {
+                        let pid_str = &proc_str[pid_idx + 4..];
+                        let num_str: String = pid_str.chars().take_while(|c| c.is_ascii_digit()).collect();
+                        if let Ok(p) = num_str.parse::<u32>() {
+                            pid = Some(p);
+                        }
+                    }
+                }
+
+                let is_system = pid.is_none() || port_num < 1024;
+                if proc_name.is_empty() {
+                    proc_name = match port_num {
+                        53 => "systemd-resolved (DNS)".into(),
+                        5355 => "systemd-resolve (LLMNR)".into(),
+                        631 => "cupsd (Impresión)".into(),
+                        22 => "sshd (SSH)".into(),
+                        _ if port_num < 1024 => format!("Servicio Sistema (:{}", port_num),
+                        _ => format!("Daemon Local (:{}", port_num),
+                    };
+                }
+
+                let mut cmdline = proc_name.clone();
+                if let Some(p) = pid {
+                    if let Ok(bytes) = fs::read(format!("/proc/{}/cmdline", p)) {
+                        let args: Vec<String> = bytes
+                            .split(|&b| b == 0)
+                            .filter(|s| !s.is_empty())
+                            .map(|s| String::from_utf8_lossy(s).to_string())
+                            .collect();
+                        if !args.is_empty() {
+                            cmdline = args.join(" ");
+                        }
+                    }
+                }
+
+                if !ports.iter().any(|p| p.port == port_num && p.pid == pid) {
+                    ports.push(DevListeningPort {
+                        port: port_num,
+                        protocol: "tcp".into(),
+                        pid,
+                        process_name: proc_name,
+                        cmdline,
+                        is_system,
+                    });
+                }
+            }
+        }
+    }
+
+    ports.sort_by_key(|p| (p.is_system, p.port));
+    ports
+}
+
+fn check_sam_cli() -> (bool, Option<String>) {
+    let sam_paths = ["sam", "/usr/local/bin/sam"];
+    for p in sam_paths {
+        if let Ok(out) = Command::new(p).arg("--version").output() {
+            if out.status.success() {
+                let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                return (true, Some(v));
+            }
+        }
+    }
+    (false, None)
+}
+
+#[tauri::command]
+pub fn get_dev_daemons_status() -> Result<DevDaemonsRadar, String> {
+    let adb_bin = resolve_adb_binary();
+    let adb = get_adb_telemetry(&adb_bin);
+    let (container_runtime, containers) = get_containers_telemetry();
+    let listening_ports = get_dev_listening_ports();
+    let (sam_cli_installed, sam_version) = check_sam_cli();
+
+    Ok(DevDaemonsRadar {
+        adb,
+        containers,
+        listening_ports,
+        sam_cli_installed,
+        sam_version,
+        container_runtime,
+    })
+}
+
+#[tauri::command]
+pub fn restart_adb_server() -> Result<String, String> {
+    let adb_bin = resolve_adb_binary().ok_or("ADB no está instalado o no fue encontrado en el sistema")?;
+    let bin_str = adb_bin.to_string_lossy().to_string();
+
+    let _ = Command::new(&bin_str).arg("kill-server").output();
+    let out = Command::new(&bin_str)
+        .arg("start-server")
+        .output()
+        .map_err(|e| format!("Error iniciando servidor ADB: {}", e))?;
+
+    if out.status.success() {
+        Ok("Servidor ADB reiniciado exitosamente".to_string())
+    } else {
+        let err = String::from_utf8_lossy(&out.stderr);
+        Err(format!("Error reiniciando ADB: {}", err.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn toggle_container_state(container_id: String, action: String) -> Result<String, String> {
+    if action != "start" && action != "stop" && action != "restart" {
+        return Err("Acción de contenedor inválida".into());
+    }
+
+    let runtimes = ["podman", "docker"];
+    let mut last_err = String::new();
+
+    for runtime in runtimes {
+        let out = Command::new(runtime)
+            .args([&action, &container_id])
+            .output();
+
+        match out {
+            Ok(res) if res.status.success() => {
+                return Ok(format!("Contenedor {} ejecutó '{}' vía {}", container_id, action, runtime));
+            }
+            Ok(res) => {
+                last_err = String::from_utf8_lossy(&res.stderr).trim().to_string();
+            }
+            Err(e) => {
+                last_err = e.to_string();
+            }
+        }
+    }
+
+    Err(format!("No se pudo ejecutar '{}' en contenedor {}: {}", action, container_id, last_err))
+}
+
+#[tauri::command]
+pub fn create_container(
+    name: String,
+    image: String,
+    port_mapping: Option<String>,
+    env_vars: Option<Vec<String>>,
+) -> Result<String, String> {
+    let clean_name = name.trim().to_string();
+    let clean_image = image.trim().to_string();
+
+    if clean_name.is_empty() || clean_image.is_empty() {
+        return Err("Nombre e imagen de contenedor son obligatorios".into());
+    }
+
+    let runtimes = ["podman", "docker"];
+    let mut args: Vec<String> = vec!["run".into(), "-d".into(), "--name".into(), clean_name.clone()];
+
+    if let Some(port) = port_mapping {
+        let p = port.trim();
+        if !p.is_empty() {
+            args.push("-p".into());
+            args.push(p.into());
+        }
+    }
+
+    if let Some(envs) = env_vars {
+        for env in envs {
+            let e = env.trim();
+            if !e.is_empty() {
+                args.push("-e".into());
+                args.push(e.into());
+            }
+        }
+    }
+
+    args.push(clean_image);
+
+    let mut last_err = String::new();
+    for runtime in runtimes {
+        let out = Command::new(runtime).args(&args).output();
+        match out {
+            Ok(res) if res.status.success() => {
+                let id = String::from_utf8_lossy(&res.stdout).trim().to_string();
+                let short_id = if id.len() > 12 { &id[..12] } else { &id };
+                return Ok(format!("Contenedor '{}' ({}) creado vía {}", clean_name, short_id, runtime));
+            }
+            Ok(res) => {
+                last_err = String::from_utf8_lossy(&res.stderr).trim().to_string();
+            }
+            Err(e) => {
+                last_err = e.to_string();
+            }
+        }
+    }
+
+    Err(format!("Error creando contenedor '{}': {}", clean_name, last_err))
+}
+
+#[tauri::command]
+pub fn delete_container(container_id: String, force: bool) -> Result<String, String> {
+    let clean_id = container_id.trim();
+    if clean_id.is_empty() {
+        return Err("ID de contenedor no válido".into());
+    }
+
+    let runtimes = ["podman", "docker"];
+    let mut args = vec!["rm"];
+    if force {
+        args.push("-f");
+    }
+    args.push(clean_id);
+
+    let mut last_err = String::new();
+    for runtime in runtimes {
+        let out = Command::new(runtime).args(&args).output();
+        match out {
+            Ok(res) if res.status.success() => {
+                return Ok(format!("Contenedor {} eliminado vía {}", clean_id, runtime));
+            }
+            Ok(res) => {
+                last_err = String::from_utf8_lossy(&res.stderr).trim().to_string();
+            }
+            Err(e) => {
+                last_err = e.to_string();
+            }
+        }
+    }
+
+    Err(format!("Error eliminando contenedor {}: {}", clean_id, last_err))
+}
+
+#[tauri::command]
+pub fn get_container_logs(container_id: String, tail: Option<u32>) -> Result<String, String> {
+    let clean_id = container_id.trim();
+    if clean_id.is_empty() {
+        return Err("ID de contenedor no válido".into());
+    }
+
+    let tail_str = tail.unwrap_or(100).to_string();
+    let runtimes = ["podman", "docker"];
+    let mut last_err = String::new();
+
+    for runtime in runtimes {
+        let out = Command::new(runtime)
+            .args(["logs", "--tail", &tail_str, clean_id])
+            .output();
+
+        match out {
+            Ok(res) if res.status.success() => {
+                let stdout = String::from_utf8_lossy(&res.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&res.stderr).to_string();
+                let combined = if stderr.is_empty() {
+                    stdout
+                } else if stdout.is_empty() {
+                    stderr
+                } else {
+                    format!("{}\n{}", stdout, stderr)
+                };
+                return Ok(combined);
+            }
+            Ok(res) => {
+                last_err = String::from_utf8_lossy(&res.stderr).trim().to_string();
+            }
+            Err(e) => {
+                last_err = e.to_string();
+            }
+        }
+    }
+
+    Err(format!("Error obteniendo logs de {}: {}", clean_id, last_err))
+}
+
+#[tauri::command]
+pub fn stop_dev_server_process(pid: u32) -> Result<String, String> {
+    if pid <= 1 {
+        return Err("Operación cancelada: No se permite detener procesos raíz del sistema".into());
+    }
+
+    let out = Command::new("kill")
+        .args(["-15", &pid.to_string()])
+        .output()
+        .map_err(|e| format!("Error al enviar señal SIGTERM: {}", e))?;
+
+    if out.status.success() {
+        Ok(format!("Proceso PID {} detenido correctamente", pid))
+    } else {
+        let err = String::from_utf8_lossy(&out.stderr);
+        Err(format!("Error al detener PID {}: {}", pid, err.trim()))
+    }
+}
