@@ -9,4 +9,8 @@ export { SkillManualModal } from './SkillManualModal';
 export { RepoDiffViewer } from './RepoDiffViewer';
 export { RepoCommitsViewer } from './RepoCommitsViewer';
 export { RepoInspectorModal } from './RepoInspectorModal';
+export { RepoCiCdViewer } from './RepoCiCdViewer';
+export { RepoPrViewer } from './RepoPrViewer';
+export { RepoRemoteMetaBar } from './RepoRemoteMetaBar';
+export { useGitHubTelemetry } from './useGitHubTelemetry';
 export { DevOpsToast } from './DevOpsToast';

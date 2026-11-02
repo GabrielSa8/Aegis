@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   FolderGit2, 
   GitBranch, 
@@ -7,15 +7,21 @@ import {
   Code2, 
   Terminal, 
   FileDiff, 
-  GitCommit 
+  GitCommit,
+  PlayCircle,
+  GitPullRequest
 } from 'lucide-react';
 import { ModalWrapper, TabsBar, TacticalButton } from '../ui';
 import { RepoDiffViewer } from './RepoDiffViewer';
 import { RepoCommitsViewer } from './RepoCommitsViewer';
+import { RepoCiCdViewer } from './RepoCiCdViewer';
+import { RepoPrViewer } from './RepoPrViewer';
+import { RepoRemoteMetaBar } from './RepoRemoteMetaBar';
+import { useGitHubTelemetry } from './useGitHubTelemetry';
 
 /**
  * RepoInspectorModal — Modal táctico avanzado para inspección en vivo de repositorios Git.
- * Permite alternar ramas, ejecutar fetch/pull, auditar diffs y examinar commits recientes.
+ * Ahora integrado con Fase 4.2: CI/CD (GitHub Actions), Pull Requests y metadata remota vía gh CLI.
  */
 export function RepoInspectorModal({
   repo,
@@ -30,8 +36,38 @@ export function RepoInspectorModal({
   onOpenInEditor,
   copiedHash,
   onCopyHash,
-  actionLoading
+  actionLoading,
+  showToast
 }) {
+  const {
+    runs,
+    prs,
+    meta,
+    loadingCiCd,
+    loadingPrs,
+    triggeringWorkflow,
+    errorCiCd,
+    errorPrs,
+    fetchCiCdRuns,
+    fetchPullRequests,
+    fetchRemoteMeta,
+    triggerWorkflow
+  } = useGitHubTelemetry(repo, showToast);
+
+  // Cargar metadata de GitHub al abrir modal o al cambiar de pestaña remota
+  useEffect(() => {
+    if (repo?.path) {
+      fetchRemoteMeta();
+    }
+  }, [repo?.path, fetchRemoteMeta]);
+
+  useEffect(() => {
+    if (repo?.path) {
+      if (inspectorTab === 'cicd') fetchCiCdRuns();
+      if (inspectorTab === 'prs') fetchPullRequests();
+    }
+  }, [repo?.path, inspectorTab, fetchCiCdRuns, fetchPullRequests]);
+
   if (!repo) return null;
 
   const isFetching = actionLoading === `fetch-${repo.id}`;
@@ -48,6 +84,16 @@ export function RepoInspectorModal({
       id: 'commits',
       label: `Historial Commits (${repoDetails?.recent_commits?.length ?? 0})`,
       icon: <GitCommit size={12} />
+    },
+    {
+      id: 'cicd',
+      label: `GitHub CI/CD (${runs.length})`,
+      icon: <PlayCircle size={12} />
+    },
+    {
+      id: 'prs',
+      label: `Pull Requests (${prs.length})`,
+      icon: <GitPullRequest size={12} />
     }
   ];
 
@@ -56,10 +102,13 @@ export function RepoInspectorModal({
       isOpen={Boolean(repo)}
       onClose={onClose}
       title={`${repo.name} — ${repo.role}`}
-      icon={<FolderGit2 size={16} color="var(--primary, #10b981)" />}
-      maxWidth="940px"
-      bodyStyle={{ height: '76vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+      icon={<FolderGit2 size={16} color="var(--primary)" />}
+      maxWidth="980px"
+      bodyStyle={{ height: '78vh', display: 'flex', flexDirection: 'column', padding: 0 }}
     >
+      {/* Franja superior de metadata remota */}
+      <RepoRemoteMetaBar meta={meta} />
+
       {/* Barra de Controles Rápidos y Selector de Rama */}
       <div style={{
         display: 'flex',
@@ -73,7 +122,7 @@ export function RepoInspectorModal({
       }}>
         {/* Selector de Rama Local */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <GitBranch size={13} color="var(--primary, #10b981)" />
+          <GitBranch size={13} color="var(--primary)" />
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Rama:</span>
           <select
             value={repoDetails?.branch || repo.branch}
@@ -83,7 +132,7 @@ export function RepoInspectorModal({
               background: 'rgba(0, 0, 0, 0.35)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              color: '#a7f3d0',
+              color: 'var(--text-high)',
               fontSize: '0.72rem',
               padding: '2px 8px',
               fontWeight: 700,
@@ -102,7 +151,7 @@ export function RepoInspectorModal({
           <TacticalButton
             variant="secondary"
             size="xs"
-            icon={<RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />}
+            icon={<RefreshCw size={11} className={isFetching ? 'spin-slow' : ''} />}
             onClick={() => onFetch(repo)}
             disabled={isFetching}
             title="Ejecutar git fetch"
@@ -113,11 +162,10 @@ export function RepoInspectorModal({
           <TacticalButton
             variant="secondary"
             size="xs"
-            icon={<Download size={11} className={isPulling ? 'animate-spin' : ''} />}
+            icon={<Download size={11} className={isPulling ? 'spin-slow' : ''} />}
             onClick={() => onPull(repo)}
             disabled={isPulling}
             title="Ejecutar git pull"
-            style={{ color: '#38bdf8' }}
           >
             Pull
           </TacticalButton>
@@ -128,7 +176,6 @@ export function RepoInspectorModal({
             icon={<Code2 size={12} />}
             onClick={() => onOpenInEditor(repo, 'cursor')}
             title="Abrir en Cursor"
-            style={{ color: '#38bdf8' }}
           >
             Cursor
           </TacticalButton>
@@ -160,20 +207,36 @@ export function RepoInspectorModal({
         />
       </div>
 
-      {/* Contenido Dinámico: Diff o Commits */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-        {loading ? (
+      {/* Contenido Dinámico: Diff, Commits, CI/CD, PRs */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: inspectorTab === 'diff' || inspectorTab === 'commits' ? '1rem' : 0 }}>
+        {loading && (inspectorTab === 'diff' || inspectorTab === 'commits') ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px', color: 'var(--text-muted)', gap: '8px' }}>
-            <RefreshCw size={16} className="animate-spin" />
+            <RefreshCw size={16} className="spin-slow" />
             <span>Inspeccionando diff y ramas de Git...</span>
           </div>
         ) : inspectorTab === 'diff' ? (
           <RepoDiffViewer repo={repo} repoDetails={repoDetails} />
-        ) : (
+        ) : inspectorTab === 'commits' ? (
           <RepoCommitsViewer
             commits={repoDetails?.recent_commits}
             copiedHash={copiedHash}
             onCopyHash={onCopyHash}
+          />
+        ) : inspectorTab === 'cicd' ? (
+          <RepoCiCdViewer
+            runs={runs}
+            loading={loadingCiCd}
+            error={errorCiCd}
+            onRefresh={fetchCiCdRuns}
+            onTrigger={triggerWorkflow}
+            triggering={triggeringWorkflow}
+          />
+        ) : (
+          <RepoPrViewer
+            prs={prs}
+            loading={loadingPrs}
+            error={errorPrs}
+            onRefresh={fetchPullRequests}
           />
         )}
       </div>

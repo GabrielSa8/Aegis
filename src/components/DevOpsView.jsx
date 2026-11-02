@@ -44,7 +44,8 @@ export default function DevOpsView() {
     handlePullRepo,
     handleSwitchBranch,
     handleOpenInEditor,
-    handleCopyHash
+    handleCopyHash,
+    showToast
   } = useDevOps();
 
   return (
@@ -118,6 +119,7 @@ export default function DevOpsView() {
         copiedHash={copiedHash}
         onCopyHash={handleCopyHash}
         actionLoading={actionLoading}
+        showToast={showToast}
       />
 
       {/* 🔔 Toast Flotante de Notificaciones */}

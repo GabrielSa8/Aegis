@@ -41,6 +41,44 @@ pub struct SkillInfo {
     pub file_count: usize,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitHubWorkflowRun {
+    pub id: u64,
+    pub name: String,
+    pub workflow_name: String,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub branch: String,
+    pub created_at: String,
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitHubPullRequest {
+    pub number: u64,
+    pub title: String,
+    pub state: String,
+    pub head_ref: String,
+    pub base_ref: String,
+    pub author: String,
+    pub is_draft: bool,
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GitHubRepoRemoteMeta {
+    pub name: String,
+    pub owner: String,
+    pub is_private: bool,
+    pub default_branch: String,
+    pub description: Option<String>,
+    pub url: String,
+    pub commit_status_state: Option<String>,
+    pub commit_status_context: Option<String>,
+    pub commit_status_desc: Option<String>,
+    pub commit_status_target_url: Option<String>,
+}
+
 fn inspect_git_repo(id: &str, name: &str, path_str: &str, role: &str, warning: Option<&str>) -> GitRepoStatus {
     let p = Path::new(path_str);
     if !p.exists() {
@@ -538,4 +576,201 @@ pub fn read_skill_markdown(skill_id: String) -> Result<String, String> {
     }
 
     fs::read_to_string(p).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_github_workflow_runs(repo_path: String) -> Result<Vec<GitHubWorkflowRun>, String> {
+    let p = Path::new(&repo_path);
+    if !p.exists() {
+        return Err("Ruta de repositorio no encontrada".into());
+    }
+
+    let output = Command::new("gh")
+        .args([
+            "run", "list",
+            "--json", "databaseId,name,workflowName,status,conclusion,headBranch,createdAt,url",
+            "--limit", "15"
+        ])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Fallo ejecutando gh run list: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Error gh: {}", err_msg.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let raw_runs: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .unwrap_or_default();
+
+    let mut runs = Vec::new();
+    for item in raw_runs {
+        runs.push(GitHubWorkflowRun {
+            id: item.get("databaseId").and_then(|v| v.as_u64()).unwrap_or(0),
+            name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            workflow_name: item.get("workflowName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            status: item.get("status").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+            conclusion: item.get("conclusion").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            branch: item.get("headBranch").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            created_at: item.get("createdAt").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            url: item.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        });
+    }
+
+    Ok(runs)
+}
+
+#[tauri::command]
+pub fn get_github_pull_requests(repo_path: String) -> Result<Vec<GitHubPullRequest>, String> {
+    let p = Path::new(&repo_path);
+    if !p.exists() {
+        return Err("Ruta de repositorio no encontrada".into());
+    }
+
+    let output = Command::new("gh")
+        .args([
+            "pr", "list",
+            "--json", "number,title,state,headRefName,baseRefName,author,isDraft,url",
+            "--limit", "15"
+        ])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Fallo ejecutando gh pr list: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Error gh: {}", err_msg.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let raw_prs: Vec<serde_json::Value> = serde_json::from_str(&stdout)
+        .unwrap_or_default();
+
+    let mut prs = Vec::new();
+    for item in raw_prs {
+        let author_login = item.get("author")
+            .and_then(|a| a.get("login"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("desconocido")
+            .to_string();
+
+        prs.push(GitHubPullRequest {
+            number: item.get("number").and_then(|v| v.as_u64()).unwrap_or(0),
+            title: item.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            state: item.get("state").and_then(|v| v.as_str()).unwrap_or("OPEN").to_string(),
+            head_ref: item.get("headRefName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            base_ref: item.get("baseRefName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            author: author_login,
+            is_draft: item.get("isDraft").and_then(|v| v.as_bool()).unwrap_or(false),
+            url: item.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        });
+    }
+
+    Ok(prs)
+}
+
+#[tauri::command]
+pub fn get_github_repo_metadata(repo_path: String) -> Result<GitHubRepoRemoteMeta, String> {
+    let p = Path::new(&repo_path);
+    if !p.exists() {
+        return Err("Ruta de repositorio no encontrada".into());
+    }
+
+    let output = Command::new("gh")
+        .args([
+            "repo", "view",
+            "--json", "name,owner,isPrivate,defaultBranchRef,description,url"
+        ])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Fallo ejecutando gh repo view: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Error gh: {}", err_msg.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let raw: serde_json::Value = serde_json::from_str(&stdout)
+        .map_err(|e| format!("Fallo parseando repo view: {}", e))?;
+
+    let name = raw.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let owner = raw.get("owner").and_then(|o| o.get("login")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let is_private = raw.get("isPrivate").and_then(|v| v.as_bool()).unwrap_or(false);
+    let default_branch = raw.get("defaultBranchRef").and_then(|b| b.get("name")).and_then(|v| v.as_str()).unwrap_or("main").to_string();
+    let description = raw.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let url = raw.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    // Intentar obtener el último commit status via API (e.g., Vercel, CI checks)
+    let mut commit_status_state = None;
+    let mut commit_status_context = None;
+    let mut commit_status_desc = None;
+    let mut commit_status_target_url = None;
+
+    if let Ok(head_sha_out) = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(p)
+        .output()
+    {
+        if head_sha_out.status.success() {
+            let sha = String::from_utf8_lossy(&head_sha_out.stdout).trim().to_string();
+            if !sha.is_empty() && !name.is_empty() && !owner.is_empty() {
+                let status_endpoint = format!("repos/{}/{}/commits/{}/status", owner, name, sha);
+                if let Ok(status_out) = Command::new("gh")
+                    .args(["api", &status_endpoint])
+                    .current_dir(p)
+                    .output()
+                {
+                    if status_out.status.success() {
+                        let status_json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&status_out.stdout))
+                            .unwrap_or_default();
+                        
+                        commit_status_state = status_json.get("state").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        if let Some(statuses) = status_json.get("statuses").and_then(|v| v.as_array()) {
+                            if let Some(first) = statuses.first() {
+                                commit_status_context = first.get("context").and_then(|v| v.as_str()).map(|s| s.to_string());
+                                commit_status_desc = first.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
+                                commit_status_target_url = first.get("target_url").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(GitHubRepoRemoteMeta {
+        name,
+        owner,
+        is_private,
+        default_branch,
+        description,
+        url,
+        commit_status_state,
+        commit_status_context,
+        commit_status_desc,
+        commit_status_target_url,
+    })
+}
+
+#[tauri::command]
+pub fn trigger_github_workflow(repo_path: String, workflow_file: String) -> Result<String, String> {
+    let p = Path::new(&repo_path);
+    if !p.exists() {
+        return Err("Ruta de repositorio no encontrada".into());
+    }
+
+    let output = Command::new("gh")
+        .args(["workflow", "run", &workflow_file])
+        .current_dir(p)
+        .output()
+        .map_err(|e| format!("Fallo ejecutando gh workflow run: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Error gh: {}", err_msg.trim()));
+    }
+
+    Ok(format!("Workflow {} disparado con éxito", workflow_file))
 }
