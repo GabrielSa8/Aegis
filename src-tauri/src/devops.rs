@@ -2,6 +2,48 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+fn expand_tilde(p: &str) -> String {
+    if p.starts_with("~/") || p == "~" {
+        if let Ok(home) = std::env::var("HOME") {
+            return p.replacen('~', &home, 1);
+        }
+    }
+    p.to_string()
+}
+
+fn is_safe_repo_deletion_path(p: &Path) -> Result<PathBuf, String> {
+    if !p.exists() {
+        return Err("La ruta no existe en disco".into());
+    }
+    let canonical = p.canonicalize().map_err(|e| format!("Error resolviendo ruta: {}", e))?;
+
+    let home = std::env::var("HOME").unwrap_or_default();
+    let home_path = PathBuf::from(&home);
+
+    if canonical == PathBuf::from("/")
+        || canonical == home_path
+        || canonical == home_path.join("Proyects")
+        || canonical == home_path.join("projects")
+        || canonical == home_path.join("Documentos")
+        || canonical == home_path.join("Downloads")
+        || canonical == home_path.join("Desktop")
+    {
+        return Err("Operación cancelada: No se permite eliminar un directorio base del sistema".into());
+    }
+
+    if !canonical.join(".git").exists() {
+        return Err("Operación cancelada: La carpeta no contiene un repositorio Git (.git no encontrado)".into());
+    }
+
+    let canon_str = canonical.to_string_lossy().to_lowercase();
+    if canon_str.contains("tadu") || canon_str.contains("tadú") {
+        return Err("Operación prohibida: TADÚ es un repositorio protegido y no puede ser destruido".into());
+    }
+
+    Ok(canonical)
+}
 
 fn get_skills_dir() -> PathBuf {
     if let Ok(home) = std::env::var("HOME") {
@@ -773,4 +815,310 @@ pub fn trigger_github_workflow(repo_path: String, workflow_file: String) -> Resu
     }
 
     Ok(format!("Workflow {} disparado con éxito", workflow_file))
+}
+
+#[tauri::command]
+pub fn add_fleet_repo(
+    name: String,
+    path: String,
+    role: String,
+    warning: Option<String>,
+) -> Result<GitRepoStatus, String> {
+    let clean_path = expand_tilde(path.trim());
+    let p = Path::new(&clean_path);
+    if clean_path.is_empty() {
+        return Err("La ruta del repositorio no puede estar vacía".into());
+    }
+    if !p.exists() {
+        return Err(format!("La ruta '{}' no existe en disco", clean_path));
+    }
+    if !p.join(".git").exists() {
+        return Err("La carpeta especificada no contiene un repositorio Git (.git no encontrado)".into());
+    }
+
+    let mut cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    if cfg.git_repos.iter().any(|r| r.path == clean_path) {
+        return Err("Este repositorio ya se encuentra registrado en la flota".into());
+    }
+
+    let id = format!(
+        "repo_{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    );
+    let clean_name = if name.trim().is_empty() {
+        p.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("Repositorio")
+            .to_string()
+    } else {
+        name.trim().to_string()
+    };
+    let clean_role = if role.trim().is_empty() {
+        "Proyecto Local".to_string()
+    } else {
+        role.trim().to_string()
+    };
+    let clean_warning = warning.and_then(|w| {
+        let trimmed = w.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+
+    cfg.git_repos.push(crate::config::GitRepoConfig {
+        id: id.clone(),
+        name: clean_name.clone(),
+        path: clean_path.clone(),
+        role: clean_role.clone(),
+        warning: clean_warning.clone(),
+    });
+
+    crate::config::save_aegis_config(cfg)?;
+
+    Ok(inspect_git_repo(
+        &id,
+        &clean_name,
+        &clean_path,
+        &clean_role,
+        clean_warning.as_deref(),
+    ))
+}
+
+#[tauri::command]
+pub fn remove_fleet_repo(id: String) -> Result<(), String> {
+    let mut cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let initial_len = cfg.git_repos.len();
+    cfg.git_repos.retain(|r| r.id != id);
+    if cfg.git_repos.len() == initial_len {
+        return Err("Repositorio no encontrado en la configuración".into());
+    }
+    crate::config::save_aegis_config(cfg)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn create_fleet_repo(
+    parent_dir: String,
+    name: String,
+    role: String,
+    warning: Option<String>,
+    init_commit: bool,
+    create_github: bool,
+    is_private: bool,
+) -> Result<GitRepoStatus, String> {
+    let clean_name = name.trim();
+    if clean_name.is_empty()
+        || clean_name.contains('/')
+        || clean_name.contains('\\')
+        || clean_name.starts_with('.')
+    {
+        return Err("Nombre de repositorio inválido (no usar barras ni comenzar con punto)".into());
+    }
+
+    let clean_parent = expand_tilde(parent_dir.trim());
+    let parent_path = Path::new(&clean_parent);
+    if !parent_path.exists() {
+        return Err(format!("El directorio padre '{}' no existe", clean_parent));
+    }
+
+    let target_path = parent_path.join(clean_name);
+    if target_path.exists() {
+        if let Ok(entries) = fs::read_dir(&target_path) {
+            if entries.count() > 0 {
+                return Err(format!(
+                    "El directorio de destino '{}' ya existe y contiene archivos",
+                    target_path.display()
+                ));
+            }
+        }
+    } else {
+        fs::create_dir_all(&target_path).map_err(|e| format!("Error creando carpeta: {}", e))?;
+    }
+
+    // git init
+    let init_out = Command::new("git")
+        .args(["init", "-b", "main"])
+        .current_dir(&target_path)
+        .output()
+        .map_err(|e| format!("Error ejecutando git init: {}", e))?;
+
+    if !init_out.status.success() {
+        let _ = Command::new("git")
+            .arg("init")
+            .current_dir(&target_path)
+            .output();
+        let _ = Command::new("git")
+            .args(["checkout", "-B", "main"])
+            .current_dir(&target_path)
+            .output();
+    }
+
+    let clean_role = if role.trim().is_empty() {
+        "Proyecto Local".to_string()
+    } else {
+        role.trim().to_string()
+    };
+
+    // Commit inicial si se solicitó
+    if init_commit {
+        let readme_content = format!(
+            "# {}\n\n> {}\n\nRepositorio gestionado bajo Aegis OS.\n",
+            clean_name, clean_role
+        );
+        let _ = fs::write(target_path.join("README.md"), readme_content);
+        let _ = Command::new("git")
+            .args(["add", "README.md"])
+            .current_dir(&target_path)
+            .output();
+        let _ = Command::new("git")
+            .args(["commit", "-m", "feat: initial commit"])
+            .current_dir(&target_path)
+            .output();
+    }
+
+    // GitHub remoto si se solicitó
+    let mut gh_warning = None;
+    if create_github {
+        let privacy_arg = if is_private { "--private" } else { "--public" };
+        let gh_out = Command::new("gh")
+            .args([
+                "repo",
+                "create",
+                clean_name,
+                "--source=.",
+                "--remote=origin",
+                privacy_arg,
+                "--push",
+            ])
+            .current_dir(&target_path)
+            .output();
+
+        match gh_out {
+            Ok(output) => {
+                if !output.status.success() {
+                    let err = String::from_utf8_lossy(&output.stderr);
+                    gh_warning = Some(format!("Repo local creado, pero gh falló: {}", err.trim()));
+                }
+            }
+            Err(e) => {
+                gh_warning = Some(format!("Repo local creado, pero no se pudo invocar gh: {}", e));
+            }
+        }
+    }
+
+    let target_str = target_path.to_string_lossy().to_string();
+    let id = format!(
+        "repo_{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    );
+    let clean_warning = warning.and_then(|w| {
+        let trimmed = w.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+
+    let mut cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    cfg.git_repos.push(crate::config::GitRepoConfig {
+        id: id.clone(),
+        name: clean_name.to_string(),
+        path: target_str.clone(),
+        role: clean_role.clone(),
+        warning: clean_warning.clone(),
+    });
+    let _ = crate::config::save_aegis_config(cfg);
+
+    let mut status = inspect_git_repo(
+        &id,
+        clean_name,
+        &target_str,
+        &clean_role,
+        clean_warning.as_deref(),
+    );
+    if let Some(gw) = gh_warning {
+        status.warning = Some(match status.warning {
+            Some(w) => format!("{} | {}", w, gw),
+            None => gw,
+        });
+    }
+
+    Ok(status)
+}
+
+#[tauri::command]
+pub fn delete_fleet_repo(
+    id: String,
+    delete_local_disk: bool,
+    delete_github_remote: bool,
+) -> Result<String, String> {
+    let mut cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let repo_opt = cfg.git_repos.iter().find(|r| r.id == id).cloned();
+    let repo = match repo_opt {
+        Some(r) => r,
+        None => return Err("Repositorio no encontrado en la flota".into()),
+    };
+
+    let mut messages = Vec::new();
+
+    // 1. Si se solicita borrar remoto de GitHub
+    if delete_github_remote {
+        let clean_path = expand_tilde(&repo.path);
+        let p = Path::new(&clean_path);
+        if p.exists() {
+            let view_out = Command::new("gh")
+                .args(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+                .current_dir(p)
+                .output();
+
+            if let Ok(out) = view_out {
+                if out.status.success() {
+                    let repo_slug = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                    if !repo_slug.is_empty() {
+                        let del_out = Command::new("gh")
+                            .args(["repo", "delete", &repo_slug, "--yes"])
+                            .current_dir(p)
+                            .output();
+
+                        match del_out {
+                            Ok(res) if res.status.success() => {
+                                messages.push(format!("Repo remoto '{}' eliminado de GitHub", repo_slug));
+                            }
+                            Ok(res) => {
+                                let err = String::from_utf8_lossy(&res.stderr);
+                                messages.push(format!("Aviso GitHub: {}", err.trim()));
+                            }
+                            Err(e) => {
+                                messages.push(format!("Aviso: No se pudo invocar gh repo delete: {}", e));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Si se solicita borrar carpeta física en disco
+    if delete_local_disk {
+        let clean_path = expand_tilde(&repo.path);
+        let safe_path = is_safe_repo_deletion_path(Path::new(&clean_path))?;
+        fs::remove_dir_all(&safe_path).map_err(|e| format!("Error eliminando carpeta local: {}", e))?;
+        messages.push("Archivos locales eliminados de disco".to_string());
+    }
+
+    // 3. Desvincular de config de Aegis
+    cfg.git_repos.retain(|r| r.id != id);
+    crate::config::save_aegis_config(cfg)?;
+    messages.push(format!("'{}' desvinculado de la flota", repo.name));
+
+    Ok(messages.join(". "))
 }

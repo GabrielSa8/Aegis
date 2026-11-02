@@ -14,3 +14,5 @@ export { RepoPrViewer } from './RepoPrViewer';
 export { RepoRemoteMetaBar } from './RepoRemoteMetaBar';
 export { useGitHubTelemetry } from './useGitHubTelemetry';
 export { DevOpsToast } from './DevOpsToast';
+export { AddRepoModal } from './AddRepoModal';
+export { RepoDeleteModal } from './RepoDeleteModal';

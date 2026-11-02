@@ -29,6 +29,11 @@ export function useDevOps() {
   const [toastMessage, setToastMessage] = useState(null);
   const [copiedHash, setCopiedHash] = useState(null);
 
+  // Modal para Añadir / Crear Repositorios
+  const [isAddRepoModalOpen, setIsAddRepoModalOpen] = useState(false);
+  // Modal para Desvincular / Eliminar Repositorio
+  const [repoToDelete, setRepoToDelete] = useState(null);
+
   const showToast = useCallback((msg, isError = false) => {
     setToastMessage({ text: msg, isError });
     setTimeout(() => setToastMessage(null), 3500);
@@ -57,7 +62,6 @@ export function useDevOps() {
     fetchDevOpsData();
   }, [fetchDevOpsData]);
 
-  // Cargar manual SKILL.md al hacer clic en una skill
   const handleOpenSkill = useCallback(async (skill) => {
     setActiveSkillModal(skill);
     setLoadingSkillMd(true);
@@ -180,6 +184,71 @@ export function useDevOps() {
     setTimeout(() => setCopiedHash(null), 2000);
   }, []);
 
+  // Vincular repo local existente
+  const handleAddFleetRepo = useCallback(async ({ name, path, role, warning }) => {
+    setActionLoading('add-repo');
+    try {
+      const newRepoStatus = await invoke('add_fleet_repo', { name, path, role, warning });
+      setRepos(prev => [...prev, newRepoStatus]);
+      showToast(`Repositorio '${newRepoStatus.name}' vinculado a la flota`);
+      await fetchDevOpsData();
+    } catch (err) {
+      console.error('Error vinculando repositorio:', err);
+      showToast(String(err), true);
+      throw err;
+    } finally {
+      setActionLoading(null);
+    }
+  }, [showToast, fetchDevOpsData]);
+
+  // Desvincular / Eliminar repo de la flota (seguro o destructivo)
+  const handleDeleteRepo = useCallback(async (repo, { deleteLocal, deleteRemote }) => {
+    setActionLoading(`delete-${repo.id}`);
+    try {
+      const res = await invoke('delete_fleet_repo', {
+        id: repo.id,
+        deleteLocalDisk: Boolean(deleteLocal),
+        deleteGithubRemote: Boolean(deleteRemote)
+      });
+      setRepos(prev => prev.filter(r => r.id !== repo.id));
+      showToast(res || `'${repo.name}' procesado`);
+      setRepoToDelete(null);
+      if (activeRepoInspector && activeRepoInspector.id === repo.id) {
+        setActiveRepoInspector(null);
+      }
+    } catch (err) {
+      console.error('Error eliminando repositorio:', err);
+      showToast(String(err), true);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [showToast, activeRepoInspector]);
+
+  // Crear e inicializar nuevo repositorio
+  const handleCreateFleetRepo = useCallback(async ({ parentDir, name, role, warning, initCommit, createGithub, isPrivate }) => {
+    setActionLoading('create-repo');
+    try {
+      const newRepoStatus = await invoke('create_fleet_repo', {
+        parentDir,
+        name,
+        role,
+        warning,
+        initCommit,
+        createGithub,
+        isPrivate
+      });
+      setRepos(prev => [...prev, newRepoStatus]);
+      showToast(`Repositorio '${newRepoStatus.name}' creado e inicializado`);
+      await fetchDevOpsData();
+    } catch (err) {
+      console.error('Error creando repositorio:', err);
+      showToast(String(err), true);
+      throw err;
+    } finally {
+      setActionLoading(null);
+    }
+  }, [showToast, fetchDevOpsData]);
+
   const filteredSkills = useMemo(() => {
     if (!skillSearch.trim()) return skills;
     const q = skillSearch.toLowerCase();
@@ -208,6 +277,8 @@ export function useDevOps() {
     actionLoading,
     toastMessage,
     copiedHash,
+    isAddRepoModalOpen,
+    setIsAddRepoModalOpen,
     fetchDevOpsData,
     handleOpenSkill,
     handleCloseSkill,
@@ -218,6 +289,11 @@ export function useDevOps() {
     handleSwitchBranch,
     handleOpenInEditor,
     handleCopyHash,
+    handleAddFleetRepo,
+    repoToDelete,
+    setRepoToDelete,
+    handleDeleteRepo,
+    handleCreateFleetRepo,
     showToast
   };
 }

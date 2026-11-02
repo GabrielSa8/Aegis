@@ -7,6 +7,8 @@ import {
   SkillsArsenalSection, 
   SkillManualModal, 
   RepoInspectorModal, 
+  AddRepoModal,
+  RepoDeleteModal,
   DevOpsToast 
 } from './devops';
 
@@ -35,6 +37,8 @@ export default function DevOpsView() {
     actionLoading,
     toastMessage,
     copiedHash,
+    isAddRepoModalOpen,
+    setIsAddRepoModalOpen,
     fetchDevOpsData,
     handleOpenSkill,
     handleCloseSkill,
@@ -45,6 +49,11 @@ export default function DevOpsView() {
     handleSwitchBranch,
     handleOpenInEditor,
     handleCopyHash,
+    handleAddFleetRepo,
+    repoToDelete,
+    setRepoToDelete,
+    handleDeleteRepo,
+    handleCreateFleetRepo,
     showToast
   } = useDevOps();
 
@@ -86,6 +95,8 @@ export default function DevOpsView() {
         onFetch={handleFetchRepo}
         onPull={handlePullRepo}
         onOpenInEditor={handleOpenInEditor}
+        onRequestDelete={setRepoToDelete}
+        onOpenAddModal={() => setIsAddRepoModalOpen(true)}
         actionLoading={actionLoading}
       />
 
@@ -104,7 +115,25 @@ export default function DevOpsView() {
         onClose={handleCloseSkill}
       />
 
-      {/* 🔍 MODAL: Inspector de Repositorio en Vivo (Diff, Commits, Ramas) */}
+      {/* ➕ MODAL: Gestor de Repositorios (Vincular / Crear) */}
+      <AddRepoModal
+        isOpen={isAddRepoModalOpen}
+        onClose={() => setIsAddRepoModalOpen(false)}
+        onAddExisting={handleAddFleetRepo}
+        onCreateNew={handleCreateFleetRepo}
+        actionLoading={actionLoading}
+      />
+
+      {/* 🗑️ MODAL: Desvincular / Eliminar Repositorio */}
+      <RepoDeleteModal
+        isOpen={Boolean(repoToDelete)}
+        onClose={() => setRepoToDelete(null)}
+        repo={repoToDelete}
+        onConfirmDelete={handleDeleteRepo}
+        actionLoading={actionLoading}
+      />
+
+      {/* 🔍 MODAL: Inspector de Repositorio en Vivo (Diff, Commits, Ramas, CI/CD, PRs) */}
       <RepoInspectorModal
         repo={activeRepoInspector}
         repoDetails={repoDetails}
