@@ -1,5 +1,6 @@
 export * from './vaultHelpers';
 export * from './useVault';
+export * from './useVaultDragDrop';
 export * from './VaultTreeNode';
 export * from './VaultSidebar';
 export * from './VaultSidebarHeader';
@@ -8,3 +9,5 @@ export * from './VaultNoteHeader';
 export * from './VaultNoteEditor';
 export * from './NewNoteModal';
 export * from './NewFolderModal';
+export * from './VaultDeleteModal';
+export * from './VaultRenameModal';

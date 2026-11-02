@@ -12,7 +12,8 @@ import {
 import { TacticalButton } from '../ui/TacticalButton';
 
 /**
- * VaultNoteHeader — Barra de herramientas de la nota activa en Bóveda.
+ * VaultNoteHeader — Barra de herramientas de la nota activa en Bóveda Obsidian.
+ * Cero hardcoded hex colors, 100% variables semánticas de tema.
  */
 export function VaultNoteHeader({
   activeNote,
@@ -25,7 +26,8 @@ export function VaultNoteHeader({
   handleToggleEdit,
   saving,
   handleSave,
-  handleDeleteActiveNote
+  handleDeleteActiveNote,
+  handleRenameActiveNote
 }) {
   if (!activeNote) return null;
 
@@ -60,10 +62,50 @@ export function VaultNoteHeader({
             <PanelLeftOpen size={15} />
           </button>
         )}
-        <div>
-          <h3 style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-high)', margin: 0 }}>
-            {activeNote.title}
-          </h3>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h3
+              style={{
+                fontSize: '0.92rem',
+                fontWeight: 800,
+                color: 'var(--text-high)',
+                margin: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {activeNote.title}
+            </h3>
+            {handleRenameActiveNote && (
+              <button
+                onClick={handleRenameActiveNote}
+                title="Renombrar título de nota"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '2px 4px',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: 0.6,
+                  transition: 'var(--transition)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.color = 'var(--primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '0.6';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                <Edit3 size={13} />
+              </button>
+            )}
+          </div>
           <div
             style={{
               display: 'flex',
@@ -76,7 +118,7 @@ export function VaultNoteHeader({
           >
             <span>{activeNote.hub}</span>
             <span>•</span>
-            <code>{activeNote.relative_path}</code>
+            <code style={{ color: 'var(--text-muted)' }}>{activeNote.relative_path}</code>
           </div>
         </div>
       </div>
@@ -86,7 +128,7 @@ export function VaultNoteHeader({
           <span
             style={{
               fontSize: '0.72rem',
-              color: '#34d399',
+              color: 'var(--primary)',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
@@ -107,7 +149,7 @@ export function VaultNoteHeader({
             gap: '4px',
             background: 'rgba(255, 255, 255, 0.04)',
             border: '1px solid var(--border-color)',
-            color: copiedLink ? '#34d399' : 'var(--text-muted)',
+            color: copiedLink ? 'var(--primary)' : 'var(--text-muted)',
             fontSize: '0.7rem',
             padding: '4px 8px',
             borderRadius: 'var(--radius-md)',
@@ -126,9 +168,13 @@ export function VaultNoteHeader({
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
-            background: isEditing ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-            border: isEditing ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-color)',
-            color: isEditing ? '#34d399' : 'var(--text-muted)',
+            background: isEditing
+              ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
+              : 'rgba(255, 255, 255, 0.04)',
+            border: isEditing
+              ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
+              : '1px solid var(--border-color)',
+            color: isEditing ? 'var(--primary)' : 'var(--text-muted)',
             fontSize: '0.72rem',
             fontWeight: 600,
             padding: '4px 10px',
@@ -156,7 +202,7 @@ export function VaultNoteHeader({
         {/* Botón Eliminar Nota */}
         <button
           onClick={handleDeleteActiveNote}
-          title="Eliminar nota"
+          title="Eliminar nota definitivamente"
           style={{
             background: 'transparent',
             border: 'none',
@@ -164,10 +210,20 @@ export function VaultNoteHeader({
             cursor: 'pointer',
             padding: '4px',
             opacity: 0.6,
-            transition: 'var(--transition)'
+            transition: 'var(--transition)',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.color = 'var(--danger)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.color = 'var(--text-muted)';
           }}
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

@@ -5,7 +5,9 @@ import {
   VaultNoteHeader,
   VaultNoteEditor,
   NewNoteModal,
-  NewFolderModal
+  NewFolderModal,
+  VaultDeleteModal,
+  VaultRenameModal
 } from './vault';
 
 /**
@@ -54,6 +56,9 @@ export default function VaultView() {
             notes={vault.notes}
             activeNote={vault.activeNote}
             loadNote={vault.loadNote}
+            dragDrop={vault.dragDrop}
+            onRenameItem={vault.handleRequestRename}
+            onDeleteItem={vault.handleRequestDelete}
           />
         )}
 
@@ -82,6 +87,7 @@ export default function VaultView() {
               saving={vault.saving}
               handleSave={vault.handleSave}
               handleDeleteActiveNote={vault.handleDeleteActiveNote}
+              handleRenameActiveNote={vault.handleRenameActiveNote}
             />
           )}
 
@@ -134,6 +140,22 @@ export default function VaultView() {
         availableSubfolders={vault.availableSubfoldersForNewFolder}
         newFolderName={vault.newFolderName}
         setNewFolderName={vault.setNewFolderName}
+      />
+
+      {/* Modal Táctico: Confirmación de Eliminación Definitiva */}
+      <VaultDeleteModal
+        isOpen={Boolean(vault.itemToDelete)}
+        onClose={() => vault.setItemToDelete(null)}
+        onConfirm={vault.handleConfirmDelete}
+        item={vault.itemToDelete}
+      />
+
+      {/* Modal Táctico: Renombrado de Nota o Carpeta */}
+      <VaultRenameModal
+        isOpen={Boolean(vault.itemToRename)}
+        onClose={() => vault.setItemToRename(null)}
+        onSubmit={vault.handleConfirmRename}
+        item={vault.itemToRename}
       />
     </div>
   );

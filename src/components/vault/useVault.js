@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { NOTE_TEMPLATES, buildVaultTree, resolveAvailableSubfolders } from './vaultHelpers';
+import { useVaultDragDrop } from './useVaultDragDrop';
 
 /**
  * useVault — Custom Hook que encapsula el estado, persistencia IPC de Tauri,
@@ -155,6 +156,14 @@ export function useVault() {
   useEffect(() => {
     loadVaultData();
   }, [loadVaultData]);
+
+  // Gestor especializado de reorganización táctica Drag & Drop
+  const dragDrop = useVaultDragDrop({
+    loadVaultData,
+    activeNoteRef,
+    setActiveNote,
+    setExpandedFolders
+  });
 
   // Búsqueda profunda en Rust (Full-Text)
   useEffect(() => {
@@ -421,21 +430,97 @@ export function useVault() {
     }
   };
 
-  const handleDeleteActiveNote = async () => {
-    if (!activeNote) return;
-    const ok = window.confirm(`¿Seguro que deseas eliminar la nota "${activeNote.title}" permanentemente de la Bóveda?`);
-    if (!ok) return;
+  // Modales defensivos de Borrado y Renombrado (Cero window.confirm)
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemToRename, setItemToRename] = useState(null);
 
+  const handleRequestDelete = useCallback((item) => {
+    setItemToDelete(item);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!itemToDelete) return;
     try {
-      await invoke('delete_vault_note', { path: activeNote.path });
-      setActiveNote(null);
-      setNoteContent('');
-      loadVaultData();
+      await invoke('delete_vault_item', { path: itemToDelete.path });
+      if (
+        activeNoteRef.current &&
+        (activeNoteRef.current.path === itemToDelete.path ||
+          activeNoteRef.current.relative_path === itemToDelete.relativePath)
+      ) {
+        setActiveNote(null);
+        setNoteContent('');
+      }
+      setItemToDelete(null);
+      await loadVaultData();
     } catch (err) {
-      console.error('Error eliminando nota:', err);
-      alert(`Error al eliminar nota: ${err}`);
+      console.error('Error eliminando elemento de Bóveda:', err);
     }
-  };
+  }, [itemToDelete, loadVaultData]);
+
+  const handleRequestRename = useCallback((item) => {
+    setItemToRename(item);
+  }, []);
+
+  const handleConfirmRename = useCallback(
+    async (item, newName) => {
+      if (!item || !newName) return;
+      try {
+        const src = item.path || item.relativePath;
+        const res = await invoke('rename_vault_item', {
+          currentPath: src,
+          newName
+        });
+
+        if (res && res.success) {
+          if (
+            activeNoteRef.current &&
+            (activeNoteRef.current.path === item.path ||
+              activeNoteRef.current.relative_path === item.relativePath)
+          ) {
+            const cleanTitle = newName.replace(/\.md$/, '');
+            setActiveNote((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    path: res.new_path,
+                    relative_path: res.new_relative_path,
+                    title: cleanTitle,
+                    hub: res.new_relative_path.split('/')[0] || 'General'
+                  }
+                : null
+            );
+          }
+          setItemToRename(null);
+          await loadVaultData();
+        }
+      } catch (err) {
+        console.error('Error renombrando elemento:', err);
+      }
+    },
+    [loadVaultData]
+  );
+
+  const handleDeleteActiveNote = useCallback(() => {
+    if (activeNoteRef.current) {
+      setItemToDelete({
+        type: 'note',
+        path: activeNoteRef.current.path,
+        relativePath: activeNoteRef.current.relative_path,
+        title: activeNoteRef.current.title
+      });
+    }
+  }, []);
+
+  const handleRenameActiveNote = useCallback(() => {
+    if (activeNoteRef.current) {
+      setItemToRename({
+        type: 'note',
+        path: activeNoteRef.current.path,
+        relativePath: activeNoteRef.current.relative_path,
+        title: activeNoteRef.current.title
+      });
+    }
+  }, []);
 
   const handleCopyWikiLink = () => {
     if (!activeNote) return;
@@ -514,6 +599,7 @@ export function useVault() {
     handleToggleEdit,
     handleSave,
     handleDeleteActiveNote,
+    handleRenameActiveNote,
     handleCopyWikiLink,
     handleNavigateNote,
     handleTagClick,
@@ -545,6 +631,16 @@ export function useVault() {
     newFolderParent,
     setNewFolderParent,
     availableSubfoldersForNewFolder,
-    handleCreateFolderSubmit
+    handleCreateFolderSubmit,
+    dragDrop,
+    // Modales de eliminación y renombrado
+    itemToDelete,
+    setItemToDelete,
+    handleRequestDelete,
+    handleConfirmDelete,
+    itemToRename,
+    setItemToRename,
+    handleRequestRename,
+    handleConfirmRename
   };
 }
