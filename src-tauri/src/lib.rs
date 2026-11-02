@@ -50,6 +50,7 @@ pub fn run() {
             vault::get_vault_folders,
             vault::move_vault_item,
             vault::rename_vault_item,
+            vault::get_vault_note_network,
             devops::get_git_fleet_status,
             devops::get_git_repo_details,
             devops::git_fetch_repo,

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -70,6 +71,52 @@ pub struct VaultSearchResult {
 pub struct MatchSnippet {
     pub line_number: usize,
     pub line_text: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultOutgoingLink {
+    pub target: String,
+    pub target_title: String,
+    pub target_path: Option<String>,
+    pub target_hub: Option<String>,
+    pub exists: bool,
+    pub occurrences: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultIncomingBacklink {
+    pub source_title: String,
+    pub source_path: String,
+    pub source_hub: String,
+    pub line_number: usize,
+    pub snippet: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultGraphNode {
+    pub id: String,
+    pub label: String,
+    pub hub: String,
+    pub degree: u8,
+    pub path: Option<String>,
+    pub links_count: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultGraphEdge {
+    pub source: String,
+    pub target: String,
+    pub direction: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VaultKnowledgeNetwork {
+    pub current_title: String,
+    pub current_hub: String,
+    pub outgoing: Vec<VaultOutgoingLink>,
+    pub incoming: Vec<VaultIncomingBacklink>,
+    pub nodes: Vec<VaultGraphNode>,
+    pub edges: Vec<VaultGraphEdge>,
 }
 
 fn resolve_hub(relative_path: &str) -> String {
@@ -665,5 +712,301 @@ pub fn rename_vault_item(current_path: String, new_name: String) -> Result<MoveV
         old_path: src_canon.to_string_lossy().to_string(),
         new_path: dest_path.to_string_lossy().to_string(),
         new_relative_path: rel_dest.to_string_lossy().to_string(),
+    })
+}
+
+fn extract_wikilinks_from_str(line: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut remainder = line;
+    while let Some(start) = remainder.find("[[") {
+        let after = &remainder[start + 2..];
+        if let Some(end) = after.find("]]") {
+            let inner = &after[..end];
+            let clean_target = inner
+                .split('|')
+                .next()
+                .unwrap_or(inner)
+                .split('#')
+                .next()
+                .unwrap_or(inner)
+                .trim();
+            if !clean_target.is_empty() {
+                targets.push(clean_target.to_string());
+            }
+            remainder = &after[end + 2..];
+        } else {
+            break;
+        }
+    }
+    targets
+}
+
+fn target_matches_note(target: &str, note: &VaultNote) -> bool {
+    let target_clean = target.trim();
+    if target_clean.eq_ignore_ascii_case(&note.title) {
+        return true;
+    }
+    let rel_no_ext = note.relative_path.trim_end_matches(".md");
+    if target_clean.eq_ignore_ascii_case(rel_no_ext) {
+        return true;
+    }
+    if target_clean.ends_with(&format!("/{}", note.title)) {
+        return true;
+    }
+    false
+}
+
+#[tauri::command]
+pub fn get_vault_note_network(file_path: String) -> Result<VaultKnowledgeNetwork, String> {
+    let target_path = PathBuf::from(&file_path);
+    if !target_path.exists() {
+        return Err(format!("El archivo no existe: {}", file_path));
+    }
+    if !is_vault_path_safe(&target_path) {
+        return Err("Violación de seguridad: ruta fuera de la bóveda".into());
+    }
+
+    let root = get_vault_root();
+    let mut all_notes = Vec::new();
+    collect_notes(&root, &root, &mut all_notes)?;
+
+    let active_canon = target_path.canonicalize().unwrap_or(target_path.clone());
+    let active_note = all_notes
+        .iter()
+        .find(|n| {
+            if let Ok(c) = PathBuf::from(&n.path).canonicalize() {
+                c == active_canon
+            } else {
+                n.path == file_path
+            }
+        })
+        .ok_or_else(|| "Nota activa no encontrada en el índice de la bóveda".to_string())?
+        .clone();
+
+    // 1. Extraer enlaces salientes (Outgoing Links) del archivo activo
+    let file = File::open(&active_note.path).map_err(|e| format!("Error al abrir archivo: {}", e))?;
+    let reader = BufReader::new(file);
+    let mut outgoing_counts: HashMap<String, usize> = HashMap::new();
+
+    for line_res in reader.lines() {
+        if let Ok(line) = line_res {
+            if line.contains("[[") {
+                for target in extract_wikilinks_from_str(&line) {
+                    *outgoing_counts.entry(target).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    let mut direct_connected_titles: HashSet<String> = HashSet::new();
+    direct_connected_titles.insert(active_note.title.clone());
+
+    let mut outgoing: Vec<VaultOutgoingLink> = Vec::new();
+    for (target, count) in &outgoing_counts {
+        let matched_note = all_notes.iter().find(|n| target_matches_note(target, n));
+        let (target_title, target_path, target_hub, exists) = match matched_note {
+            Some(n) => {
+                direct_connected_titles.insert(n.title.clone());
+                (n.title.clone(), Some(n.path.clone()), Some(n.hub.clone()), true)
+            }
+            None => (target.clone(), None, None, false),
+        };
+
+        outgoing.push(VaultOutgoingLink {
+            target: target.clone(),
+            target_title,
+            target_path,
+            target_hub,
+            exists,
+            occurrences: *count,
+        });
+    }
+    outgoing.sort_by(|a, b| b.occurrences.cmp(&a.occurrences).then_with(|| a.target_title.cmp(&b.target_title)));
+
+    // 2. Extraer enlaces entrantes (Incoming Backlinks) escaneando el resto de la bóveda
+    let mut incoming: Vec<VaultIncomingBacklink> = Vec::new();
+    let mut second_degree_map: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for note in &all_notes {
+        let is_current = if let Ok(c) = PathBuf::from(&note.path).canonicalize() {
+            c == active_canon
+        } else {
+            note.path == active_note.path
+        };
+        if is_current {
+            continue;
+        }
+
+        if let Ok(f) = File::open(&note.path) {
+            let r = BufReader::new(f);
+            let mut note_links: HashSet<String> = HashSet::new();
+            for (line_idx, line_res) in r.lines().enumerate() {
+                if let Ok(line) = line_res {
+                    if line.contains("[[") {
+                        let targets = extract_wikilinks_from_str(&line);
+                        let mut line_matched = false;
+                        for target in targets {
+                            note_links.insert(target.clone());
+                            if !line_matched && target_matches_note(&target, &active_note) {
+                                line_matched = true;
+                                direct_connected_titles.insert(note.title.clone());
+                                let snippet = line.trim();
+                                let truncated = if snippet.chars().count() > 160 {
+                                    format!("{}...", snippet.chars().take(157).collect::<String>())
+                                } else {
+                                    snippet.to_string()
+                                };
+                                incoming.push(VaultIncomingBacklink {
+                                    source_title: note.title.clone(),
+                                    source_path: note.path.clone(),
+                                    source_hub: note.hub.clone(),
+                                    line_number: line_idx + 1,
+                                    snippet: truncated,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            if !note_links.is_empty() {
+                second_degree_map.insert(note.title.clone(), note_links);
+            }
+        }
+    }
+    incoming.sort_by(|a, b| a.source_hub.cmp(&b.source_hub).then_with(|| a.source_title.cmp(&b.source_title)));
+
+    // 3. Construir Nodos y Aristas del Micro-Grafo (1° y 2° grado)
+    let mut graph_nodes: HashMap<String, VaultGraphNode> = HashMap::new();
+    let mut graph_edges_map: HashMap<(String, String), String> = HashMap::new();
+
+    // Nodo Central (Grado 0)
+    graph_nodes.insert(
+        active_note.title.clone(),
+        VaultGraphNode {
+            id: active_note.title.clone(),
+            label: active_note.title.clone(),
+            hub: active_note.hub.clone(),
+            degree: 0,
+            path: Some(active_note.path.clone()),
+            links_count: 0,
+        },
+    );
+
+    // Nodos de 1° Grado (Salientes)
+    for out in &outgoing {
+        let node_id = out.target_title.clone();
+        graph_nodes.entry(node_id.clone()).or_insert_with(|| VaultGraphNode {
+            id: node_id.clone(),
+            label: node_id.clone(),
+            hub: out.target_hub.clone().unwrap_or_else(|| "Exterior".to_string()),
+            degree: 1,
+            path: out.target_path.clone(),
+            links_count: 0,
+        });
+
+        // Arista Active -> Target
+        let key = (active_note.title.clone(), node_id.clone());
+        graph_edges_map.insert(key, "outgoing".to_string());
+    }
+
+    // Nodos de 1° Grado (Entrantes)
+    for inc in &incoming {
+        let node_id = inc.source_title.clone();
+        graph_nodes.entry(node_id.clone()).or_insert_with(|| VaultGraphNode {
+            id: node_id.clone(),
+            label: node_id.clone(),
+            hub: inc.source_hub.clone(),
+            degree: 1,
+            path: Some(inc.source_path.clone()),
+            links_count: 0,
+        });
+
+        // Arista Source -> Active
+        let outgoing_key = (active_note.title.clone(), node_id.clone());
+        let incoming_key = (node_id.clone(), active_note.title.clone());
+
+        if graph_edges_map.contains_key(&outgoing_key) {
+            graph_edges_map.insert(outgoing_key, "mutual".to_string());
+        } else {
+            graph_edges_map.insert(incoming_key, "incoming".to_string());
+        }
+    }
+
+    // Nodos de 2° Grado (Conexiones de los nodos de 1° grado)
+    let mut second_degree_candidates: HashSet<String> = HashSet::new();
+    for title in &direct_connected_titles {
+        if *title == active_note.title {
+            continue;
+        }
+        if let Some(links) = second_degree_map.get(title) {
+            for raw_target in links {
+                let resolved_title = all_notes
+                    .iter()
+                    .find(|n| target_matches_note(raw_target, n))
+                    .map(|n| n.title.clone())
+                    .unwrap_or_else(|| raw_target.clone());
+
+                if !direct_connected_titles.contains(&resolved_title) && second_degree_candidates.len() < 24 {
+                    second_degree_candidates.insert(resolved_title.clone());
+                }
+
+                if direct_connected_titles.contains(&resolved_title) || second_degree_candidates.contains(&resolved_title) {
+                    let edge_key = (title.clone(), resolved_title.clone());
+                    let reverse_key = (resolved_title.clone(), title.clone());
+                    if !graph_edges_map.contains_key(&reverse_key) && !graph_edges_map.contains_key(&edge_key) {
+                        graph_edges_map.insert(edge_key, "outgoing".to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // Registrar nodos de 2° grado resueltos
+    for cand in second_degree_candidates {
+        let matched = all_notes.iter().find(|n| n.title.eq_ignore_ascii_case(&cand));
+        let (hub, path) = match matched {
+            Some(n) => (n.hub.clone(), Some(n.path.clone())),
+            None => ("Exterior".to_string(), None),
+        };
+
+        graph_nodes.entry(cand.clone()).or_insert_with(|| VaultGraphNode {
+            id: cand.clone(),
+            label: cand.clone(),
+            hub,
+            degree: 2,
+            path,
+            links_count: 0,
+        });
+    }
+
+    // Calcular links_count en cada nodo a partir de las aristas
+    for ((s, t), _) in &graph_edges_map {
+        if let Some(n) = graph_nodes.get_mut(s) {
+            n.links_count += 1;
+        }
+        if let Some(n) = graph_nodes.get_mut(t) {
+            n.links_count += 1;
+        }
+    }
+
+    let edges: Vec<VaultGraphEdge> = graph_edges_map
+        .into_iter()
+        .map(|((source, target), direction)| VaultGraphEdge {
+            source,
+            target,
+            direction,
+        })
+        .collect();
+
+    let mut nodes: Vec<VaultGraphNode> = graph_nodes.into_values().collect();
+    nodes.sort_by(|a, b| a.degree.cmp(&b.degree).then_with(|| b.links_count.cmp(&a.links_count)));
+
+    Ok(VaultKnowledgeNetwork {
+        current_title: active_note.title,
+        current_hub: active_note.hub,
+        outgoing,
+        incoming,
+        nodes,
+        edges,
     })
 }

@@ -4,6 +4,8 @@ import {
   VaultSidebar,
   VaultNoteHeader,
   VaultNoteEditor,
+  VaultBacklinksPanel,
+  useVaultNetwork,
   NewNoteModal,
   NewFolderModal,
   VaultDeleteModal,
@@ -16,6 +18,7 @@ import {
  */
 export default function VaultView() {
   const vault = useVault();
+  const networkState = useVaultNetwork(vault.activeNote, vault.handleNavigateNote);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -65,6 +68,7 @@ export default function VaultView() {
         {/* PANEL DERECHO: Visor / Editor de Markdown */}
         <div
           style={{
+            position: 'relative',
             background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-lg)',
@@ -105,6 +109,14 @@ export default function VaultView() {
             showSidebar={vault.showSidebar}
             setShowSidebar={vault.setShowSidebar}
           />
+
+          {/* 🔗 Red de Conocimiento: Panel Retráctil de Backlinks, Salientes y Micro-Grafo */}
+          {vault.activeNote && (
+            <VaultBacklinksPanel
+              networkState={networkState}
+              onNavigateNote={vault.handleNavigateNote}
+            />
+          )}
         </div>
       </div>
 

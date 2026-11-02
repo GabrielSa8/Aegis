@@ -114,7 +114,7 @@ export function formatInline(str, onNavigateNote) {
           key={i}
           onClick={() => onNavigateNote && onNavigateNote(target)}
           style={{
-            color: '#34d399',
+            color: 'var(--primary)',
             textDecoration: 'underline',
             textUnderlineOffset: '3px',
             cursor: 'pointer',

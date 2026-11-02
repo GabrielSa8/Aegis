@@ -11,3 +11,8 @@ export * from './NewNoteModal';
 export * from './NewFolderModal';
 export * from './VaultDeleteModal';
 export * from './VaultRenameModal';
+export * from './useVaultNetwork';
+export * from './VaultMicroGraph';
+export * from './VaultBacklinksList';
+export * from './VaultOutgoingList';
+export * from './VaultBacklinksPanel';
