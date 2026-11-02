@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Plus, Edit3, Trash2, CheckSquare, Square, ArrowRight, CalendarRange } from 'lucide-react';
+import { Plus, Edit3, Trash2, ArrowRight, CalendarRange } from 'lucide-react';
 import InlineTxEditor from './InlineTxEditor';
 
 export default function DayMovementsDeck({
   selectedDate,
   selectedDayTxs = [],
-  selectedDayEvents = [],
-  onToggleTimelineEvent,
+  selectedDayDeadlines = [],
   onSaveTransaction,
   onDeleteTx,
   onGoToOperations,
@@ -61,21 +60,27 @@ export default function DayMovementsDeck({
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.7rem', fontFamily: 'JetBrains Mono, monospace' }}>
+        {/* Resumen Dinámico de Balances */}
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.72rem' }}>
           {totalIncome > 0 && (
-            <span style={{ color: 'var(--accent, var(--primary))', fontWeight: 700 }}>
-              +${totalIncome.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            <span style={{ color: 'var(--success, #10b981)', fontWeight: 700 }}>
+              +${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </span>
           )}
           {totalExpense > 0 && (
             <span style={{ color: 'var(--danger, #ef4444)', fontWeight: 700 }}>
-              -${totalExpense.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              -${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          )}
+          {totalIncome === 0 && totalExpense === 0 && (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.66rem' }}>
+              $0.00
             </span>
           )}
         </div>
       </div>
 
-      {/* Lista Scrolleable */}
+      {/* Lista Desplazable de Movimientos del Día */}
       <div
         style={{
           display: 'flex',
@@ -88,17 +93,17 @@ export default function DayMovementsDeck({
         }}
         className="no-scrollbar"
       >
-        {/* Hitos del Día */}
-        {selectedDayEvents.length > 0 && (
+        {/* Vencimientos, Cortes y Compromisos Financieros del Día */}
+        {selectedDayDeadlines.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-              HITOS OPERATIVOS ({selectedDayEvents.length})
+              VENCIMIENTOS & CORTES ({selectedDayDeadlines.length})
             </span>
-            {selectedDayEvents.map((evt) => {
-              const isCompleted = evt.status === 'completed';
+            {selectedDayDeadlines.map((item) => {
+              const Icon = item.icon;
               return (
                 <div
-                  key={evt.id}
+                  key={item.id}
                   className="day-deck-tx-card"
                   style={{
                     display: 'flex',
@@ -107,26 +112,24 @@ export default function DayMovementsDeck({
                     padding: '0.35rem 0.55rem',
                     borderRadius: 'var(--radius-sm, 5px)',
                     border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
-                    background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-                    opacity: isCompleted ? 0.65 : 1
+                    borderLeft: `3px solid ${item.color || 'var(--accent, var(--primary))'}`,
+                    background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
-                    <button
-                      type="button"
-                      onClick={() => onToggleTimelineEvent(evt.id, !isCompleted)}
-                      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: isCompleted ? 'var(--accent, var(--primary))' : 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
-                      title={isCompleted ? 'Marcar pendiente' : 'Marcar completado'}
-                    >
-                      {isCompleted ? <CheckSquare size={13} /> : <Square size={13} />}
-                    </button>
-                    <span style={{ fontSize: '0.74rem', color: isCompleted ? 'var(--text-muted)' : 'var(--text-high)', textDecoration: isCompleted ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {evt.title}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, flex: 1 }}>
+                    {Icon && <Icon size={12} style={{ color: item.color || 'var(--accent, var(--primary))', flexShrink: 0 }} />}
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.title}
+                      </span>
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+                        {item.subtitle}
+                      </span>
+                    </div>
                   </div>
-                  {evt.time && (
-                    <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-                      {evt.time}
+                  {item.amount != null && item.amount > 0 && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--font-mono, monospace)', color: 'var(--text-high)' }}>
+                      ${Number(item.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
                   )}
                 </div>
@@ -135,9 +138,9 @@ export default function DayMovementsDeck({
           </div>
         )}
 
-        {/* Transacciones del Día */}
+        {/* Transacciones del Día Elásticas */}
         {selectedDayTxs.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(4px, 0.8vh, 8px)', flex: 1, minHeight: 0 }}>
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
               TRANSACCIONES ({selectedDayTxs.length})
             </span>
@@ -149,19 +152,14 @@ export default function DayMovementsDeck({
               return (
                 <div
                   key={tx.id}
-                  className="day-deck-tx-card"
+                  className="day-deck-tx-card pulse-elastic-tx-card"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.35rem 0.55rem',
-                    borderRadius: 'var(--radius-sm, 5px)',
                     border: isBeingEdited 
                       ? '1px solid var(--accent, var(--primary))' 
-                      : '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                      : undefined,
                     background: isBeingEdited 
                       ? 'color-mix(in srgb, var(--accent, var(--primary)) 12%, var(--bg-card))' 
-                      : 'color-mix(in srgb, var(--bg-card) 60%, transparent)'
+                      : undefined
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
@@ -179,38 +177,45 @@ export default function DayMovementsDeck({
                         fontSize: '0.76rem',
                         fontFamily: 'JetBrains Mono, monospace',
                         fontWeight: 700,
-                        color: isIncome ? 'var(--accent, var(--primary))' : 'var(--text-high)'
+                        color: isIncome ? 'var(--success, #10b981)' : 'var(--danger, #ef4444)'
                       }}
                     >
-                      {isIncome ? '+' : '-'}${amt.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      {isIncome ? '+' : '-'}${amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
-                    <div style={{ display: 'flex', gap: '2px' }}>
+
+                    {/* Botones de Acción */}
+                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                       <button
                         type="button"
-                        onClick={() => setEditingTx(isBeingEdited ? null : tx)}
-                        className="cockpit-filter-pill"
-                        title="Editar transacción"
+                        onClick={() => setEditingTx(tx)}
                         style={{
-                          background: isBeingEdited ? 'var(--accent, var(--primary))' : 'transparent',
+                          background: 'transparent',
                           border: 'none',
-                          color: isBeingEdited ? 'var(--bg-main)' : 'var(--text-muted)',
+                          padding: '3px',
                           cursor: 'pointer',
-                          padding: '2px',
+                          color: 'var(--text-muted)',
                           borderRadius: '3px',
-                          touchAction: 'manipulation'
+                          display: 'flex',
+                          alignItems: 'center'
                         }}
+                        title="Editar transacción"
                       >
                         <Edit3 size={11} />
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (editingTx?.id === tx.id) setEditingTx(null);
-                          onDeleteTx?.(tx);
+                        onClick={() => onDeleteTx?.(tx)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          padding: '3px',
+                          cursor: 'pointer',
+                          color: 'var(--danger, #ef4444)',
+                          borderRadius: '3px',
+                          display: 'flex',
+                          alignItems: 'center'
                         }}
-                        className="cockpit-filter-pill"
-                        title="Eliminar"
-                        style={{ background: 'transparent', border: 'none', color: 'var(--danger, #ef4444)', cursor: 'pointer', padding: '2px' }}
+                        title="Eliminar transacción"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -223,7 +228,7 @@ export default function DayMovementsDeck({
         )}
 
         {/* Estado Vacío del Día */}
-        {selectedDayEvents.length === 0 && selectedDayTxs.length === 0 && (
+        {selectedDayDeadlines.length === 0 && selectedDayTxs.length === 0 && (
           <div
             style={{
               padding: '2.5rem 1rem',
@@ -236,7 +241,7 @@ export default function DayMovementsDeck({
             }}
           >
             <p style={{ fontSize: '0.76rem', margin: 0, fontWeight: 500 }}>
-              Sin movimientos ni hitos programados en este día.
+              Sin transacciones ni compromisos en este día.
             </p>
             {onGoToOperations && (
               <button

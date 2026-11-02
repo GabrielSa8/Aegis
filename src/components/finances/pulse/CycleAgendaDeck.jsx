@@ -172,18 +172,10 @@ export default function CycleAgendaDeck({
         </div>
       </div>
 
-      {/* Lista Scrolleable de Todas las Transacciones del Ciclo */}
+      {/* Lista Scrolleable de Todas las Transacciones del Ciclo Elásticas */}
       <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.4rem',
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          paddingRight: '2px'
-        }}
-        className="no-scrollbar"
+        className="pulse-elastic-container no-scrollbar"
+        style={{ paddingRight: '2px' }}
       >
         {filteredTxs.length === 0 ? (
           <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
@@ -199,20 +191,14 @@ export default function CycleAgendaDeck({
             return (
               <div
                 key={tx.id}
-                className="day-deck-tx-card"
+                className="day-deck-tx-card pulse-elastic-tx-card"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.35rem 0.55rem',
-                  borderRadius: 'var(--radius-sm, 5px)',
                   border: isBeingEdited
                     ? '1px solid var(--accent, var(--primary))'
-                    : '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                    : undefined,
                   background: isBeingEdited
                     ? 'color-mix(in srgb, var(--accent, var(--primary)) 12%, var(--bg-card))'
-                    : 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-                  gap: '0.5rem'
+                    : undefined
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>

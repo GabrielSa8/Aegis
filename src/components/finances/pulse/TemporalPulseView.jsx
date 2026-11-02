@@ -1,26 +1,37 @@
 import { useState, useMemo } from 'react';
-import { Calendar as CalendarIcon, CalendarRange, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarRange } from 'lucide-react';
 import Calendar from '../../Calendar';
 import DayMovementsDeck from './DayMovementsDeck';
 import CycleAgendaDeck from './CycleAgendaDeck';
+import UpcomingDeadlinesRadar from './UpcomingDeadlinesRadar';
+import { useFinancialDeadlines } from './useFinancialDeadlines';
 import { getFinancialMonthRange, isDateInRange } from '../../../utils/storage';
 
 export default function TemporalPulseView({
   safeTransactions = [],
-  timelineEvents = [],
   selectedDate,
   onDateSelect,
   selectedDayTxs = [],
-  selectedDayEvents = [],
   startDate,
   endDate,
   cutoffDay,
-  onToggleTimelineEvent,
   onSaveTransaction,
   onDeleteTx,
   onGoToOperations
 }) {
   const [activeDeck, setActiveDeck] = useState('day'); // 'day' | 'cycle'
+
+  // Hook unificado para cortes, pagos de tarjetas, gastos recurrentes y MSI
+  const {
+    upcomingDeadlines,
+    deadlinesByDayMap,
+    getDeadlinesForDate,
+    loading: deadlinesLoading
+  } = useFinancialDeadlines();
+
+  const selectedDayDeadlines = useMemo(() => {
+    return getDeadlinesForDate(selectedDate);
+  }, [getDeadlinesForDate, selectedDate]);
 
   // Calcular el ciclo financiero correspondiente a la fecha seleccionada
   const cycleInfo = useMemo(() => {
@@ -37,10 +48,10 @@ export default function TemporalPulseView({
   // Contar transacciones de este ciclo específico detectado
   const cycleTxsCount = useMemo(() => {
     return (safeTransactions || []).filter((tx) => {
-      if (!tx.date) return false;
+      if (!tx || !tx.date) return false;
       return isDateInRange(tx.date, cycleInfo.startDate, cycleInfo.endDate);
     }).length;
-  }, [safeTransactions, cycleInfo.startDate, cycleInfo.endDate]);
+  }, [safeTransactions, cycleInfo]);
 
   return (
     <div
@@ -52,7 +63,7 @@ export default function TemporalPulseView({
         overflow: 'hidden'
       }}
     >
-      {/* Columna Izquierda: Calendario Mensual Táctico */}
+      {/* Columna Izquierda: Calendario Mensual Táctico + Radar de Vencimientos */}
       <div
         style={{
           borderRadius: 'var(--radius-md, 8px)',
@@ -60,15 +71,23 @@ export default function TemporalPulseView({
           background: 'var(--bg-card, rgba(255,255,255,0.02))',
           padding: '0.85rem',
           height: '100%',
-          overflowY: 'auto',
+          overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          gap: '0.65rem'
         }}
-        className="no-scrollbar"
       >
         <Calendar
           transactions={safeTransactions}
-          timelineEvents={timelineEvents}
+          deadlinesByDayMap={deadlinesByDayMap}
+          selectedDate={selectedDate}
+          onDateSelect={onDateSelect}
+        />
+
+        {/* 🧭 Radar de Próximos Vencimientos, Cortes y Compromisos */}
+        <UpcomingDeadlinesRadar
+          upcomingDeadlines={upcomingDeadlines}
+          loading={deadlinesLoading}
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
         />
@@ -116,7 +135,7 @@ export default function TemporalPulseView({
               <CalendarIcon size={12} />
               <span>Día Seleccionado</span>
               <span style={{ fontSize: '0.65rem', opacity: 0.8, fontFamily: 'JetBrains Mono, monospace' }}>
-                ({selectedDayTxs.length + selectedDayEvents.length})
+                ({selectedDayTxs.length + selectedDayDeadlines.length})
               </span>
             </button>
 
@@ -177,8 +196,7 @@ export default function TemporalPulseView({
           <DayMovementsDeck
             selectedDate={selectedDate}
             selectedDayTxs={selectedDayTxs}
-            selectedDayEvents={selectedDayEvents}
-            onToggleTimelineEvent={onToggleTimelineEvent}
+            selectedDayDeadlines={selectedDayDeadlines}
             onSaveTransaction={onSaveTransaction}
             onDeleteTx={onDeleteTx}
             onGoToOperations={onGoToOperations}

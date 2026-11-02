@@ -1,6 +1,5 @@
 import { useState, useMemo, memo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Layers } from 'lucide-react';
-
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { getTodayLocalDateStr } from '../utils/storage';
 
 const MONTH_NAMES = [
@@ -10,28 +9,17 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-const NORDIC_PALETTE = [
-  '#34d399', '#38bdf8', '#818cf8', '#a78bfa', '#f472b6',
-  '#fbbf24', '#fb923c', '#4ade80', '#2dd4bf', '#a3e635'
-];
-
-function getDomainColor(domain) {
-  if (!domain) return '#94a3b8';
-  let hash = 0;
-  for (let i = 0; i < domain.length; i++) {
-    hash = (hash << 5) - hash + domain.charCodeAt(i);
-    hash |= 0;
-  }
-  return NORDIC_PALETTE[Math.abs(hash) % NORDIC_PALETTE.length];
-}
-
-function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelect }) {
+function Calendar({
+  transactions,
+  deadlinesByDayMap = new Map(),
+  selectedDate,
+  onDateSelect
+}) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
   const today = new Date();
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const safeEvents = Array.isArray(timelineEvents) ? timelineEvents : [];
 
   // Mapa de transacciones por fecha precomputado en O(N) para lookup O(1)
   const dailySummaryMap = useMemo(() => {
@@ -54,22 +42,6 @@ function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelec
     }
     return map;
   }, [safeTransactions]);
-
-  // Mapa de eventos del timeline por fecha O(N)
-  const dailyEventsMap = useMemo(() => {
-    const map = new Map();
-    for (let i = 0; i < safeEvents.length; i++) {
-      const evt = safeEvents[i];
-      if (!evt.date) continue;
-      let list = map.get(evt.date);
-      if (!list) {
-        list = [];
-        map.set(evt.date, list);
-      }
-      list.push(evt);
-    }
-    return map;
-  }, [safeEvents]);
 
   // Obtener días del mes seleccionado
   const getDaysInMonth = (month, year) => {
@@ -132,9 +104,10 @@ function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelec
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = formatDateString(day);
       const summary = dailySummaryMap.get(dateStr) || { income: 0, expense: 0, count: 0 };
-      const dayEvents = dailyEventsMap.get(dateStr) || [];
+      const dayDeadlines = (deadlinesByDayMap && typeof deadlinesByDayMap.get === 'function')
+        ? (deadlinesByDayMap.get(day) || [])
+        : [];
       const hasTransactions = summary.count > 0;
-      const hasEvents = dayEvents.length > 0;
       const { income, expense } = summary;
       
       const isToday = today.getDate() === day && 
@@ -151,22 +124,27 @@ function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelec
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <span className="day-number">{day}</span>
-            {hasEvents && (
-              <div style={{ display: 'flex', gap: '3px' }} title={`${dayEvents.length} eventos operativos`}>
-                {dayEvents.slice(0, 3).map((e) => (
+            {dayDeadlines.length > 0 && (
+              <div
+                style={{ display: 'flex', gap: '3px', alignItems: 'center' }}
+                title={dayDeadlines.map((d) => `${d.title}${d.amount ? ` ($${Number(d.amount).toLocaleString()})` : ''}`).join(' • ')}
+              >
+                {dayDeadlines.slice(0, 3).map((d) => (
                   <span
-                    key={e.id}
+                    key={d.id}
                     style={{
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      background: getDomainColor(e.domain),
-                      boxShadow: `0 0 5px ${getDomainColor(e.domain)}`
+                      background: d.color || 'var(--accent, var(--primary))',
+                      boxShadow: `0 0 6px ${d.color || 'var(--accent, var(--primary))'}`
                     }}
                   />
                 ))}
-                {dayEvents.length > 3 && (
-                  <span style={{ fontSize: '0.6rem', color: '#9ca3af', lineHeight: 1 }}>+</span>
+                {dayDeadlines.length > 3 && (
+                  <span style={{ fontSize: '0.56rem', color: 'var(--text-muted)', lineHeight: 1, fontWeight: 700 }}>
+                    +{dayDeadlines.length - 3}
+                  </span>
                 )}
               </div>
             )}
@@ -222,7 +200,7 @@ function Calendar({ transactions, timelineEvents = [], selectedDate, onDateSelec
 
       <div className="calendar-grid">
         {/* Cabecera de días de la semana */}
-        {DAY_NAMES.map(name => (
+        {DAY_NAMES.map((name) => (
           <div key={name} className="day-name">
             {name}
           </div>

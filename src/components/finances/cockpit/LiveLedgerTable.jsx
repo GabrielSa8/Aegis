@@ -33,16 +33,8 @@ function LiveLedgerTable({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1, minHeight: 0 }}>
       <div 
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.25rem',
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          paddingRight: '2px'
-        }}
-        className="no-scrollbar"
+        className="ledger-elastic-container no-scrollbar"
+        style={{ paddingRight: '2px' }}
       >
         {transactions.map((tx) => {
           const isIncome = tx.type === 'income';
@@ -52,19 +44,7 @@ function LiveLedgerTable({
           return (
             <div
               key={tx.id}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '24px 44px minmax(110px, 1fr) auto auto 100px 52px',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.35rem 0.65rem',
-                borderRadius: 'var(--radius-sm, 6px)',
-                border: '1px solid var(--border-color, rgba(255,255,255,0.06))',
-                background: 'var(--bg-card, rgba(255,255,255,0.02))',
-                transition: 'background 0.15s ease, border-color 0.15s ease',
-                fontSize: '0.75rem'
-              }}
-              className="ledger-row"
+              className="ledger-row ledger-elastic-row"
             >
               {/* Icono Tipo */}
               <div

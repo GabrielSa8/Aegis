@@ -95,22 +95,16 @@ export default function FinancesView() {
           />
         )}
 
-        {/* 🧭 VISTA 2: PULSO TEMPORAL (CALENDARIO + TIMELINE BILATERAL) */}
+        {/* 🧭 VISTA 2: PULSO TEMPORAL (CALENDARIO TÁCTICO & AGENDA DEL CICLO) */}
         {(subTab === 'pulse' || subTab === 'calendar' || subTab === 'timeline') && (
           <TemporalPulseView
             safeTransactions={safeTransactions}
-            timelineEvents={timelineEvents}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
             selectedDayTxs={selectedDayTxs}
-            selectedDayEvents={selectedDayEvents}
             startDate={startDate}
             endDate={endDate}
             cutoffDay={cutoffDay}
-            onToggleTimelineEvent={handleToggleTimelineEvent}
-            onSaveTimelineEvent={handleSaveTimelineEvent}
-            onDeleteTimelineEvent={handleDeleteTimelineEvent}
-            onEditTx={handleTransactionEdit}
             onSaveTransaction={handleTransactionSave}
             onDeleteTx={setDeletingTransaction}
             onGoToOperations={() => setSubTab('operations')}
