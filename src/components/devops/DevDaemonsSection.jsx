@@ -21,7 +21,8 @@ export function DevDaemonsSection({
   onViewContainerLogs,
   onDeleteContainer,
   onStopProcess,
-  onOpenUrl
+  onOpenUrl,
+  fillHeight = false
 }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'adb' | 'containers' | 'ports'
 
@@ -31,7 +32,12 @@ export function DevDaemonsSection({
   const portsCount = daemons?.listening_ports?.length || 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.65rem',
+      ...(fillHeight ? { flex: 1, minHeight: 0 } : {})
+    }}>
       {/* 🧭 Encabezado de la Sección */}
       <div style={{
         display: 'flex',
@@ -171,22 +177,56 @@ export function DevDaemonsSection({
           <RefreshCw size={14} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
           Escaneando daemons y servicios activos...
         </div>
-      ) : (
+      ) : activeTab === 'all' ? (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: activeTab === 'all' ? 'repeat(auto-fit, minmax(320px, 1fr))' : '1fr',
+          gridTemplateColumns: fillHeight ? 'minmax(330px, 380px) 1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '0.65rem',
-          alignItems: 'start'
+          flex: fillHeight ? 1 : 'none',
+          minHeight: 0,
+          alignItems: 'stretch'
         }}>
-          {(activeTab === 'all' || activeTab === 'adb') && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.65rem',
+            overflowY: fillHeight ? 'auto' : 'visible',
+            minHeight: 0
+          }}>
+            <DevAdbCard
+              adb={daemons?.adb}
+              onRestart={onRestartAdb}
+              actionLoadingId={actionLoadingId}
+            />
+            <DevContainersCard
+              containers={daemons?.containers}
+              runtime={daemons?.container_runtime}
+              onToggleContainer={onToggleContainer}
+              onOpenCreate={onOpenCreateContainer}
+              onViewLogs={onViewContainerLogs}
+              onDeleteContainer={onDeleteContainer}
+              actionLoadingId={actionLoadingId}
+            />
+          </div>
+
+          <DevPortsCard
+            ports={daemons?.listening_ports}
+            onStopProcess={onStopProcess}
+            onOpenUrl={onOpenUrl}
+            actionLoadingId={actionLoadingId}
+            fillHeight={fillHeight}
+          />
+        </div>
+      ) : (
+        <div style={{ flex: fillHeight ? 1 : 'none', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {activeTab === 'adb' && (
             <DevAdbCard
               adb={daemons?.adb}
               onRestart={onRestartAdb}
               actionLoadingId={actionLoadingId}
             />
           )}
-
-          {(activeTab === 'all' || activeTab === 'containers') && (
+          {activeTab === 'containers' && (
             <DevContainersCard
               containers={daemons?.containers}
               runtime={daemons?.container_runtime}
@@ -197,13 +237,13 @@ export function DevDaemonsSection({
               actionLoadingId={actionLoadingId}
             />
           )}
-
-          {(activeTab === 'all' || activeTab === 'ports') && (
+          {activeTab === 'ports' && (
             <DevPortsCard
               ports={daemons?.listening_ports}
               onStopProcess={onStopProcess}
               onOpenUrl={onOpenUrl}
               actionLoadingId={actionLoadingId}
+              fillHeight={fillHeight}
             />
           )}
         </div>

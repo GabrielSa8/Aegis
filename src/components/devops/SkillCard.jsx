@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Zap, Trash2, ArrowRight } from 'lucide-react';
+import { Zap, Trash2, ArrowRight, FileText } from 'lucide-react';
 import { getSkillCategory, SKILL_CATEGORIES } from './devopsHelpers';
 
 /**
- * SkillCard — Tarjeta interactiva para una habilidad del arsenal.
- * Integra taxonomía visual, telemetría y acción de desinstalación.
+ * SkillCard — Tarjeta compacta para una habilidad del arsenal.
+ * Diseño denso y proporcional para evitar sensaciones de vacío en pantallas amplias.
  */
 export function SkillCard({ skill, onOpen, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -18,7 +18,7 @@ export function SkillCard({ skill, onOpen, onDelete }) {
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)',
-        padding: '0.65rem 0.75rem',
+        padding: '0.6rem 0.75rem',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -39,8 +39,8 @@ export function SkillCard({ skill, onOpen, onDelete }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '3px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden' }}>
-            <Zap size={12} color="var(--primary)" flexShrink={0} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Zap size={12} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {skill.name}
             </span>
           </div>
@@ -48,7 +48,8 @@ export function SkillCard({ skill, onOpen, onDelete }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{
               fontSize: '0.56rem',
-              background: 'rgba(255, 255, 255, 0.05)',
+              fontWeight: 700,
+              background: 'color-mix(in srgb, var(--border-color) 30%, transparent)',
               padding: '1px 5px',
               borderRadius: '3px',
               color: 'var(--text-muted)'
@@ -62,16 +63,16 @@ export function SkillCard({ skill, onOpen, onDelete }) {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onDelete(skill); setConfirmDelete(false); }}
                   style={{
-                    background: 'rgba(239, 68, 68, 0.25)',
-                    border: '1px solid rgba(239, 68, 68, 0.45)',
-                    color: '#fca5a5',
-                    fontSize: '0.58rem',
+                    background: 'color-mix(in srgb, var(--warning) 20%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--warning) 40%, transparent)',
+                    color: 'var(--warning)',
+                    fontSize: '0.56rem',
                     padding: '1px 4px',
                     borderRadius: '2px',
                     cursor: 'pointer',
                     fontWeight: 800
                   }}
-                  title="Confirmar eliminación permanente"
+                  title="Confirmar desinstalación"
                 >
                   ¿Borrar?
                 </button>
@@ -90,12 +91,12 @@ export function SkillCard({ skill, onOpen, onDelete }) {
         </div>
 
         <p style={{
-          fontSize: '0.68rem',
+          fontSize: '0.66rem',
           color: 'var(--text-muted)',
           margin: 0,
           lineHeight: '1.35',
           display: '-webkit-box',
-          WebkitLineClamp: 3,
+          WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden'
         }}>
@@ -107,15 +108,18 @@ export function SkillCard({ skill, onOpen, onDelete }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        fontSize: '0.62rem',
+        fontSize: '0.6rem',
         color: 'var(--text-muted)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+        borderTop: '1px solid var(--border-color)',
         paddingTop: '4px',
         marginTop: '2px'
       }}>
-        <span style={{ fontFamily: 'var(--font-mono)' }}>{skill.file_count} archivos</span>
-        <span style={{ color: 'var(--primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-          Ver manual <ArrowRight size={10} />
+        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontFamily: 'var(--font-mono, monospace)' }}>
+          <FileText size={10} style={{ color: 'var(--primary)' }} />
+          SKILL.md ({skill.file_count || 1} arch.)
+        </span>
+        <span style={{ color: 'var(--primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.62rem' }}>
+          Manual <ArrowRight size={9} />
         </span>
       </div>
     </div>

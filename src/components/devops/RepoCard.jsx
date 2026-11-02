@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
 import { 
   FolderGit2, GitBranch, ShieldAlert, CheckCircle2, AlertCircle, 
-  ArrowUp, ArrowDown, FileDiff, RefreshCw, Download, Code2, Terminal, Trash2 
+  ArrowUp, ArrowDown, FileDiff, RefreshCw, Download, Code2, Terminal, Trash2, Copy, Check 
 } from 'lucide-react';
 import { TacticalBadge, TacticalButton } from '../ui';
 
+function getRepoStack(repo) {
+  const p = (repo.path || '').toLowerCase();
+  const n = (repo.name || '').toLowerCase();
+  if (p.includes('aegis') || n.includes('aegis')) return { label: 'Tauri / Rust + React', color: 'var(--primary)' };
+  if (p.includes('tadu') || n.includes('tadu')) return { label: 'AWS SAM / Python 3.12', color: 'var(--secondary)' };
+  if (p.includes('granja') || n.includes('granja')) return { label: 'Android / Kotlin', color: 'var(--accent)' };
+  if (p.includes('vault') || p.includes('obsidian') || n.includes('obsidian')) return { label: 'Obsidian PKM', color: 'var(--text-high)' };
+  return { label: 'Git Project', color: 'var(--text-muted)' };
+}
+
 /**
- * RepoCard — Tarjeta atómica representativa de un repositorio Git local.
- * Integra acciones rápidas (fetch, pull, IDE, terminal, diff, desvincular) y alertas.
+ * RepoCard — Tarjeta de alta densidad para un repositorio Git local.
+ * Cero espacios muertos: combina tech stack, estado Git granular y acciones tácticas.
  */
 export function RepoCard({
   repo,
@@ -18,170 +28,257 @@ export function RepoCard({
   onRequestDelete,
   actionLoading
 }) {
+  const [copied, setCopied] = useState(false);
   const isFetching = actionLoading === `fetch-${repo.id}`;
   const isPulling = actionLoading === `pull-${repo.id}`;
+  const stack = getRepoStack(repo);
+
+  const handleCopyPath = (e) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(repo.path);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <div style={{
       background: 'var(--bg-card)',
-      border: repo.warning ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid var(--border-color)',
+      border: repo.warning ? '1px solid color-mix(in srgb, var(--warning) 40%, transparent)' : '1px solid var(--border-color)',
       borderRadius: 'var(--radius-md)',
-      padding: '0.75rem 0.85rem',
+      padding: '0.65rem 0.8rem',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between',
-      gap: '8px'
+      gap: '6px',
+      transition: 'border-color 0.15s ease'
     }}>
-      {/* Cabecera del Repo */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '3px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FolderGit2 size={14} color="var(--primary)" />
-              <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-high)' }}>{repo.name}</span>
-            </div>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', marginTop: '1px' }}>{repo.role}</span>
+      {/* 🧭 Cabecera: Nombre, Stack y Rama */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FolderGit2 size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {repo.name}
+            </span>
+            <span style={{
+              fontSize: '0.58rem',
+              fontWeight: 700,
+              padding: '1px 5px',
+              borderRadius: '4px',
+              background: 'color-mix(in srgb, var(--border-color) 25%, transparent)',
+              color: stack.color,
+              whiteSpace: 'nowrap'
+            }}>
+              {stack.label}
+            </span>
           </div>
 
-          {/* Badge de Rama y Botón Desvincular / Eliminar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <TacticalBadge variant={repo.is_git_repo ? 'success' : 'neutral'} size="xs" icon={<GitBranch size={11} />}>
-              {repo.branch}
-            </TacticalBadge>
-
-            {onRequestDelete && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onRequestDelete(repo); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-dim, var(--text-muted))', padding: '2px 3px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.7 }}
-                title="Desvincular o eliminar repositorio"
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
+          {/* Ruta en disco con botón copiar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+            <code style={{
+              fontSize: '0.6rem',
+              color: 'var(--text-muted)',
+              background: 'color-mix(in srgb, var(--border-color) 15%, transparent)',
+              padding: '1px 5px',
+              borderRadius: '3px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '240px'
+            }}>
+              {repo.path}
+            </code>
+            <button
+              type="button"
+              onClick={handleCopyPath}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: copied ? 'var(--primary)' : 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '1px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Copiar ruta absoluta"
+            >
+              {copied ? <Check size={10} /> : <Copy size={10} />}
+            </button>
           </div>
         </div>
 
-        {/* Ruta en disco */}
-        <code style={{ fontSize: '0.62rem', color: 'var(--text-dim, var(--text-muted))', background: 'rgba(0, 0, 0, 0.2)', padding: '2px 5px', borderRadius: '3px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '4px' }}>
-          {repo.path}
-        </code>
+        {/* Badge de Rama y Desvincular */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <TacticalBadge variant={repo.is_git_repo ? 'success' : 'neutral'} size="xs" icon={<GitBranch size={10} />}>
+            {repo.branch}
+          </TacticalBadge>
 
-        {/* Advertencia Crítica */}
-        {repo.warning && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 'var(--radius-sm)', padding: '4px 7px', marginTop: '6px', fontSize: '0.66rem', color: 'var(--warning, #f59e0b)', fontWeight: 600 }}>
-            <ShieldAlert size={12} flexShrink={0} />
-            <span>{repo.warning}</span>
-          </div>
-        )}
+          {onRequestDelete && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRequestDelete(repo); }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.6 }}
+              title="Desvincular repositorio de la flota"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Telemetría de Estado y Último Commit */}
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            {repo.is_clean ? (
-              <span style={{ color: 'var(--success, #34d399)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                <CheckCircle2 size={12} /> Árbol Limpio
-              </span>
-            ) : (
-              <span style={{ color: 'var(--warning, #f59e0b)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                <AlertCircle size={12} /> {repo.changed_files_count} cambios
-                {repo.untracked_files_count > 0 && ` (${repo.untracked_files_count} no rastreados)`}
-              </span>
-            )}
-          </div>
+      {/* ⚠️ Advertencia de Seguridad TADÚ / Archivos Críticos */}
+      {repo.warning && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '3px 6px',
+          fontSize: '0.64rem',
+          color: 'var(--warning)',
+          fontWeight: 600
+        }}>
+          <ShieldAlert size={11} flexShrink={0} />
+          <span>{repo.warning}</span>
+        </div>
+      )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {repo.ahead > 0 && (
-              <span style={{ color: 'var(--accent, #38bdf8)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}>
-                <ArrowUp size={11} /> {repo.ahead}
-              </span>
-            )}
-            {repo.behind > 0 && (
-              <span style={{ color: 'var(--warning, #fb923c)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}>
-                <ArrowDown size={11} /> {repo.behind}
-              </span>
-            )}
-            {repo.ahead === 0 && repo.behind === 0 && repo.is_git_repo && (
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.64rem' }}>Sincronizado</span>
-            )}
-          </div>
+      {/* 📊 Matriz de Telemetría Git (Estado y Sincronización) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: 'color-mix(in srgb, var(--border-color) 12%, transparent)',
+        borderRadius: 'var(--radius-sm)',
+        padding: '3px 7px',
+        fontSize: '0.66rem'
+      }}>
+        {/* Estado del árbol */}
+        <div>
+          {repo.is_clean ? (
+            <span style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
+              <CheckCircle2 size={11} /> Árbol limpio
+            </span>
+          ) : (
+            <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700 }}>
+              <AlertCircle size={11} />
+              {repo.changed_files_count} cambios
+              {repo.untracked_files_count > 0 && ` (${repo.untracked_files_count} untracked)`}
+            </span>
+          )}
         </div>
 
-        {repo.last_commit_hash && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.64rem', color: 'var(--text-muted)', overflow: 'hidden' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--success, #34d399)', fontWeight: 600 }}>
-              {repo.last_commit_hash}
+        {/* Sincronización Remota */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {repo.ahead > 0 && (
+            <span style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}>
+              <ArrowUp size={10} /> {repo.ahead} ahead
             </span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-              {repo.last_commit_msg}
+          )}
+          {repo.behind > 0 && (
+            <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 700 }}>
+              <ArrowDown size={10} /> {repo.behind} behind
             </span>
-            <span style={{ whiteSpace: 'nowrap', color: 'var(--text-dim, var(--text-muted))' }}>
-              {repo.last_commit_time}
-            </span>
-          </div>
-        )}
+          )}
+          {repo.ahead === 0 && repo.behind === 0 && repo.is_git_repo && (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>✓ Sincronizado</span>
+          )}
+        </div>
+      </div>
 
-        {/* Acciones Tácticas del Repo */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      {/* 📜 Cardlet del Último Commit */}
+      {repo.last_commit_hash && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '0.64rem',
+          color: 'var(--text-muted)',
+          background: 'color-mix(in srgb, var(--border-color) 8%, transparent)',
+          padding: '3px 6px',
+          borderRadius: 'var(--radius-sm)'
+        }}>
+          <span style={{ fontFamily: 'var(--font-mono, monospace)', color: 'var(--primary)', fontWeight: 700 }}>
+            {repo.last_commit_hash}
+          </span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, color: 'var(--text-high)' }}>
+            {repo.last_commit_msg}
+          </span>
+          <span style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.58rem' }}>
+            {repo.last_commit_time}
+          </span>
+        </div>
+      )}
+
+      {/* ⚡ Barra Táctica de Acciones */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '6px',
+        paddingTop: '4px',
+        borderTop: '1px solid var(--border-color)'
+      }}>
+        <TacticalButton
+          variant="ghost"
+          size="xs"
+          icon={<FileDiff size={11} />}
+          onClick={() => onInspect(repo)}
+          style={{
+            background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
+            color: 'var(--primary)',
+            fontWeight: 700,
+            fontSize: '0.64rem',
+            padding: '2px 7px'
+          }}
+        >
+          Inspeccionar
+        </TacticalButton>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
           <TacticalButton
-            variant="ghost"
+            variant="secondary"
             size="xs"
-            icon={<FileDiff size={12} />}
-            onClick={() => onInspect(repo)}
-            style={{
-              background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
-              color: 'var(--primary)',
-              fontWeight: 700
-            }}
+            icon={<RefreshCw size={9} className={isFetching ? 'animate-spin' : ''} />}
+            onClick={(e) => onFetch(repo, e)}
+            disabled={isFetching}
+            title="Ejecutar git fetch"
+            style={{ fontSize: '0.62rem', padding: '2px 6px' }}
           >
-            Inspeccionar
+            Fetch
           </TacticalButton>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TacticalButton
-              variant="secondary"
-              size="xs"
-              icon={<RefreshCw size={10} className={isFetching ? 'animate-spin' : ''} />}
-              onClick={(e) => onFetch(repo, e)}
-              disabled={isFetching}
-              title="Ejecutar git fetch"
-            >
-              Fetch
-            </TacticalButton>
+          <TacticalButton
+            variant="secondary"
+            size="xs"
+            icon={<Download size={9} className={isPulling ? 'animate-spin' : ''} />}
+            onClick={(e) => onPull(repo, e)}
+            disabled={isPulling}
+            title="Ejecutar git pull"
+            style={{ color: 'var(--accent)', fontSize: '0.62rem', padding: '2px 6px' }}
+          >
+            Pull
+          </TacticalButton>
 
-            <TacticalButton
-              variant="secondary"
-              size="xs"
-              icon={<Download size={10} className={isPulling ? 'animate-spin' : ''} />}
-              onClick={(e) => onPull(repo, e)}
-              disabled={isPulling}
-              title="Ejecutar git pull"
-              style={{ color: 'var(--accent, #38bdf8)' }}
-            >
-              Pull
-            </TacticalButton>
+          <TacticalButton
+            variant="secondary"
+            size="xs"
+            icon={<Code2 size={10} />}
+            onClick={(e) => onOpenInEditor(repo, 'cursor', e)}
+            title="Abrir repositorio en Cursor"
+            style={{ padding: '2px 5px' }}
+          />
 
-            <TacticalButton
-              variant="secondary"
-              size="xs"
-              icon={<Code2 size={11} />}
-              onClick={(e) => onOpenInEditor(repo, 'cursor', e)}
-              title="Abrir repositorio en Cursor"
-              style={{ padding: '3px 6px' }}
-            />
-
-            <TacticalButton
-              variant="secondary"
-              size="xs"
-              icon={<Terminal size={11} />}
-              onClick={(e) => onOpenInEditor(repo, 'terminal', e)}
-              title="Abrir terminal en la ruta del repositorio"
-              style={{ padding: '3px 6px' }}
-            />
-          </div>
+          <TacticalButton
+            variant="secondary"
+            size="xs"
+            icon={<Terminal size={10} />}
+            onClick={(e) => onOpenInEditor(repo, 'terminal', e)}
+            title="Abrir terminal en la ruta del repositorio"
+            style={{ padding: '2px 5px' }}
+          />
         </div>
       </div>
     </div>

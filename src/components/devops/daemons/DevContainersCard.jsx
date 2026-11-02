@@ -1,10 +1,10 @@
 import React from 'react';
-import { Box, Play, Square, RefreshCw, Plus, Terminal, Trash2 } from 'lucide-react';
+import { Box, Play, Square, Plus, Terminal, Trash2, Layers } from 'lucide-react';
 import { TacticalButton } from '../../ui';
 
 /**
  * DevContainersCard — Monitor y control integral de contenedores locales (Podman / Docker).
- * Soporta arranque, detención, reinicio, lectura de logs y eliminación.
+ * Soporta presets de despliegue rápido, logs, arranque, parada y eliminación.
  */
 export function DevContainersCard({
   containers = [],
@@ -28,19 +28,19 @@ export function DevContainersCard({
       background: 'var(--bg-card)',
       border: '1px solid var(--border-color)',
       borderRadius: 'var(--radius-md)',
-      padding: '0.85rem',
+      padding: '0.75rem 0.85rem',
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.65rem'
+      gap: '0.55rem'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box size={16} style={{ color: 'var(--primary)' }} />
+          <Box size={15} style={{ color: 'var(--primary)' }} />
           <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
             Contenedores ({containers.length})
           </span>
           <span style={{
-            fontSize: '0.62rem',
+            fontSize: '0.6rem',
             padding: '1px 6px',
             borderRadius: '10px',
             fontWeight: 700,
@@ -48,12 +48,12 @@ export function DevContainersCard({
             color: 'var(--primary)',
             border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)'
           }}>
-            {runtime ? runtime.toUpperCase() : 'NO DETECTADO'}
+            {runtime ? runtime.toUpperCase() : 'PODMAN'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
             <strong style={{ color: activeCount > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
               {activeCount}
             </strong> activos
@@ -62,11 +62,11 @@ export function DevContainersCard({
           <TacticalButton
             variant="secondary"
             size="xs"
-            icon={<Plus size={11} />}
+            icon={<Plus size={10} />}
             onClick={onOpenCreate}
             style={{
-              fontSize: '0.65rem',
-              padding: '2px 8px',
+              fontSize: '0.62rem',
+              padding: '2px 7px',
               color: 'var(--primary)',
               borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)',
               fontWeight: 700
@@ -79,17 +79,53 @@ export function DevContainersCard({
 
       {containers.length === 0 ? (
         <div style={{
-          textAlign: 'center',
-          padding: '1rem',
-          fontSize: '0.72rem',
-          color: 'var(--text-muted)',
-          border: '1px dashed var(--border-color)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          padding: '8px',
+          background: 'color-mix(in srgb, var(--border-color) 10%, transparent)',
+          border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-sm)'
         }}>
-          No se encontraron contenedores configurados
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+              Sin contenedores en {runtime?.toUpperCase() || 'Podman'}. Presets recomendados:
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            {[
+              { name: 'Redis', tag: 'redis_dev' },
+              { name: 'Postgres', tag: 'postgres_dev' },
+              { name: 'MongoDB', tag: 'mongodb_local' },
+              { name: 'Nginx', tag: 'nginx_test' }
+            ].map(preset => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={onOpenCreate}
+                style={{
+                  background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+                  color: 'var(--primary)',
+                  borderRadius: '3px',
+                  padding: '2px 6px',
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+              >
+                <Layers size={9} />
+                <span>+ {preset.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '240px', overflowY: 'auto' }}>
           {containers.map((c) => {
             const isRunning = c.state === 'running';
             const isActionLoading = actionLoadingId?.startsWith(`container-${c.id}`);
@@ -101,31 +137,31 @@ export function DevContainersCard({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '6px 8px',
+                  padding: '5px 8px',
                   borderRadius: 'var(--radius-sm)',
                   background: 'color-mix(in srgb, var(--border-color) 12%, transparent)',
                   border: '1px solid var(--border-color)',
-                  fontSize: '0.72rem'
+                  fontSize: '0.7rem'
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
                       background: isRunning ? 'var(--primary)' : 'var(--text-muted)'
                     }} />
-                    <span style={{ fontWeight: 600, color: 'var(--text-high)' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-high)' }}>
                       {c.name}
                     </span>
-                    <span style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '0.58rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                       ({c.id})
                     </span>
                   </div>
 
                   <div style={{
-                    fontSize: '0.62rem',
+                    fontSize: '0.6rem',
                     color: 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -135,15 +171,15 @@ export function DevContainersCard({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
                   {isRunning ? (
                     <TacticalButton
                       variant="secondary"
                       size="xs"
-                      icon={<Square size={10} />}
+                      icon={<Square size={9} />}
                       onClick={() => onToggleContainer(c.id, 'stop')}
                       disabled={isActionLoading}
-                      style={{ fontSize: '0.62rem', padding: '2px 6px' }}
+                      style={{ fontSize: '0.6rem', padding: '1px 5px' }}
                     >
                       Detener
                     </TacticalButton>
@@ -151,15 +187,10 @@ export function DevContainersCard({
                     <TacticalButton
                       variant="secondary"
                       size="xs"
-                      icon={<Play size={10} />}
+                      icon={<Play size={9} />}
                       onClick={() => onToggleContainer(c.id, 'start')}
                       disabled={isActionLoading}
-                      style={{
-                        fontSize: '0.62rem',
-                        padding: '2px 6px',
-                        color: 'var(--primary)',
-                        borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)'
-                      }}
+                      style={{ fontSize: '0.6rem', padding: '1px 5px', color: 'var(--primary)' }}
                     >
                       Iniciar
                     </TacticalButton>
@@ -170,29 +201,28 @@ export function DevContainersCard({
                     size="xs"
                     icon={<Terminal size={10} />}
                     onClick={() => onViewLogs(c)}
-                    title="Ver logs"
-                    style={{ padding: '3px' }}
+                    title="Ver logs en vivo"
+                    style={{ padding: '2px 5px' }}
                   />
 
-                  <TacticalButton
-                    variant="ghost"
-                    size="xs"
-                    icon={<RefreshCw size={10} className={isActionLoading ? 'animate-spin' : ''} />}
-                    onClick={() => onToggleContainer(c.id, 'restart')}
-                    disabled={isActionLoading}
-                    title="Reiniciar contenedor"
-                    style={{ padding: '3px' }}
-                  />
-
-                  <TacticalButton
-                    variant="danger"
-                    size="xs"
-                    icon={<Trash2 size={10} />}
+                  <button
+                    type="button"
                     onClick={() => handleDelete(c)}
                     disabled={isActionLoading}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      opacity: 0.6
+                    }}
                     title="Eliminar contenedor"
-                    style={{ padding: '3px' }}
-                  />
+                  >
+                    <Trash2 size={11} />
+                  </button>
                 </div>
               </div>
             );
