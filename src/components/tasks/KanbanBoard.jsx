@@ -14,7 +14,8 @@ export function KanbanBoard({
   toggleProjectCollapse,
   kanbanColumns,
   customizations,
-  onToggle
+  onToggle,
+  onSelectTask
 }) {
   if (kanbanLayout === 'swimlanes') {
     return (
@@ -108,6 +109,7 @@ export function KanbanBoard({
                           focusTasks={pFocus}
                           doneTasks={pCompleted}
                           onToggleTask={onToggle}
+                          onSelectTask={onSelectTask}
                         />
                       );
                     })}
@@ -148,6 +150,7 @@ export function KanbanBoard({
                 focusTasks={pFocus}
                 doneTasks={pCompleted}
                 onToggleTask={onToggle}
+                onSelectTask={onSelectTask}
               />
             );
           })
@@ -171,6 +174,7 @@ export function KanbanBoard({
         count={kanbanColumns.todo.length}
         tasks={kanbanColumns.todo}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
         headerColor="var(--text-high)"
         accentColor="rgba(148, 163, 184, 0.3)"
         emptyMessage="Sin tareas en cola"
@@ -181,6 +185,7 @@ export function KanbanBoard({
         count={kanbanColumns.focus.length}
         tasks={kanbanColumns.focus}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
         headerColor="#fbbf24"
         accentColor="rgba(245, 158, 11, 0.4)"
         highlight
@@ -192,6 +197,7 @@ export function KanbanBoard({
         count={kanbanColumns.done.length}
         tasks={kanbanColumns.done}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
         headerColor="#34d399"
         accentColor="rgba(16, 185, 129, 0.3)"
         emptyMessage="Aún no has completado tareas hoy"

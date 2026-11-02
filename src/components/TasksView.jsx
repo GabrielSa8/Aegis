@@ -6,7 +6,8 @@ import {
   TasksListView,
   KanbanBoard,
   FocusMatrix,
-  CustomizerModal
+  CustomizerModal,
+  TaskInspectorDrawer
 } from './tasks';
 
 export default function TasksView() {
@@ -41,6 +42,8 @@ export default function TasksView() {
     activeHubs,
     availableProjects,
     filteredTasks,
+    selectedTask,
+    setSelectedTask,
     stats,
     tasksHierarchy,
     tasksByProject,
@@ -113,6 +116,7 @@ export default function TasksView() {
           toggleProjectCollapse={toggleProjectCollapse}
           customizations={customizations}
           onToggle={handleToggle}
+          onSelectTask={setSelectedTask}
         />
       ) : viewMode === 'kanban' ? (
         <KanbanBoard
@@ -127,6 +131,7 @@ export default function TasksView() {
           kanbanColumns={kanbanColumns}
           customizations={customizations}
           onToggle={handleToggle}
+          onSelectTask={setSelectedTask}
         />
       ) : (
         <FocusMatrix
@@ -138,6 +143,16 @@ export default function TasksView() {
           updateMatrixQuadrant={updateMatrixQuadrant}
           activeHubs={activeHubs}
           availableProjects={availableProjects}
+          onToggle={handleToggle}
+          onSelectTask={setSelectedTask}
+        />
+      )}
+
+      {/* 🧭 Inspector Táctico Lateral de Tarea */}
+      {selectedTask && (
+        <TaskInspectorDrawer
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
           onToggle={handleToggle}
         />
       )}

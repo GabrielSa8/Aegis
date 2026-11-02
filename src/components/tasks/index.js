@@ -9,5 +9,6 @@ export { KanbanBoard } from './KanbanBoard';
 export { ConfigurableMatrixQuadrant } from './ConfigurableMatrixQuadrant';
 export { FocusMatrix } from './FocusMatrix';
 export { CustomizerModal } from './CustomizerModal';
+export { TaskInspectorDrawer } from './TaskInspectorDrawer';
 export { useTasks } from './useTasks';
 export * from './taskHelpers';

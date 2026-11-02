@@ -6,6 +6,7 @@ export function KanbanColumn({
   count,
   tasks,
   onToggle,
+  onSelectTask,
   headerColor,
   accentColor,
   highlight = false,
@@ -83,7 +84,7 @@ export function KanbanColumn({
                   <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>({projTasks.length})</span>
                 </div>
                 {projTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={onToggle} compact highlight={highlight} />
+                  <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} compact highlight={highlight} />
                 ))}
               </div>
             );

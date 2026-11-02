@@ -7,7 +7,8 @@ export function ConfigurableMatrixQuadrant({
   onConfigChange,
   activeHubs,
   availableProjects,
-  onToggle
+  onToggle,
+  onSelectTask
 }) {
   return (
     <div
@@ -99,7 +100,7 @@ export function ConfigurableMatrixQuadrant({
           </div>
         ) : (
           data.tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onToggle={onToggle} compact />
+            <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} compact />
           ))
         )}
       </div>

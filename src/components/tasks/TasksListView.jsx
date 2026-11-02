@@ -12,7 +12,8 @@ export function TasksListView({
   collapsedProjects,
   toggleProjectCollapse,
   customizations,
-  onToggle
+  onToggle,
+  onSelectTask
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -140,7 +141,7 @@ export function TasksListView({
                         {!isProjCollapsed && (
                           <div style={{ padding: '0.4rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {projTasks.map((task) => (
-                              <TaskCard key={task.id} task={task} onToggle={onToggle} />
+                              <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} />
                             ))}
                           </div>
                         )}
@@ -208,7 +209,7 @@ export function TasksListView({
               {!isProjCollapsed && (
                 <div style={{ padding: '0.45rem 0.65rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {projTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} onToggle={onToggle} />
+                    <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} />
                   ))}
                 </div>
               )}
@@ -268,7 +269,7 @@ export function TasksListView({
               {!isCollapsed && (
                 <div style={{ padding: '0.4rem 0.6rem', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   {hubTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} onToggle={onToggle} />
+                    <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} />
                   ))}
                 </div>
               )}

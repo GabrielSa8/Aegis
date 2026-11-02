@@ -117,7 +117,7 @@ export function resolveProjectTheme(projectName, customizations) {
   };
 }
 
-// Parseo de metadatos Obsidian Tasks (fechas, prioridad, etiquetas, proyecto)
+// Parseo de metadatos Obsidian Tasks (fechas, prioridad, etiquetas, proyecto, dependsOn y task ID)
 export function parseTask(t, customizations) {
   const text = t.text;
   
@@ -133,13 +133,24 @@ export function parseTask(t, customizations) {
     priority = 'low';
   }
 
+  // ID explícito de tarea tipo [id:xxx] o id:xxx
+  const idMatch = text.match(/\[id:([a-zA-Z0-9_\-]+)\]|\bid:([a-zA-Z0-9_\-]+)\b/i);
+  const customId = idMatch ? (idMatch[1] || idMatch[2]) : null;
+
+  // Dependencias de bloqueo tipo ⛔ dependsOn:id o dependsOn:id
+  const dependsMatch = text.match(/(?:⛔\s*)?dependsOn:([a-zA-Z0-9_\-]+)/i);
+  const dependsOn = dependsMatch ? dependsMatch[1] : null;
+
   const tags = (text.match(/#[a-zA-Z0-9_\-]+/g) || [])
     .map((tag) => tag.slice(1))
-    .filter((tag) => !['urgente', 'critico', 'alta', 'media', 'baja', 'hoy'].includes(tag.toLowerCase()));
+    .filter((tag) => !['urgente', 'critico', 'alta', 'media', 'baja', 'hoy', 'bloqueante'].includes(tag.toLowerCase()));
 
   const cleanText = text
     .replace(/[📅⏳]\s*\d{4}-\d{2}-\d{2}/g, '')
     .replace(/[🔺⏫🔼🔽]/g, '')
+    .replace(/\[id:[a-zA-Z0-9_\-]+\]|\bid:[a-zA-Z0-9_\-]+\b/gi, '')
+    .replace(/(?:⛔\s*)?dependsOn:[a-zA-Z0-9_\-]+/gi, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
   const rawProject = getTaskProject(t);
@@ -148,6 +159,8 @@ export function parseTask(t, customizations) {
 
   return {
     ...t,
+    customId,
+    dependsOn,
     dueDate,
     priority,
     tags,

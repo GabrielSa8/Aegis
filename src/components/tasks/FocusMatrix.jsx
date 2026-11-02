@@ -9,7 +9,8 @@ export function FocusMatrix({
   updateMatrixQuadrant,
   activeHubs,
   availableProjects,
-  onToggle
+  onToggle,
+  onSelectTask
 }) {
   return (
     <div
@@ -27,6 +28,7 @@ export function FocusMatrix({
         activeHubs={activeHubs}
         availableProjects={availableProjects}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
       />
       <ConfigurableMatrixQuadrant
         quadrantId="q2"
@@ -36,6 +38,7 @@ export function FocusMatrix({
         activeHubs={activeHubs}
         availableProjects={availableProjects}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
       />
       <ConfigurableMatrixQuadrant
         quadrantId="q3"
@@ -45,6 +48,7 @@ export function FocusMatrix({
         activeHubs={activeHubs}
         availableProjects={availableProjects}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
       />
       <ConfigurableMatrixQuadrant
         quadrantId="q4"
@@ -54,6 +58,7 @@ export function FocusMatrix({
         activeHubs={activeHubs}
         availableProjects={availableProjects}
         onToggle={onToggle}
+        onSelectTask={onSelectTask}
       />
     </div>
   );

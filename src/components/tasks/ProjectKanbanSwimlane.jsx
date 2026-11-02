@@ -12,7 +12,8 @@ export function ProjectKanbanSwimlane({
   todoTasks,
   focusTasks,
   doneTasks,
-  onToggleTask
+  onToggleTask,
+  onSelectTask
 }) {
   return (
     <div
@@ -101,7 +102,7 @@ export function ProjectKanbanSwimlane({
                   Sin tareas en cola
                 </div>
               ) : (
-                todoTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} compact />)
+                todoTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
               )}
             </div>
           </div>
@@ -140,7 +141,7 @@ export function ProjectKanbanSwimlane({
                   Sin tareas urgentes
                 </div>
               ) : (
-                focusTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} compact highlight />)
+                focusTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact highlight />)
               )}
             </div>
           </div>
@@ -176,7 +177,7 @@ export function ProjectKanbanSwimlane({
                   Sin completadas
                 </div>
               ) : (
-                doneTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} compact />)
+                doneTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
               )}
             </div>
           </div>

@@ -157,6 +157,22 @@ export function useVault() {
     loadVaultData();
   }, [loadVaultData]);
 
+  // Escucha de evento táctico aegis:open-vault-note para apertura de notas desde otras pestañas (ej. Tasks)
+  useEffect(() => {
+    const handleOpenExternalNote = (e) => {
+      const targetPath = e.detail?.path || e.detail?.relative_path;
+      if (!targetPath || !notes || notes.length === 0) return;
+      const target = notes.find(
+        (n) => n.path === targetPath || n.relative_path === targetPath || n.title.toLowerCase() === targetPath.toLowerCase()
+      );
+      if (target) {
+        loadNote(target);
+      }
+    };
+    window.addEventListener('aegis:open-vault-note', handleOpenExternalNote);
+    return () => window.removeEventListener('aegis:open-vault-note', handleOpenExternalNote);
+  }, [notes, loadNote]);
+
   // Gestor especializado de reorganización táctica Drag & Drop
   const dragDrop = useVaultDragDrop({
     loadVaultData,
