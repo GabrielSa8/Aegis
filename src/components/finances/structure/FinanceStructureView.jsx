@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { CreditCard, Layers, PieChart, Target, Repeat } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CreditCard, Layers, PieChart, Target, Repeat, Flame } from 'lucide-react';
+import { getBudgets } from '../../../utils/storage';
 import {
   useAccountsMsi,
   AccountsSection,
@@ -13,9 +14,10 @@ import {
   useAnalyticsData,
   CategoryExpenseChart,
   MethodExpenseChart,
-  YearlyEvolutionChart
+  YearlyEvolutionChart,
+  BurnRateCockpit
 } from '../analytics';
-import FinanceDeleteConfirmModal from '../FinanceDeleteConfirmModal';
+import StructureDeleteModal from './StructureDeleteModal';
 import Dashboard from '../../Dashboard';
 
 export default function FinanceStructureView({
@@ -26,52 +28,37 @@ export default function FinanceStructureView({
   onTransactionCreated
 }) {
   const [activeAccountTab, setActiveAccountTab] = useState('accounts'); // 'accounts' | 'msi' | 'recurring'
-  const [analyticsView, setAnalyticsView] = useState('cycle'); // 'cycle' | 'annual'
+  const [analyticsView, setAnalyticsView] = useState('cycle'); // 'cycle' | 'burnrate' | 'annual'
+  const [budgets, setBudgets] = useState({});
+
+  useEffect(() => {
+    let mounted = true;
+    getBudgets().then((b) => {
+      if (mounted && b) setBudgets(b);
+    });
+    return () => { mounted = false; };
+  }, [safeTransactions.length]);
 
   // Hook soberano de Cuentas, MSI y Recurrentes
   const {
-    paymentMethods,
-    msiPlans,
-    recurringExpenses,
-    showAccountModal,
-    setShowAccountModal,
-    showMsiModal,
-    setShowMsiModal,
-    showRecurringModal,
-    setShowRecurringModal,
-    accountForm,
-    setAccountForm,
-    msiForm,
-    setMsiForm,
-    recurringForm,
-    setRecurringForm,
-    handleOpenAddAccount,
-    handleEditAccount,
-    handleSaveAccount,
-    handleDeleteAccount,
-    handleSaveMsi,
-    handlePayInstallment,
-    handleDeleteMsi,
-    handleSaveRecurring,
-    handleApproveRecurring,
-    handleDeleteRecurring,
-    itemToDelete,
-    handleCancelDelete,
-    handleConfirmDelete
+    paymentMethods, msiPlans, recurringExpenses,
+    showAccountModal, setShowAccountModal,
+    showMsiModal, setShowMsiModal,
+    showRecurringModal, setShowRecurringModal,
+    accountForm, setAccountForm,
+    msiForm, setMsiForm,
+    recurringForm, setRecurringForm,
+    handleOpenAddAccount, handleEditAccount, handleSaveAccount, handleDeleteAccount,
+    handleSaveMsi, handlePayInstallment, handleDeleteMsi,
+    handleSaveRecurring, handleApproveRecurring, handleDeleteRecurring,
+    itemToDelete, handleCancelDelete, handleConfirmDelete
   } = useAccountsMsi(onTransactionCreated);
 
   // Hook de analítica de gastos
   const {
-    startDate,
-    endDate,
-    activeFinancialYear,
-    doughnutData,
-    hasExpenses,
-    doughnutOptions,
-    barData,
-    barOptions,
-    methodData,
-    methodOptions
+    startDate, endDate, activeFinancialYear,
+    doughnutData, hasExpenses, doughnutOptions,
+    barData, barOptions, methodData, methodOptions
   } = useAnalyticsData(safeTransactions, selectedDate, paymentMethods);
 
   return (
@@ -180,9 +167,13 @@ export default function FinanceStructureView({
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))', paddingBottom: '0.35rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <PieChart size={13} style={{ color: 'var(--accent, var(--primary))' }} />
+              {analyticsView === 'burnrate' ? (
+                <Flame size={13} style={{ color: 'var(--warning)' }} />
+              ) : (
+                <PieChart size={13} style={{ color: 'var(--accent, var(--primary))' }} />
+              )}
               <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                DISTRIBUCIÓN DE GASTO ({activeFinancialYear})
+                {analyticsView === 'burnrate' ? 'TELEMETRÍA BURN-RATE & RUNWAY' : `DISTRIBUCIÓN DE GASTO (${activeFinancialYear})`}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
@@ -196,6 +187,15 @@ export default function FinanceStructureView({
               </button>
               <button
                 type="button"
+                onClick={() => setAnalyticsView('burnrate')}
+                className={`structure-tab-pill ${analyticsView === 'burnrate' ? 'active' : ''}`}
+                style={{ padding: '0.18rem 0.5rem', fontSize: '0.67rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+              >
+                <Flame size={10} style={{ color: analyticsView === 'burnrate' ? 'var(--warning)' : 'currentColor' }} />
+                <span>Burn-Rate</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setAnalyticsView('annual')}
                 className={`structure-tab-pill ${analyticsView === 'annual' ? 'active' : ''}`}
                 style={{ padding: '0.18rem 0.5rem', fontSize: '0.67rem' }}
@@ -206,7 +206,18 @@ export default function FinanceStructureView({
           </div>
 
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="no-scrollbar">
-            {analyticsView === 'cycle' ? (
+            {analyticsView === 'burnrate' ? (
+              <BurnRateCockpit
+                transactions={safeTransactions}
+                startDate={startDate}
+                endDate={endDate}
+                selectedDate={selectedDate}
+                budgets={budgets}
+                paymentMethods={paymentMethods}
+                recurringExpenses={recurringExpenses}
+                msiPlans={msiPlans}
+              />
+            ) : analyticsView === 'cycle' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', height: '100%' }}>
                 <CategoryExpenseChart
                   startDate={startDate}
@@ -264,21 +275,10 @@ export default function FinanceStructureView({
       <RecurringModal isOpen={showRecurringModal} onClose={() => setShowRecurringModal(false)} recurringForm={recurringForm} setRecurringForm={setRecurringForm} paymentMethods={paymentMethods} onSubmit={handleSaveRecurring} />
 
       {/* 🗑️ Modal Unificado de Confirmación de Borrado */}
-      <FinanceDeleteConfirmModal
-        isOpen={Boolean(itemToDelete)}
-        onClose={handleCancelDelete}
+      <StructureDeleteModal
+        itemToDelete={itemToDelete}
+        onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        title={itemToDelete?.type === 'account' ? '¿Eliminar cuenta o tarjeta?' : itemToDelete?.type === 'msi' ? '¿Eliminar plan MSI?' : itemToDelete?.type === 'recurring' ? '¿Eliminar gasto recurrente?' : '¿Confirmar eliminación?'}
-        description={
-          itemToDelete?.type === 'account' ? (
-            <>Estás a punto de eliminar <strong>"{itemToDelete.data?.name}"</strong> ({itemToDelete.data?.type === 'credit' ? 'Crédito' : 'Débito / Efectivo'}).<br /><span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Esta acción no se puede deshacer en la base de datos local SQLite.</span></>
-          ) : itemToDelete?.type === 'msi' ? (
-            <>Estás a punto de eliminar el plan <strong>"{itemToDelete.data?.description}"</strong> por un total de <strong style={{ color: 'var(--danger)' }}>${Number(itemToDelete.data?.totalAmount || 0).toLocaleString()}</strong> ({itemToDelete.data?.totalInstallments} cuotas).</>
-          ) : itemToDelete?.type === 'recurring' ? (
-            <>Estás a punto de eliminar el gasto <strong>"{itemToDelete.data?.description}"</strong> por <strong style={{ color: 'var(--danger)' }}>${Number(itemToDelete.data?.amount || 0).toLocaleString()}</strong> (Corte: día {itemToDelete.data?.dueDay}).</>
-          ) : null
-        }
-        confirmText={itemToDelete?.type === 'account' ? 'Eliminar Cuenta' : itemToDelete?.type === 'msi' ? 'Eliminar Plan' : itemToDelete?.type === 'recurring' ? 'Eliminar Gasto' : 'Sí, Eliminar'}
       />
     </div>
   );
