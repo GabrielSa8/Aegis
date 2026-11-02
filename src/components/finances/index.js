@@ -1,9 +1,13 @@
 export { useFinances } from './useFinances';
-export { default as FinancesNav, FINANCES_SUBTABS } from './FinancesNav';
+export { default as FinancesNav } from './FinancesNav';
+export { FINANCES_SUBTABS } from './financesConstants';
 export { default as CycleCloseBanner } from './CycleCloseBanner';
 export { default as OperationsSection } from './OperationsSection';
+export { default as TemporalPulseView } from './pulse/TemporalPulseView';
+export { default as FinanceStructureView } from './structure/FinanceStructureView';
 export { default as CalendarSection } from './CalendarSection';
 export { default as BudgetsSection } from './BudgetsSection';
 export { default as BackupsModal } from './BackupsModal';
 export { default as DeleteTxModal } from './DeleteTxModal';
+export { default as FinanceDeleteConfirmModal } from './FinanceDeleteConfirmModal';
 export { default as RestoreSnapshotModal } from './RestoreSnapshotModal';

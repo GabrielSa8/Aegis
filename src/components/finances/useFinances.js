@@ -12,6 +12,8 @@ import {
   restoreFromSnapshot,
   getTodayLocalDateStr,
   getFinancialMonthRange,
+  getFinanceCutoffDay,
+  setFinanceCutoffDay,
   isDateInRange,
   getTimelineEvents,
   saveTimelineEvent,
@@ -91,9 +93,42 @@ export function useFinances() {
     return Array.isArray(transactions) ? transactions : [];
   }, [transactions]);
 
+  const [cutoffDay, setCutoffDay] = useState(() => getFinanceCutoffDay());
+
+  // Escuchar cambios de día de corte
+  useEffect(() => {
+    const handleCutoffChange = (e) => {
+      if (typeof e.detail === 'number') {
+        setCutoffDay(e.detail);
+      }
+    };
+    window.addEventListener('aegis-cutoff-day-changed', handleCutoffChange);
+    return () => window.removeEventListener('aegis-cutoff-day-changed', handleCutoffChange);
+  }, []);
+
+  const handleUpdateCutoffDay = useCallback((newDay) => {
+    const updated = setFinanceCutoffDay(newDay);
+    setCutoffDay(updated);
+  }, []);
+
+  // Navegar ciclos (anterior / siguiente con offset seguro)
+  const handleShiftCycle = useCallback((offsetCycles) => {
+    if (!offsetCycles) return;
+    setSelectedDate((prevDate) => {
+      const { startDate, endDate } = getFinancialMonthRange(prevDate, cutoffDay);
+      const target = offsetCycles < 0
+        ? new Date(startDate.getTime() - 15 * 24 * 60 * 60 * 1000)
+        : new Date(endDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+      const yStr = target.getFullYear();
+      const mStr = String(target.getMonth() + 1).padStart(2, '0');
+      const dStr = String(target.getDate()).padStart(2, '0');
+      return `${yStr}-${mStr}-${dStr}`;
+    });
+  }, [cutoffDay]);
+
   const { startDate, endDate } = useMemo(() => {
-    return getFinancialMonthRange(selectedDate);
-  }, [selectedDate]);
+    return getFinancialMonthRange(selectedDate, cutoffDay);
+  }, [selectedDate, cutoffDay]);
 
   const monthlyTxs = useMemo(() => {
     return safeTransactions
@@ -111,7 +146,7 @@ export function useFinances() {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [safeTransactions, selectedDate]);
 
-  const isToday22 = useMemo(() => new Date().getDate() === 22, []);
+  const isTodayCutoff = useMemo(() => new Date().getDate() === cutoffDay, [cutoffDay]);
 
   const selectedDayEvents = useMemo(() => {
     return (timelineEvents || []).filter((e) => e.date === selectedDate);
@@ -257,11 +292,15 @@ export function useFinances() {
     setVisibleLimit,
     startDate,
     endDate,
+    cutoffDay,
+    handleUpdateCutoffDay,
+    handleShiftCycle,
     monthlyTxs,
     visibleMonthlyTxs,
     selectedDayTxs,
     selectedDayEvents,
-    isToday22,
+    isToday22: isTodayCutoff,
+    isTodayCutoff,
     refreshSnapshots,
     refreshTimeline,
     refreshTransactionsAndSnapshots,

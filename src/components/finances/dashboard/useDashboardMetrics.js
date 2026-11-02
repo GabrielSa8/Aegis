@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { getFinancialMonthRange, isDateInRange } from '../../../utils/storage';
 
-export function useDashboardMetrics(transactions, selectedDate) {
+export function useDashboardMetrics(transactions, selectedDate, cutoffDay) {
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
   // Obtener rango del periodo financiero para la fecha seleccionada
   const { startDate, endDate } = useMemo(() => {
-    return getFinancialMonthRange(selectedDate);
-  }, [selectedDate]);
+    return getFinancialMonthRange(selectedDate, cutoffDay);
+  }, [selectedDate, cutoffDay]);
 
   // Cálculos consolidados y memoizados en un solo recorrido O(N)
   const metrics = useMemo(() => {

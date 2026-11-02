@@ -9,6 +9,7 @@ import {
 function Dashboard({
   transactions,
   selectedDate,
+  cutoffDay,
   onBudgetChange,
   showBudgets = true,
   showStats = true
@@ -34,7 +35,7 @@ function Dashboard({
     };
   }, [safeTransactions.length]);
 
-  const { startDate, endDate, metrics } = useDashboardMetrics(safeTransactions, selectedDate);
+  const { startDate, endDate, metrics } = useDashboardMetrics(safeTransactions, selectedDate, cutoffDay);
 
   return (
     <div>
@@ -50,6 +51,7 @@ function Dashboard({
       {showBudgets && (
         <BudgetCategoriesGrid
           categories={categories}
+          setCategories={setCategories}
           budgets={budgets}
           setBudgets={setBudgets}
           expenseByCategory={metrics.expenseByCategory}

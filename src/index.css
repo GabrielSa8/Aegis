@@ -2399,6 +2399,627 @@ body.aegis-dock-open .dynamic-island-capsule {
   transform: scale(0.92);
 }
 
+/* ⚡ FINANZAS COCKPIT TACTILE & RESPONSIVE FEEDBACK */
+.finances-bottom-capsule {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.finances-bottom-capsule:hover {
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px color-mix(in srgb, var(--primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border-color));
+}
+
+.finances-nav-pill {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.finances-nav-pill:hover {
+  transform: translateY(-2px) scale(1.04);
+  background: color-mix(in srgb, var(--primary) 14%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  color: var(--text-high) !important;
+}
+.finances-nav-pill:active {
+  transform: scale(0.96);
+}
+.finances-nav-pill.active {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.cockpit-hero-amount {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.cockpit-hero-amount:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-color));
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg-card));
+}
+.cockpit-hero-amount:focus-within {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent), 0 0 20px color-mix(in srgb, var(--primary) 15%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-card)) !important;
+}
+
+.cockpit-pill-btn {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.cockpit-pill-btn:hover {
+  transform: translateY(-1.5px) scale(1.03);
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg-card)) !important;
+  color: var(--text-high) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.cockpit-pill-btn:active {
+  transform: scale(0.96);
+}
+.cockpit-pill-btn.selected {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.day-deck-tx-card {
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+.day-deck-tx-card:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--primary)) 45%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--accent, var(--primary)) 10%, var(--bg-card)) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* 🛠️ ESTRUCTURA Y CONTROL TÁCTICO & RESPONSIVE */
+.structure-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  outline: none;
+}
+.structure-tab-pill:hover {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent, var(--primary)) 30%, transparent);
+  color: var(--text-high);
+}
+.structure-tab-pill:active {
+  transform: scale(0.96);
+}
+.structure-tab-pill.active {
+  border: 1px solid var(--accent, var(--primary));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent);
+  color: var(--text-high);
+  font-weight: 700;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent);
+}
+
+.structure-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.26rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 5px);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--primary)) 26%, var(--border-color));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 8%, transparent);
+  color: var(--text-high);
+  outline: none;
+}
+.structure-action-btn:hover {
+  border-color: var(--accent, var(--primary));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent);
+  color: var(--text-high);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--primary)) 25%, transparent);
+}
+.structure-action-btn:active {
+  transform: scale(0.95);
+}
+.structure-action-btn.delete {
+  padding: 4px;
+  min-width: 24px;
+  min-height: 24px;
+  color: var(--text-muted);
+  border-color: transparent;
+  background: transparent;
+}
+.structure-action-btn.delete:hover {
+  color: var(--danger, #ef4444);
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 40%, transparent);
+  background: color-mix(in srgb, var(--danger, #ef4444) 15%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--danger, #ef4444) 25%, transparent);
+}
+.structure-action-btn.delete:active {
+  transform: scale(0.9);
+}
+
+/* 🎯 PRESUPUESTOS TÁCTICOS Y RESPONSIVOS */
+.budget-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 3px;
+  border-radius: var(--radius-sm, 4px);
+  background: color-mix(in srgb, var(--accent, var(--primary)) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--primary)) 22%, var(--border-color));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  outline: none;
+}
+.budget-edit-btn:hover {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent);
+  border-color: var(--accent, var(--primary));
+  color: var(--text-high);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent, var(--primary)) 30%, transparent);
+  transform: scale(1.05);
+}
+.budget-edit-btn:active {
+  transform: scale(0.92);
+}
+.budget-edit-btn.confirm {
+  background: color-mix(in srgb, var(--success, #10b981) 15%, transparent);
+  border-color: color-mix(in srgb, var(--success, #10b981) 40%, transparent);
+  color: var(--success, #10b981);
+}
+.budget-edit-btn.confirm:hover {
+  background: color-mix(in srgb, var(--success, #10b981) 25%, transparent);
+  border-color: var(--success, #10b981);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--success, #10b981) 35%, transparent);
+}
+.budget-edit-btn.cancel {
+  background: color-mix(in srgb, var(--danger, #ef4444) 15%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 40%, transparent);
+  color: var(--danger, #ef4444);
+}
+.budget-edit-btn.cancel:hover {
+  background: color-mix(in srgb, var(--danger, #ef4444) 25%, transparent);
+  border-color: var(--danger, #ef4444);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--danger, #ef4444) 35%, transparent);
+}
+
+/* Erradicar spin buttons de inputs numéricos en WebKit/GTK y Firefox */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.budget-inline-edit-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: color-mix(in srgb, var(--bg-card) 90%, black);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--primary)) 40%, var(--border-color));
+  border-radius: var(--radius-sm, 5px);
+  padding: 2px 6px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.budget-inline-edit-wrapper:focus-within {
+  border-color: var(--accent, var(--primary));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--primary)) 30%, transparent);
+}
+.budget-inline-input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-high);
+  font-size: 0.84rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  outline: none;
+  padding: 0;
+}
+
+.structure-card {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.structure-card:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--primary)) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 6%, var(--bg-card));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* 🎯 BOTONES ACCIÓN MODAL GESTIÓN PRESUPUESTOS (RESPONSIVE + FEEDBACK TÁCTIL) */
+.budget-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0 1rem;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.budget-modal-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.budget-modal-btn-create {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent);
+  border: 1px solid var(--accent, var(--primary));
+  color: var(--text-high);
+  flex: 1 1 auto;
+}
+.budget-modal-btn-create:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 32%, transparent);
+  border-color: var(--accent, var(--primary));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent, var(--primary)) 40%, transparent);
+  transform: translateY(-1px);
+}
+.budget-modal-btn-create:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+}
+
+.budget-modal-btn-secondary {
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  min-width: 90px;
+}
+.budget-modal-btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-high) 8%, transparent);
+  border-color: var(--text-muted);
+  color: var(--text-high);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+.budget-modal-btn-secondary:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+}
+
+.budget-modal-btn-primary {
+  background: var(--accent, var(--primary));
+  border: 1px solid var(--accent, var(--primary));
+  color: var(--bg-main);
+  font-weight: 800;
+  min-width: 120px;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, var(--primary)) 35%, transparent);
+}
+.budget-modal-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.12);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent, var(--primary)) 55%, transparent);
+  transform: translateY(-1px);
+}
+.budget-modal-btn-primary:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+}
+
+.budget-modal-footer-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .budget-modal-footer-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .budget-modal-footer-actions .budget-modal-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .budget-modal-create-btn {
+    width: 100%;
+    flex: 1 1 100% !important;
+  }
+}
+
+.tactical-btn-primitive:not(:disabled):hover {
+  filter: brightness(1.15);
+}
+.tactical-btn-primitive:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+/* 🎯 EDITOR INLINE DE MOVIMIENTO (PULSO Y CALENDARIO - RESPONSIVE + TÁCTIL) */
+.inline-tx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  min-height: 28px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm, 5px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+.inline-tx-btn-cancel {
+  background: color-mix(in srgb, var(--bg-card) 60%, transparent);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.inline-tx-btn-cancel:hover {
+  background: color-mix(in srgb, var(--text-high) 8%, transparent);
+  border-color: var(--text-muted);
+  color: var(--text-high);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+.inline-tx-btn-cancel:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.inline-tx-btn-save {
+  background: var(--accent, var(--primary));
+  border: 1px solid var(--accent, var(--primary));
+  color: var(--bg-main);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, var(--primary)) 30%, transparent);
+}
+.inline-tx-btn-save:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent, var(--primary)) 50%, transparent);
+  transform: translateY(-1px);
+}
+.inline-tx-btn-save:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.inline-tx-type-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0.3rem 0.6rem;
+  min-height: 26px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  flex: 1 1 auto;
+}
+.inline-tx-type-btn:hover {
+  background: color-mix(in srgb, var(--text-high) 6%, transparent);
+  color: var(--text-high);
+}
+.inline-tx-type-btn:active {
+  transform: scale(0.95);
+}
+.inline-tx-type-btn.active-expense {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+  font-weight: 700;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--danger) 25%, transparent);
+}
+.inline-tx-type-btn.active-income {
+  border-color: var(--accent, var(--primary));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent);
+  color: var(--accent, var(--primary));
+  font-weight: 700;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent, var(--primary)) 25%, transparent);
+}
+
+.inline-tx-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 4px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+.inline-tx-close-btn:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  transform: scale(1.1);
+}
+.inline-tx-close-btn:active {
+  transform: scale(0.9);
+}
+
+.inline-tx-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+@media (max-width: 540px) {
+  .inline-tx-actions > button {
+    flex: 1 1 0;
+  }
+}
+
+
+.ledger-row {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ledger-row:hover {
+  transform: translateX(4px);
+  background: color-mix(in srgb, var(--primary) 7%, var(--bg-card)) !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-color)) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.ledger-row .ledger-action-btn {
+  opacity: 0.5;
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.ledger-row:hover .ledger-action-btn {
+  opacity: 1;
+}
+.ledger-row .ledger-action-btn:hover {
+  transform: scale(1.25);
+  color: var(--primary) !important;
+}
+.ledger-row .ledger-action-btn.delete:hover {
+  color: var(--accent-danger, var(--danger)) !important;
+}
+
+.cockpit-filter-pill {
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.cockpit-filter-pill:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border-color)) !important;
+  color: var(--text-high) !important;
+}
+.cockpit-filter-pill:active {
+  transform: scale(0.96);
+}
+
+.cockpit-type-toggle {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.cockpit-type-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.cockpit-type-toggle:active {
+  transform: scale(0.95);
+}
+
+/* ⚡ BOTÓN REGISTRAR OPERACIÓN TÁCTICO CON RESPONSIVE ÚNICO */
+.cockpit-submit-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-md, 10px);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--primary) 70%, transparent);
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 75%, #000) 100%);
+  color: #04120c;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 30%, transparent);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
+  overflow: hidden;
+}
+
+.cockpit-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.cockpit-submit-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: color-mix(in srgb, var(--primary) 90%, #fff);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 45%, transparent), 0 0 16px color-mix(in srgb, var(--primary) 35%, transparent);
+  filter: brightness(1.08);
+}
+
+.cockpit-submit-btn:hover::before {
+  left: 100%;
+}
+
+.cockpit-submit-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
+  filter: brightness(0.95);
+}
+
+.cockpit-submit-icon {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+}
+
+.cockpit-submit-btn:hover .cockpit-submit-icon {
+  transform: scale(1.25) rotate(-10deg);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+}
+
+/* 📅 MINI CALENDARIO TÁCTICO POPOVER */
+.mini-calendar-popover {
+  animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mini-cal-day-cell {
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.mini-cal-day-cell:hover {
+  transform: scale(1.15);
+  background: color-mix(in srgb, var(--primary) 20%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent) !important;
+  color: var(--text-high) !important;
+  z-index: 2;
+}
+
+.mini-cal-day-cell:active {
+  transform: scale(0.9);
+}
+
+.mini-cal-day-cell.selected {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+
+
+
 
 
 

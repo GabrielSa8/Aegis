@@ -5,6 +5,7 @@ import TacticalButton from '../ui/TacticalButton';
 export default function BudgetsSection({
   safeTransactions,
   selectedDate,
+  cutoffDay,
   onBudgetChange,
   onExportBackup,
   onImportBackup
@@ -25,7 +26,7 @@ export default function BudgetsSection({
       }}>
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Copias de Seguridad Físicas</h3>
-          <p style={{ fontSize: '0.78rem', color: '#9ca3af', margin: '3px 0 0 0' }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '3px 0 0 0' }}>
             Exporta tus transacciones en JSON o restaura un respaldo previo.
           </p>
         </div>
@@ -61,6 +62,7 @@ export default function BudgetsSection({
       <Dashboard 
         transactions={safeTransactions} 
         selectedDate={selectedDate} 
+        cutoffDay={cutoffDay}
         onBudgetChange={onBudgetChange} 
         showBudgets={true}
         showStats={false}

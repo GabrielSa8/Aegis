@@ -160,7 +160,7 @@ export default function App() {
           flex: 1,
           minHeight: 0,
           marginLeft: isDockPinned ? '54px' : '0',
-          overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault') ? 'hidden' : 'auto',
+          overflowY: (activeTab === 'agent' || activeTab === 'settings' || activeTab === 'vault' || activeTab === 'finances') ? 'hidden' : 'auto',
           overflowX: 'hidden',
           padding: (activeTab === 'settings' || activeTab === 'agent')
             ? '0' 

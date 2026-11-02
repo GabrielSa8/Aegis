@@ -61,6 +61,9 @@ export function useAccountsMsi(onTransactionCreated) {
   const [msiForm, setMsiForm] = useState(INITIAL_MSI_FORM);
   const [recurringForm, setRecurringForm] = useState(INITIAL_RECURRING_FORM);
 
+  // Estado para confirmación unificada de borrado
+  const [itemToDelete, setItemToDelete] = useState(null);
+
   const loadAllData = async () => {
     setLoading(true);
     try {
@@ -106,10 +109,11 @@ export function useAccountsMsi(onTransactionCreated) {
     setAccountForm(INITIAL_ACCOUNT_FORM);
   };
 
-  const handleDeleteAccount = async (id) => {
-    if (!confirm('¿Eliminar esta cuenta/tarjeta?')) return;
-    const updated = await deletePaymentMethod(id);
-    setPaymentMethods(updated);
+  const handleDeleteAccount = (accountOrId) => {
+    const item = (typeof accountOrId === 'object' && accountOrId !== null)
+      ? accountOrId
+      : paymentMethods.find((p) => p.id === accountOrId) || { id: accountOrId, name: 'esta cuenta' };
+    setItemToDelete({ type: 'account', data: item });
   };
 
   // Handlers MSI
@@ -150,10 +154,11 @@ export function useAccountsMsi(onTransactionCreated) {
     }
   };
 
-  const handleDeleteMsi = async (id) => {
-    if (!confirm('¿Eliminar este plan MSI?')) return;
-    const updated = await deleteMsiPlan(id);
-    setMsiPlans(updated);
+  const handleDeleteMsi = (planOrId) => {
+    const item = (typeof planOrId === 'object' && planOrId !== null)
+      ? planOrId
+      : msiPlans.find((m) => m.id === planOrId) || { id: planOrId, description: 'este plan MSI' };
+    setItemToDelete({ type: 'msi', data: item });
   };
 
   // Handlers Gastos Recurrentes
@@ -192,10 +197,35 @@ export function useAccountsMsi(onTransactionCreated) {
     }
   };
 
-  const handleDeleteRecurring = async (id) => {
-    if (!confirm('¿Eliminar este gasto recurrente?')) return;
-    const updated = await deleteRecurringExpense(id);
-    setRecurringExpenses(updated);
+  const handleDeleteRecurring = (recOrId) => {
+    const item = (typeof recOrId === 'object' && recOrId !== null)
+      ? recOrId
+      : recurringExpenses.find((r) => r.id === recOrId) || { id: recOrId, description: 'este gasto recurrente' };
+    setItemToDelete({ type: 'recurring', data: item });
+  };
+
+  const handleCancelDelete = () => {
+    setItemToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    const { type, data } = itemToDelete;
+    setItemToDelete(null);
+    try {
+      if (type === 'account') {
+        const updated = await deletePaymentMethod(data.id);
+        setPaymentMethods(updated);
+      } else if (type === 'msi') {
+        const updated = await deleteMsiPlan(data.id);
+        setMsiPlans(updated);
+      } else if (type === 'recurring') {
+        const updated = await deleteRecurringExpense(data.id);
+        setRecurringExpenses(updated);
+      }
+    } catch (err) {
+      console.error('Error eliminando elemento:', err);
+    }
   };
 
   return {
@@ -222,6 +252,9 @@ export function useAccountsMsi(onTransactionCreated) {
     handleDeleteMsi,
     handleSaveRecurring,
     handleApproveRecurring,
-    handleDeleteRecurring
+    handleDeleteRecurring,
+    itemToDelete,
+    handleCancelDelete,
+    handleConfirmDelete
   };
 }

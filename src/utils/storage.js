@@ -414,8 +414,37 @@ export const importBackup = async (fileContent) => {
   }
 };
 
-// --- MOTOR DE FECHAS FINANCIERAS (CICLOS DEL 22 AL 22) ---
-export const getFinancialMonthRange = (dateStr) => {
+// --- CONFIGURACIÓN DE DÍA DE CORTE (1..31, POR DEFECTO 22) ---
+export const getFinanceCutoffDay = () => {
+  try {
+    const val = localStorage.getItem('aegis_finance_cutoff_day');
+    if (val) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 31) return parsed;
+    }
+  } catch (e) {
+    console.error('Error leyendo corte financiero:', e);
+  }
+  return 22;
+};
+
+export const setFinanceCutoffDay = (day) => {
+  const parsed = parseInt(day, 10);
+  const validDay = !isNaN(parsed) && parsed >= 1 && parsed <= 31 ? parsed : 22;
+  try {
+    localStorage.setItem('aegis_finance_cutoff_day', String(validDay));
+    window.dispatchEvent(new CustomEvent('aegis-cutoff-day-changed', { detail: validDay }));
+  } catch (e) {
+    console.error('Error guardando corte financiero:', e);
+  }
+  return validDay;
+};
+
+// --- MOTOR DE FECHAS FINANCIERAS (CONFIGURABLE POR USUARIO) ---
+export const getFinancialMonthRange = (dateStr, cutoffDay) => {
+  if (typeof cutoffDay !== 'number' || isNaN(cutoffDay) || cutoffDay < 1 || cutoffDay > 31) {
+    cutoffDay = getFinanceCutoffDay();
+  }
   if (!dateStr || typeof dateStr !== 'string') {
     dateStr = getTodayLocalDateStr();
   }
@@ -426,19 +455,24 @@ export const getFinancialMonthRange = (dateStr) => {
 
   let startDate, endDate, financialMonth, financialYear;
 
-  if (day < 22) {
-    startDate = new Date(year, month - 1, 22, 0, 0, 0, 0);
-    endDate = new Date(year, month, 22, 23, 59, 59, 999);
+  if (cutoffDay === 1) {
+    startDate = new Date(year, month, 1, 0, 0, 0, 0);
+    endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    financialMonth = month;
+    financialYear = year;
+  } else if (day < cutoffDay) {
+    startDate = new Date(year, month - 1, cutoffDay, 0, 0, 0, 0);
+    endDate = new Date(year, month, cutoffDay, 23, 59, 59, 999);
     financialMonth = (month + 12) % 12;
     financialYear = month === 0 ? year - 1 : year;
   } else {
-    startDate = new Date(year, month, 22, 0, 0, 0, 0);
-    endDate = new Date(year, month + 1, 22, 23, 59, 59, 999);
+    startDate = new Date(year, month, cutoffDay, 0, 0, 0, 0);
+    endDate = new Date(year, month + 1, cutoffDay, 23, 59, 59, 999);
     financialMonth = (month + 1) % 12;
     financialYear = month === 11 ? year + 1 : year;
   }
 
-  return { startDate, endDate, financialMonth, financialYear };
+  return { startDate, endDate, financialMonth, financialYear, cutoffDay };
 };
 
 // --- MÉTODOS DE PAGO (V2.2.0) ---

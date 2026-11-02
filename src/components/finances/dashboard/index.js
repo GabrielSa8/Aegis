@@ -1,3 +1,7 @@
 export { useDashboardMetrics } from './useDashboardMetrics';
 export { TelemetryStatsGrid } from './TelemetryStatsGrid';
 export { BudgetCategoriesGrid } from './BudgetCategoriesGrid';
+export { ManageBudgetsModal } from './ManageBudgetsModal';
+export { BudgetCategoryRow } from './BudgetCategoryRow';
+export { CreateApartadoForm } from './CreateApartadoForm';
+export { useManageBudgets } from './useManageBudgets';

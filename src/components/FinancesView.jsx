@@ -1,13 +1,10 @@
-import Analytics from './Analytics';
-import TimelineView from './TimelineView';
-import AccountsMsiView from './AccountsMsiView';
 import {
   useFinances,
   FinancesNav,
   CycleCloseBanner,
   OperationsSection,
-  CalendarSection,
-  BudgetsSection,
+  TemporalPulseView,
+  FinanceStructureView,
   BackupsModal,
   DeleteTxModal,
   RestoreSnapshotModal
@@ -33,6 +30,9 @@ export default function FinancesView() {
     setVisibleLimit,
     startDate,
     endDate,
+    cutoffDay,
+    handleUpdateCutoffDay,
+    handleShiftCycle,
     monthlyTxs,
     visibleMonthlyTxs,
     selectedDayTxs,
@@ -54,13 +54,11 @@ export default function FinancesView() {
   } = useFinances();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* 🧭 Barra de Sub-Navegación Táctica */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', height: '100%', width: '100%', overflow: 'hidden', position: 'relative' }}>
+      {/* 🧭 Barra Superior de Sub-Navegación Táctica */}
       <FinancesNav
         subTab={subTab}
         onSelectSubTab={setSubTab}
-        startDate={startDate}
-        endDate={endDate}
         snapshotsCount={snapshots.length}
         onOpenBackups={() => setShowBackupsModal(true)}
       />
@@ -71,76 +69,65 @@ export default function FinancesView() {
         onExportBackup={handleExportBackup}
       />
 
-      {/* 🚀 SUB-VISTA 1: OPERACIONES & REGISTRO */}
-      {subTab === 'operations' && (
-        <OperationsSection
-          safeTransactions={safeTransactions}
-          selectedDate={selectedDate}
-          onBudgetChange={refreshSnapshots}
-          onTransactionSave={handleTransactionSave}
-          editingTransaction={editingTransaction}
-          onCancelEdit={handleCancelEdit}
-          onCategoriesChange={refreshTransactionsAndSnapshots}
-          visibleMonthlyTxs={visibleMonthlyTxs}
-          monthlyTxs={monthlyTxs}
-          visibleLimit={visibleLimit}
-          onLoadMore={() => setVisibleLimit((prev) => prev + 30)}
-          onEditTx={handleTransactionEdit}
-          onDeleteTx={setDeletingTransaction}
-        />
-      )}
-
-      {/* 💳 SUB-VISTA 2: CUENTAS, MSI Y GASTOS RECURRENTES */}
-      {subTab === 'accounts' && (
-        <AccountsMsiView onTransactionCreated={refreshTransactionsAndSnapshots} />
-      )}
-
-      {/* 🧭 SUB-VISTA 3: TIMELINE MAESTRO CRUZADO */}
-      {subTab === 'timeline' && (
-        <TimelineView 
-          events={timelineEvents}
-          onToggleEvent={handleToggleTimelineEvent}
-          onSaveEvent={handleSaveTimelineEvent}
-          onDeleteEvent={handleDeleteTimelineEvent}
-        />
-      )}
-
-      {/* 📅 SUB-VISTA 4: CALENDARIO */}
-      {subTab === 'calendar' && (
-        <CalendarSection
-          safeTransactions={safeTransactions}
-          timelineEvents={timelineEvents}
-          selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
-          selectedDayTxs={selectedDayTxs}
-          selectedDayEvents={selectedDayEvents}
-          onToggleTimelineEvent={handleToggleTimelineEvent}
-          onEditTx={handleTransactionEdit}
-          onDeleteTx={setDeletingTransaction}
-          onGoToOperations={() => setSubTab('operations')}
-        />
-      )}
-
-      {/* 📊 SUB-VISTA 5: ANALÍTICA & GRÁFICOS */}
-      {subTab === 'analytics' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Analytics 
-            transactions={safeTransactions} 
-            selectedDate={selectedDate} 
+      {/* 🚀 Contenedor Flexible de Sub-Vistas (100% Pantalla Útil) */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* 🚀 SUB-VISTA 1: OPERACIONES & REGISTRO */}
+        {subTab === 'operations' && (
+          <OperationsSection
+            safeTransactions={safeTransactions}
+            selectedDate={selectedDate}
+            onBudgetChange={refreshSnapshots}
+            onTransactionSave={handleTransactionSave}
+            editingTransaction={editingTransaction}
+            onCancelEdit={handleCancelEdit}
+            onCategoriesChange={refreshTransactionsAndSnapshots}
+            visibleMonthlyTxs={visibleMonthlyTxs}
+            monthlyTxs={monthlyTxs}
+            visibleLimit={visibleLimit}
+            onLoadMore={() => setVisibleLimit((prev) => prev + 30)}
+            onEditTx={handleTransactionEdit}
+            onDeleteTx={setDeletingTransaction}
+            startDate={startDate}
+            endDate={endDate}
+            cutoffDay={cutoffDay}
+            onUpdateCutoffDay={handleUpdateCutoffDay}
+            onShiftCycle={handleShiftCycle}
           />
-        </div>
-      )}
+        )}
 
-      {/* 🎯 SUB-VISTA 6: PRESUPUESTOS & RESPALDOS */}
-      {subTab === 'budgets' && (
-        <BudgetsSection
-          safeTransactions={safeTransactions}
-          selectedDate={selectedDate}
-          onBudgetChange={refreshSnapshots}
-          onExportBackup={handleExportBackup}
-          onImportBackup={handleImportBackup}
-        />
-      )}
+        {/* 🧭 VISTA 2: PULSO TEMPORAL (CALENDARIO + TIMELINE BILATERAL) */}
+        {(subTab === 'pulse' || subTab === 'calendar' || subTab === 'timeline') && (
+          <TemporalPulseView
+            safeTransactions={safeTransactions}
+            timelineEvents={timelineEvents}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            selectedDayTxs={selectedDayTxs}
+            selectedDayEvents={selectedDayEvents}
+            startDate={startDate}
+            endDate={endDate}
+            cutoffDay={cutoffDay}
+            onToggleTimelineEvent={handleToggleTimelineEvent}
+            onSaveTimelineEvent={handleSaveTimelineEvent}
+            onDeleteTimelineEvent={handleDeleteTimelineEvent}
+            onEditTx={handleTransactionEdit}
+            onSaveTransaction={handleTransactionSave}
+            onDeleteTx={setDeletingTransaction}
+            onGoToOperations={() => setSubTab('operations')}
+          />
+        )}
+
+        {/* 📊 VISTA 3: ESTRUCTURA, MSI, ANALÍTICA & PRESUPUESTOS */}
+        {(subTab === 'structure' || subTab === 'accounts' || subTab === 'analytics' || subTab === 'budgets') && (
+          <FinanceStructureView
+            safeTransactions={safeTransactions}
+            selectedDate={selectedDate}
+            cutoffDay={cutoffDay}
+            onBudgetChange={refreshSnapshots}
+            onTransactionCreated={refreshTransactionsAndSnapshots}
+          />
+        )}
+      </div>
 
       {/* ⚙️ MODAL DE RESPALDOS */}
       <BackupsModal

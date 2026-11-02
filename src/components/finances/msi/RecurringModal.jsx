@@ -8,7 +8,7 @@ export default function RecurringModal({
   onClose,
   recurringForm,
   setRecurringForm,
-  paymentMethods,
+  paymentMethods = [],
   onSubmit
 }) {
   return (
@@ -66,7 +66,7 @@ export default function RecurringModal({
             onChange={(e) => setRecurringForm({ ...recurringForm, paymentMethod: e.target.value })}
             style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
           >
-            {paymentMethods.map((pm) => (
+            {(paymentMethods || []).map((pm) => (
               <option key={pm.id} value={pm.name}>{pm.name}</option>
             ))}
           </select>

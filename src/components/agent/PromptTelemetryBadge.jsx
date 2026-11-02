@@ -16,12 +16,13 @@ export function estimateTokens(text = '', explicitRefsCount = 0) {
  * Detecta si el modelo activo es pesado/profundo y el prompt es trivial
  */
 export function checkEfficiencyHint(prompt = '', activeModel = '', effectiveEffort = 'low') {
-  const trimmed = prompt.trim();
+  const modelSafe = typeof activeModel === 'string' ? activeModel : '';
+  const trimmed = (prompt || '').trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
   const isHeavyModel =
     effectiveEffort === 'high' ||
-    /argon|opus|pro/i.test(activeModel) ||
-    (activeModel.endsWith('-high') && !activeModel.includes('flash'));
+    /argon|opus|pro/i.test(modelSafe) ||
+    (modelSafe.endsWith('-high') && !modelSafe.includes('flash'));
 
   const isTrivial = wordCount > 0 && wordCount <= 7 && !trimmed.includes('\n') && !trimmed.includes('{') && !trimmed.includes('@');
 
