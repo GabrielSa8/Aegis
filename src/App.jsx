@@ -112,11 +112,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showCommandPalette, showSettings]);
 
-  // Ping al núcleo Rust local
+  // Ping al núcleo Rust local y escucha de cambio de pestañas táctico
   useEffect(() => {
     invoke('ping')
       .then((res) => setCoreStatus(res))
       .catch(() => setCoreStatus('Modo Web Standalone'));
+
+    const handleSwitchTab = (e) => {
+      if (e.detail?.tab) setActiveTab(e.detail.tab);
+    };
+    window.addEventListener('aegis:switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('aegis:switch-tab', handleSwitchTab);
   }, []);
 
   return (

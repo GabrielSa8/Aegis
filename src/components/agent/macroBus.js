@@ -18,6 +18,9 @@ export function loadMacros(fallback = []) {
 export function queueMacro(macro, send = false) {
   pending = { macro, send };
   window.dispatchEvent(new CustomEvent(EVENT));
+  if (send) {
+    window.dispatchEvent(new CustomEvent('aegis:switch-tab', { detail: { tab: 'agent' } }));
+  }
 }
 
 export function consumePendingMacro() {

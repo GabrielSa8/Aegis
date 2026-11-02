@@ -8,7 +8,8 @@ export const DEFAULT_MACROS = [
   { id: 'm1', label: 'Auditar Git', text: 'Revisa status de git y ramas locales de los repositorios vigilados.' },
   { id: 'm2', label: 'Analizar Diff', text: 'Analiza los siguientes cambios del repositorio y resume el impacto:\n{{diff}}' },
   { id: 'm3', label: 'Pegar Clip', text: 'Revisa, corrige o comenta el código pegado desde el portapapeles:\n{{clip}}' },
-  { id: 'm4', label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' }
+  { id: 'm4', label: 'Resumen Bitácora', text: 'Lee la bitácora de proyectos en Obsidian y resume el estado del hito actual.' },
+  { id: 'm5', label: 'Copiloto Finanzas', text: 'Ejecuta un diagnóstico financiero cualitativo sobre mis gastos, burn-rate y posibles fugas de capital en este ciclo.' }
 ];
 
 export default function MacroManagerModal({ isOpen, onClose, macros = [], onSaveMacros }) {

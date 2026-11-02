@@ -21,7 +21,7 @@ export function useAttachments(contextId) {
 
   // Drop nativo de Tauri (evita que el webview navegue al archivo); copia al workspace al soltar
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.__TAURI_INTERNALS__) return;
+    if (typeof window === 'undefined' || !window.__TAURI_INTERNALS__?.metadata?.currentWindow) return;
     let unlisten;
     let cancelled = false;
     getCurrentWebview()

@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { Flame, ShieldCheck, TrendingUp, TrendingDown, AlertTriangle, Zap, Calendar, ArrowRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Flame, ShieldCheck, TrendingUp, TrendingDown, AlertTriangle, Zap, Calendar, ArrowRight, Brain } from 'lucide-react';
 import { calculateBurnRateMetrics } from './burnRateEngine';
+import FinancialDiagnosisModal from './FinancialDiagnosisModal';
 
 export default function BurnRateCockpit({
   transactions = [],
@@ -12,6 +13,8 @@ export default function BurnRateCockpit({
   recurringExpenses = [],
   msiPlans = []
 }) {
+  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+
   const metrics = useMemo(() => {
     return calculateBurnRateMetrics({
       transactions,
@@ -60,6 +63,16 @@ export default function BurnRateCockpit({
     ? 'color-mix(in srgb, var(--warning) 15%, transparent)'
     : 'color-mix(in srgb, var(--accent, var(--primary)) 15%, transparent)';
 
+  const cardStyle = {
+    background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
+    border: '1px solid var(--border-color)',
+    borderRadius: 'var(--radius-sm, 6px)',
+    padding: '0.55rem 0.65rem',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between'
+  };
+
   return (
     <div
       style={{
@@ -106,11 +119,35 @@ export default function BurnRateCockpit({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.64rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', flexShrink: 0 }}>
-          <Calendar size={11} style={{ opacity: 0.7 }} />
-          <span>Día {daysElapsed}/{totalCycleDays}</span>
-          <span>•</span>
-          <strong style={{ color: 'var(--text-high)' }}>{daysRemaining}d para corte</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.64rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)' }}>
+            <Calendar size={11} style={{ opacity: 0.7 }} />
+            <span>Día {daysElapsed}/{totalCycleDays}</span>
+            <span>•</span>
+            <strong style={{ color: 'var(--text-high)' }}>{daysRemaining}d para corte</strong>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowDiagnosisModal(true)}
+            className="structure-tab-pill"
+            style={{
+              padding: '0.15rem 0.45rem',
+              fontSize: '0.64rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              background: 'color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent, var(--primary)) 40%, transparent)',
+              color: 'var(--text-high)',
+              cursor: 'pointer'
+            }}
+            title="Abrir Copiloto Financiero IA y Diagnóstico de Fugas"
+          >
+            <Brain size={11} style={{ color: 'var(--accent, var(--primary))' }} />
+            <span>Diagnóstico IA</span>
+          </button>
         </div>
       </div>
 
@@ -125,17 +162,7 @@ export default function BurnRateCockpit({
         }}
       >
         {/* Tarjeta 1: Burn Rate Actual */}
-        <div
-          style={{
-            background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 6px)',
-            padding: '0.55rem 0.65rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}
-        >
+        <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               Ritmo de Quema
@@ -157,17 +184,7 @@ export default function BurnRateCockpit({
         </div>
 
         {/* Tarjeta 2: Proyección de Fin de Ciclo */}
-        <div
-          style={{
-            background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 6px)',
-            padding: '0.55rem 0.65rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}
-        >
+        <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               Proyección al Corte
@@ -191,17 +208,7 @@ export default function BurnRateCockpit({
         </div>
 
         {/* Tarjeta 3: Runway & Tope Seguro */}
-        <div
-          style={{
-            background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 6px)',
-            padding: '0.55rem 0.65rem',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between'
-          }}
-        >
+        <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               Límite Diario Seguro
@@ -270,6 +277,16 @@ export default function BurnRateCockpit({
           </div>
         </div>
       </div>
+
+      {/* 🧠 Modal Copiloto de Diagnóstico IA */}
+      <FinancialDiagnosisModal
+        isOpen={showDiagnosisModal}
+        onClose={() => setShowDiagnosisModal(false)}
+        metrics={metrics}
+        transactions={transactions}
+        budgets={budgets}
+        paymentMethods={paymentMethods}
+      />
     </div>
   );
 }
