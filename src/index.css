@@ -2640,6 +2640,120 @@ input[type="number"] {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* ⚡ LISTADO ELÁSTICO ESTRUCTURA & CONTROL (EDGE-TO-EDGE + DYNAMIC SIZE) */
+.structure-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.2vh, 10px);
+  flex: 1 1 0px;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+}
+
+.structure-elastic-card {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 0px;
+  min-height: 56px;
+  max-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: color-mix(in srgb, var(--bg-card) 65%, transparent);
+  padding: clamp(8px, 1.4vh, 14px) clamp(10px, 1.4vw, 16px);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.structure-elastic-card:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--primary)) 40%, var(--border-color));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 8%, var(--bg-card));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+/* 🎨 PALETA DE COLOR RESPONSIVA & TÁCTIL (MODAL CUENTAS) */
+.account-color-grid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.account-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.account-color-swatch:hover {
+  transform: scale(1.18);
+  box-shadow: 0 0 10px currentColor, 0 2px 6px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.account-color-swatch:active {
+  transform: scale(0.92);
+}
+
+.account-color-swatch.selected {
+  border-color: var(--text-high);
+  box-shadow: 0 0 12px currentColor, 0 0 0 2px var(--bg-card);
+  transform: scale(1.1);
+}
+
+.account-color-custom-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px dashed var(--border-color);
+  background: color-mix(in srgb, var(--accent, var(--primary)) 12%, transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.account-color-custom-btn:hover {
+  border-color: var(--accent, var(--primary));
+  background: color-mix(in srgb, var(--accent, var(--primary)) 24%, transparent);
+  transform: scale(1.15);
+}
+
+.account-color-custom-btn:active {
+  transform: scale(0.92);
+}
+
+.account-color-native-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+
+
 /* 🎯 BOTONES ACCIÓN MODAL GESTIÓN PRESUPUESTOS (RESPONSIVE + FEEDBACK TÁCTIL) */
 .budget-modal-btn {
   display: inline-flex;

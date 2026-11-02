@@ -7,10 +7,12 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
       background: 'transparent',
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.65rem'
+      gap: '0.5rem',
+      height: '100%',
+      minHeight: 0
     }}>
       {/* Cabecera y Botón Nuevo Plan */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Layers size={14} style={{ color: 'var(--accent, var(--primary))' }} />
           <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
@@ -33,11 +35,34 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
       </div>
 
       {msiPlans.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-          No hay planes MSI activos. Pulsa en "Nuevo Plan MSI" para registrar una compra a meses.
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          color: 'var(--text-muted)',
+          fontSize: '0.74rem',
+          textAlign: 'center',
+          padding: '1.5rem'
+        }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            background: 'color-mix(in srgb, var(--border-color) 40%, transparent)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-muted)'
+          }}>
+            <Layers size={18} />
+          </div>
+          <span>No hay planes MSI activos. Pulsa en "Nuevo Plan MSI" para registrar una compra a meses.</span>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className="structure-list-container no-scrollbar">
           {msiPlans.map((plan) => {
             const paidInstallments = plan.totalInstallments - plan.remainingInstallments;
             const progressPct = Math.min(100, Math.round((paidInstallments / plan.totalInstallments) * 100));
@@ -46,20 +71,24 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
             return (
               <div
                 key={plan.id}
-                className="structure-card"
-                style={{
-                  padding: '8px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  flexWrap: 'wrap'
-                }}
+                className="structure-card structure-elastic-card"
               >
-                {/* Columna Izquierda: Descripción + Tarjeta + Progreso */}
-                <div style={{ flex: '1 1 200px', minWidth: '180px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                {/* Fila 1: Título + Badge de Tarjeta + Liquidado/Cuotas + Acciones */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      background: 'color-mix(in srgb, var(--accent, var(--primary)) 16%, transparent)',
+                      flexShrink: 0
+                    }}>
+                      <Layers size={13} style={{ color: 'var(--accent, var(--primary))' }} />
+                    </div>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {plan.description}
                     </span>
                     <span style={{
@@ -68,12 +97,12 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
                       borderRadius: '3px',
                       background: 'color-mix(in srgb, var(--accent, var(--primary)) 15%, transparent)',
                       color: 'var(--accent, var(--primary))',
-                      fontFamily: 'JetBrains Mono, monospace',
+                      fontFamily: 'var(--font-mono)',
                       fontWeight: 600
                     }}>
                       {plan.paymentMethod}
                     </span>
-                    {isCompleted && (
+                    {isCompleted ? (
                       <span style={{
                         fontSize: '0.62rem',
                         padding: '1px 5px',
@@ -88,68 +117,90 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
                         <CheckCircle2 size={10} />
                         Liquidado
                       </span>
+                    ) : (
+                      <span style={{
+                        fontSize: '0.62rem',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        background: 'color-mix(in srgb, var(--border-color) 45%, transparent)',
+                        color: 'var(--text-muted)',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 600
+                      }}>
+                        {paidInstallments}/{plan.totalInstallments} cuotas ({progressPct}%)
+                      </span>
                     )}
                   </div>
 
-                  {/* Barra de progreso de amortización */}
-                  <div style={{ marginTop: '5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{
-                      flex: 1,
-                      height: '4px',
-                      background: 'color-mix(in srgb, var(--border-color) 80%, transparent)',
-                      borderRadius: '2px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        width: `${progressPct}%`,
-                        height: '100%',
-                        background: isCompleted ? 'var(--primary)' : 'var(--accent, var(--primary))',
-                        borderRadius: '2px',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-                      {paidInstallments}/{plan.totalInstallments} cuotas ({progressPct}%)
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    {!isCompleted && (
+                      <button
+                        type="button"
+                        onClick={() => onPayInstallment(plan.id)}
+                        className="structure-action-btn"
+                        style={{
+                          background: 'color-mix(in srgb, var(--primary) 18%, transparent)',
+                          borderColor: 'color-mix(in srgb, var(--primary) 35%, transparent)',
+                          color: 'var(--primary)'
+                        }}
+                        title="Registra el gasto de la cuota en SQLite y descuenta 1 mensualidad"
+                      >
+                        <Zap size={11} />
+                        <span>Pagar Cuota</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onDeleteMsi(plan)}
+                      className="structure-action-btn delete"
+                      title="Eliminar plan MSI"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                 </div>
 
-                {/* Columna Derecha: Montos y Botones Tácticos */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)', fontFamily: 'JetBrains Mono, monospace' }}>
-                      ${(plan.monthlyAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}/mes
-                    </div>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                      Total: ${(plan.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
+                {/* Fila 2: Barra de progreso de amortización */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '3px 0' }}>
+                  <div style={{
+                    flex: 1,
+                    height: '4px',
+                    background: 'color-mix(in srgb, var(--border-color) 80%, transparent)',
+                    borderRadius: '2px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: `${progressPct}%`,
+                      height: '100%',
+                      background: isCompleted ? 'var(--primary)' : 'var(--accent, var(--primary))',
+                      borderRadius: '2px',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+
+                {/* Fila 3: Detalle de montos y cuota mensual */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+                    <span>Total: <strong style={{ color: 'var(--text-high)', fontFamily: 'var(--font-mono)' }}>${(plan.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                    <span>·</span>
+                    <span>Restante: <strong style={{ color: 'var(--text-high)', fontFamily: 'var(--font-mono)' }}>${Number((plan.monthlyAmount || 0) * plan.remainingInstallments).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
                   </div>
 
-                  {!isCompleted && (
-                    <button
-                      type="button"
-                      onClick={() => onPayInstallment(plan.id)}
-                      className="structure-action-btn"
-                      style={{
-                        background: 'color-mix(in srgb, var(--primary) 18%, transparent)',
-                        borderColor: 'color-mix(in srgb, var(--primary) 35%, transparent)',
-                        color: 'var(--primary)'
-                      }}
-                      title="Registra el gasto de la cuota en SQLite y descuenta 1 mensualidad"
-                    >
-                      <Zap size={11} />
-                      <span>Pagar Cuota</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onDeleteMsi(plan)}
-                    className="structure-action-btn delete"
-                    title="Eliminar plan MSI"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '5px' }}>
+                      Mensualidad
+                    </span>
+                    <span style={{
+                      fontSize: 'clamp(0.92rem, 1.8vh, 1.15rem)',
+                      fontWeight: 800,
+                      color: isCompleted ? 'var(--text-muted)' : 'var(--accent, var(--primary))',
+                      fontFamily: 'var(--font-mono)'
+                    }}>
+                      ${(plan.monthlyAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

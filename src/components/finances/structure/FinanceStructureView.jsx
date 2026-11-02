@@ -45,6 +45,8 @@ export default function FinanceStructureView({
     setMsiForm,
     recurringForm,
     setRecurringForm,
+    handleOpenAddAccount,
+    handleEditAccount,
     handleSaveAccount,
     handleDeleteAccount,
     handleSaveMsi,
@@ -125,11 +127,12 @@ export default function FinanceStructureView({
         </div>
 
         {/* Panel Scrolleable del Tier 1 */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="no-scrollbar">
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="no-scrollbar">
           {activeAccountTab === 'accounts' && (
             <AccountsSection
               paymentMethods={paymentMethods}
-              onAddClick={() => setShowAccountModal(true)}
+              onAddClick={handleOpenAddAccount}
+              onEditAccount={handleEditAccount}
               onDeleteAccount={handleDeleteAccount}
             />
           )}
@@ -265,52 +268,17 @@ export default function FinanceStructureView({
         isOpen={Boolean(itemToDelete)}
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        title={
-          itemToDelete?.type === 'account' ? '¿Eliminar cuenta o tarjeta?' :
-          itemToDelete?.type === 'msi' ? '¿Eliminar plan MSI?' :
-          itemToDelete?.type === 'recurring' ? '¿Eliminar gasto recurrente?' :
-          '¿Confirmar eliminación?'
-        }
+        title={itemToDelete?.type === 'account' ? '¿Eliminar cuenta o tarjeta?' : itemToDelete?.type === 'msi' ? '¿Eliminar plan MSI?' : itemToDelete?.type === 'recurring' ? '¿Eliminar gasto recurrente?' : '¿Confirmar eliminación?'}
         description={
           itemToDelete?.type === 'account' ? (
-            <>
-              Estás a punto de eliminar la cuenta/tarjeta{' '}
-              <strong>"{itemToDelete.data?.name}"</strong>{' '}
-              ({itemToDelete.data?.type === 'credit' ? 'Crédito' : 'Débito / Efectivo'}).
-              {itemToDelete.data?.type === 'credit' && itemToDelete.data?.creditLimit ? (
-                <> Límite: <strong>${Number(itemToDelete.data.creditLimit).toLocaleString()}</strong>.</>
-              ) : ''}
-              <br />
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Esta acción no se puede deshacer en la base de datos local SQLite.
-              </span>
-            </>
+            <>Estás a punto de eliminar <strong>"{itemToDelete.data?.name}"</strong> ({itemToDelete.data?.type === 'credit' ? 'Crédito' : 'Débito / Efectivo'}).<br /><span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Esta acción no se puede deshacer en la base de datos local SQLite.</span></>
           ) : itemToDelete?.type === 'msi' ? (
-            <>
-              Estás a punto de eliminar el plan a meses sin intereses{' '}
-              <strong>"{itemToDelete.data?.description}"</strong> por un total de{' '}
-              <strong style={{ color: 'var(--danger)' }}>
-                ${Number(itemToDelete.data?.totalAmount || 0).toLocaleString()}
-              </strong>{' '}
-              ({itemToDelete.data?.totalInstallments} mensualidades).
-            </>
+            <>Estás a punto de eliminar el plan <strong>"{itemToDelete.data?.description}"</strong> por un total de <strong style={{ color: 'var(--danger)' }}>${Number(itemToDelete.data?.totalAmount || 0).toLocaleString()}</strong> ({itemToDelete.data?.totalInstallments} cuotas).</>
           ) : itemToDelete?.type === 'recurring' ? (
-            <>
-              Estás a punto de eliminar el gasto fijo recurrente{' '}
-              <strong>"{itemToDelete.data?.description}"</strong> por{' '}
-              <strong style={{ color: 'var(--danger)' }}>
-                ${Number(itemToDelete.data?.amount || 0).toLocaleString()}
-              </strong>{' '}
-              (Día de corte: {itemToDelete.data?.dueDay}).
-            </>
+            <>Estás a punto de eliminar el gasto <strong>"{itemToDelete.data?.description}"</strong> por <strong style={{ color: 'var(--danger)' }}>${Number(itemToDelete.data?.amount || 0).toLocaleString()}</strong> (Corte: día {itemToDelete.data?.dueDay}).</>
           ) : null
         }
-        confirmText={
-          itemToDelete?.type === 'account' ? 'Eliminar Cuenta' :
-          itemToDelete?.type === 'msi' ? 'Eliminar Plan' :
-          itemToDelete?.type === 'recurring' ? 'Eliminar Gasto' :
-          'Sí, Eliminar'
-        }
+        confirmText={itemToDelete?.type === 'account' ? 'Eliminar Cuenta' : itemToDelete?.type === 'msi' ? 'Eliminar Plan' : itemToDelete?.type === 'recurring' ? 'Eliminar Gasto' : 'Sí, Eliminar'}
       />
     </div>
   );

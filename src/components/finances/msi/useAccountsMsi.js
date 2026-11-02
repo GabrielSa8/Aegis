@@ -87,11 +87,31 @@ export function useAccountsMsi(onTransactionCreated) {
   }, []);
 
   // Handlers Cuentas
+  const handleOpenAddAccount = () => {
+    setAccountForm(INITIAL_ACCOUNT_FORM);
+    setShowAccountModal(true);
+  };
+
+  const handleEditAccount = (pm) => {
+    if (!pm) return;
+    setAccountForm({
+      id: pm.id,
+      name: pm.name || '',
+      type: pm.type || 'debit',
+      color: pm.color || '#004481',
+      cutoffDay: pm.cutoffDay != null ? String(pm.cutoffDay) : '',
+      paymentDay: pm.paymentDay != null ? String(pm.paymentDay) : '',
+      balance: pm.balance != null ? String(pm.balance) : '',
+      creditLimit: pm.creditLimit != null ? String(pm.creditLimit) : ''
+    });
+    setShowAccountModal(true);
+  };
+
   const handleSaveAccount = async (e) => {
     e.preventDefault();
     if (!accountForm.name.trim()) return;
 
-    const id = `pm_${Date.now()}`;
+    const id = accountForm.id || `pm_${Date.now()}`;
     const newMethod = {
       id,
       name: accountForm.name.trim(),
@@ -245,6 +265,8 @@ export function useAccountsMsi(onTransactionCreated) {
     setMsiForm,
     recurringForm,
     setRecurringForm,
+    handleOpenAddAccount,
+    handleEditAccount,
     handleSaveAccount,
     handleDeleteAccount,
     handleSaveMsi,
