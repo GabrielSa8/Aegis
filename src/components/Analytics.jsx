@@ -6,7 +6,7 @@ import {
   YearlyEvolutionChart
 } from './finances/analytics';
 
-function Analytics({ transactions, selectedDate }) {
+function Analytics({ transactions, selectedDate, paymentMethods }) {
   const {
     startDate,
     endDate,
@@ -18,7 +18,7 @@ function Analytics({ transactions, selectedDate }) {
     barOptions,
     methodData,
     methodOptions
-  } = useAnalyticsData(transactions, selectedDate);
+  } = useAnalyticsData(transactions, selectedDate, paymentMethods);
 
   return (
     <div className="analytics-layout">

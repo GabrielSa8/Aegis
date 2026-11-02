@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { getFinancialMonthRange, isDateInRange } from '../../../utils/storage';
+import { useMemo, useState, useEffect } from 'react';
+import { getFinancialMonthRange, isDateInRange, getPaymentMethods } from '../../../utils/storage';
 import {
   MONTH_SHORT_NAMES,
   getCategoryColors,
@@ -8,8 +8,29 @@ import {
   getMethodHoverColors
 } from './analyticsConstants';
 
-export function useAnalyticsData(transactions, selectedDate) {
+export function useAnalyticsData(transactions, selectedDate, externalPaymentMethods = null) {
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+  // Sincronizar métodos de pago si no vienen provistos directamente
+  const [internalPaymentMethods, setInternalPaymentMethods] = useState([]);
+
+  useEffect(() => {
+    if (!externalPaymentMethods) {
+      let mounted = true;
+      getPaymentMethods()
+        .then((res) => {
+          if (mounted && Array.isArray(res)) {
+            setInternalPaymentMethods(res);
+          }
+        })
+        .catch(() => {});
+      return () => { mounted = false; };
+    }
+  }, [externalPaymentMethods]);
+
+  const activeMethods = Array.isArray(externalPaymentMethods) && externalPaymentMethods.length > 0
+    ? externalPaymentMethods
+    : internalPaymentMethods;
 
   // Obtener rango del periodo financiero para la fecha seleccionada
   const { startDate, endDate, financialYear: activeFinancialYear } = useMemo(() => {
@@ -141,32 +162,73 @@ export function useAnalyticsData(transactions, selectedDate) {
     },
   }), []);
 
-  // --- 3. PROCESAR DATOS PARA EL GRÁFICO DE MÉTODOS DE PAGO ---
+  // --- 3. PROCESAR DATOS PARA EL GRÁFICO DE MÉTODOS DE PAGO (SINCRONIZADO CON CUENTAS GUARDADAS) ---
   const methodData = useMemo(() => {
-    const expenseByMethod = { 'Efectivo': 0, 'Débito': 0, 'Crédito': 0 };
-    safeTransactions.forEach((t) => {
-      if (t.type === 'expense' && isDateInRange(t.date, startDate, endDate)) {
-        const method = t.paymentMethod || 'Débito';
-        expenseByMethod[method] = (expenseByMethod[method] || 0) + (Number(t.amount) || 0);
+    const monthlyExpenses = safeTransactions.filter((t) => {
+      return t.type === 'expense' && isDateInRange(t.date, startDate, endDate);
+    });
+
+    // Lookup indexado para resolución rápida por id o name en minúsculas
+    const methodLookup = new Map();
+    (activeMethods || []).forEach((pm) => {
+      if (!pm) return;
+      if (pm.name) methodLookup.set(pm.name.trim().toLowerCase(), pm);
+      if (pm.id) methodLookup.set(pm.id.trim().toLowerCase(), pm);
+    });
+
+    // Mapear gastos acumulados por método
+    const expenseByMethod = new Map();
+
+    monthlyExpenses.forEach((t) => {
+      const raw = (t.paymentMethod || '').trim();
+      const rawLower = raw.toLowerCase();
+      const amt = Number(t.amount) || 0;
+
+      const matchedPm = methodLookup.get(rawLower);
+      if (matchedPm) {
+        const key = matchedPm.id || matchedPm.name;
+        if (!expenseByMethod.has(key)) {
+          expenseByMethod.set(key, {
+            name: matchedPm.name || 'Cuenta',
+            color: matchedPm.color || '#3b82f6',
+            amount: 0
+          });
+        }
+        expenseByMethod.get(key).amount += amt;
+      } else {
+        const label = raw || 'Otros';
+        const key = label.toLowerCase();
+        if (!expenseByMethod.has(key)) {
+          expenseByMethod.set(key, {
+            name: label,
+            color: '#64748b',
+            amount: 0
+          });
+        }
+        expenseByMethod.get(key).amount += amt;
       }
     });
 
-    const labels = Object.keys(expenseByMethod);
-    const dataValues = Object.values(expenseByMethod);
+    // Filtrar exclusivamente métodos con gastos reales > 0
+    const activeEntries = Array.from(expenseByMethod.values()).filter((e) => e.amount > 0);
+
+    const labels = activeEntries.map((e) => e.name);
+    const dataValues = activeEntries.map((e) => e.amount);
+    const backgroundColors = activeEntries.map((e) => e.color);
 
     return {
       labels,
       datasets: [
         {
           data: dataValues,
-          backgroundColor: getMethodColors(labels.length),
+          backgroundColor: backgroundColors,
           borderColor: 'rgba(11, 15, 25, 0.9)',
           borderWidth: 2,
-          hoverBackgroundColor: getMethodHoverColors(labels.length),
+          hoverBackgroundColor: backgroundColors,
         },
       ],
     };
-  }, [safeTransactions, startDate, endDate]);
+  }, [safeTransactions, startDate, endDate, activeMethods]);
 
   const methodOptions = useMemo(() => ({
     responsive: true,

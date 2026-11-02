@@ -72,7 +72,7 @@ export default function FinanceStructureView({
     barOptions,
     methodData,
     methodOptions
-  } = useAnalyticsData(safeTransactions, selectedDate);
+  } = useAnalyticsData(safeTransactions, selectedDate, paymentMethods);
 
   return (
     <div
