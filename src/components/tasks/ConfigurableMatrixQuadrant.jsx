@@ -13,14 +13,14 @@ export function ConfigurableMatrixQuadrant({
   return (
     <div
       style={{
-        background: 'linear-gradient(180deg, rgba(20, 26, 24, 0.8) 0%, rgba(14, 18, 17, 0.9) 100%)',
+        background: 'var(--bg-card)',
         border: `1px solid ${data.borderColor}`,
         borderRadius: '8px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         minHeight: '220px',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
+        boxShadow: 'var(--shadow-lg)'
       }}
     >
       {/* Cabecera Interactiva con Selector */}
@@ -44,7 +44,7 @@ export function ConfigurableMatrixQuadrant({
               fontSize: '0.74rem',
               fontWeight: 800,
               color: data.color,
-              background: 'rgba(0, 0, 0, 0.4)',
+              background: 'color-mix(in srgb, var(--bg-card) 85%, transparent)',
               border: `1px solid ${data.borderColor}`,
               borderRadius: '4px',
               padding: '2px 20px 2px 6px',
@@ -57,16 +57,16 @@ export function ConfigurableMatrixQuadrant({
             title="Cambiar qué monitorea este cuadrante"
           >
             <optgroup label="Tácticas & Urgencia">
-              <option value="urgent" style={{ background: '#131716', color: '#fbbf24' }}>🚨 Urgente & Crítico</option>
-              <option value="focus" style={{ background: '#131716', color: '#f97316' }}>🔥 En Foco</option>
-              <option value="backlog" style={{ background: '#131716', color: '#94a3b8' }}>📥 Backlog General</option>
-              <option value="done" style={{ background: '#131716', color: '#10b981' }}>✅ Completadas</option>
+              <option value="urgent" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>🚨 Urgente & Crítico</option>
+              <option value="focus" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>🔥 En Foco</option>
+              <option value="backlog" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>📥 Backlog General</option>
+              <option value="done" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>✅ Completadas</option>
             </optgroup>
 
             {activeHubs.length > 0 && (
               <optgroup label="Por Hub Maestro (Bóveda)">
                 {activeHubs.map((h) => (
-                  <option key={h} value={`hub:${h}`} style={{ background: '#131716', color: '#34d399' }}>
+                  <option key={h} value={`hub:${h}`} style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>
                     📁 Hub: {h}
                   </option>
                 ))}
@@ -78,7 +78,7 @@ export function ConfigurableMatrixQuadrant({
                 {availableProjects
                   .filter((p) => p !== 'Todos')
                   .map((p) => (
-                    <option key={p} value={`project:${p}`} style={{ background: '#131716', color: '#38bdf8' }}>
+                    <option key={p} value={`project:${p}`} style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>
                       📦 Proyecto: {p}
                     </option>
                   ))}

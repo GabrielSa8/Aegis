@@ -36,7 +36,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
         maxWidth: '92vw',
         background: 'linear-gradient(180deg, var(--bg-card) 0%, var(--bg-main) 100%)',
         borderLeft: '1px solid var(--border-color)',
-        boxShadow: '-8px 0 24px rgba(0, 0, 0, 0.45)',
+        boxShadow: 'var(--shadow-lg)',
         zIndex: 900,
         display: 'flex',
         flexDirection: 'column',
@@ -52,7 +52,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
           justifyContent: 'space-between',
           padding: '0.85rem 1rem',
           borderBottom: '1px solid var(--border-color)',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'color-mix(in srgb, var(--text-high) 2%, transparent)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -102,8 +102,8 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
             style={{
               padding: '0.75rem',
               borderRadius: '6px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
+              background: 'color-mix(in srgb, var(--danger) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)',
               display: 'flex',
               flexDirection: 'column',
               gap: '4px'
@@ -127,7 +127,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
           style={{
             padding: '0.85rem',
             borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'color-mix(in srgb, var(--text-high) 3%, transparent)',
             border: '1px solid var(--border-color)',
             display: 'flex',
             flexDirection: 'column',
@@ -184,7 +184,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
                   fontFamily: 'var(--font-mono, monospace)',
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: 'rgba(255, 255, 255, 0.06)',
+                  background: 'color-mix(in srgb, var(--text-high) 6%, transparent)',
                   color: 'var(--text-muted)'
                 }}
               >

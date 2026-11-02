@@ -82,21 +82,22 @@ export default function TasksView() {
       {/* 🧭 Área Principal de Vistas */}
       {loading ? (
         <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 10px auto', color: '#10b981' }} />
+          <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 10px auto', color: 'var(--primary)' }} />
           <p style={{ fontSize: '0.82rem', fontWeight: 600 }}>Cargando tareas estructuradas desde la Bóveda...</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(20, 26, 24, 0.7) 0%, rgba(14, 18, 17, 0.8) 100%)',
-            border: '1px solid rgba(52, 211, 153, 0.15)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
             borderRadius: 'var(--radius-lg)',
             textAlign: 'center',
             padding: '3.5rem 1rem',
-            color: 'var(--text-muted)'
+            color: 'var(--text-muted)',
+            boxShadow: 'var(--shadow-lg)'
           }}
         >
-          <CheckCircle2 size={36} color="#10b981" style={{ margin: '0 auto 10px auto', opacity: 0.8 }} />
+          <CheckCircle2 size={36} color="var(--primary)" style={{ margin: '0 auto 10px auto', opacity: 0.8 }} />
           <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-high)' }}>
             No hay tareas en esta vista
           </p>

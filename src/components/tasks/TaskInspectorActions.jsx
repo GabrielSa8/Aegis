@@ -68,7 +68,7 @@ export function TaskInspectorActions({ task }) {
           style={{
             padding: '0.75rem',
             borderRadius: '6px',
-            background: 'rgba(0, 0, 0, 0.25)',
+            background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
             border: '1px solid var(--border-color)',
             display: 'flex',
             flexDirection: 'column',

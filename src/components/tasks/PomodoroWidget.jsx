@@ -65,9 +65,9 @@ export function PomodoroWidget() {
   };
 
   const isWork = pomoMode === 'work';
-  const activeColor = isWork ? '#34d399' : '#38bdf8';
-  const activeGlow = isWork ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.2)';
-  const activeBorder = isWork ? 'rgba(52, 211, 153, 0.5)' : 'rgba(56, 189, 248, 0.5)';
+  const activeColor = isWork ? 'var(--primary)' : 'var(--accent)';
+  const activeGlow = isWork ? 'color-mix(in srgb, var(--primary) 20%, transparent)' : 'color-mix(in srgb, var(--accent) 20%, transparent)';
+  const activeBorder = isWork ? 'color-mix(in srgb, var(--primary) 50%, transparent)' : 'color-mix(in srgb, var(--accent) 50%, transparent)';
 
   return (
     <div
@@ -75,7 +75,7 @@ export function PomodoroWidget() {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        background: 'rgba(0, 0, 0, 0.45)',
+        background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
         border: pomoRunning ? `1px solid ${activeBorder}` : '1px solid var(--border-color)',
         borderRadius: '6px',
         padding: '2px 8px',
@@ -88,7 +88,7 @@ export function PomodoroWidget() {
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          background: pomoRunning ? activeColor : '#64748b',
+          background: pomoRunning ? activeColor : 'var(--text-muted)',
           boxShadow: pomoRunning ? `0 0 6px ${activeColor}` : 'none'
         }}
       />
@@ -116,7 +116,7 @@ export function PomodoroWidget() {
           fontFamily: 'var(--font-mono, monospace)',
           fontWeight: 800,
           fontSize: '0.8rem',
-          color: pomoRunning ? '#f1f5f9' : 'var(--text-muted)',
+          color: pomoRunning ? 'var(--text-high)' : 'var(--text-muted)',
           minWidth: '42px',
           textAlign: 'center',
           letterSpacing: '0.04em'
@@ -130,10 +130,10 @@ export function PomodoroWidget() {
         onClick={togglePomodoro}
         title={pomoRunning ? 'Pausar' : 'Iniciar'}
         style={{
-          background: pomoRunning ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+          background: pomoRunning ? 'color-mix(in srgb, var(--danger) 18%, transparent)' : 'color-mix(in srgb, var(--primary) 18%, transparent)',
           border: 'none',
           borderRadius: '3px',
-          color: pomoRunning ? '#f87171' : '#34d399',
+          color: pomoRunning ? 'var(--danger)' : 'var(--primary)',
           padding: '3px 5px',
           cursor: 'pointer',
           display: 'flex',

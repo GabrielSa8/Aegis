@@ -1,16 +1,22 @@
-// Paleta Curada Táctica Nórdica Universal (10 Colores Armónicos de Alta Legibilidad)
-export const NORDIC_PALETTE = [
-  { id: 'emerald', name: 'Esmeralda', color: '#10b981', border: 'rgba(16, 185, 129, 0.4)', bg: 'rgba(16, 185, 129, 0.12)' },
-  { id: 'sky', name: 'Cielo', color: '#38bdf8', border: 'rgba(56, 189, 248, 0.4)', bg: 'rgba(56, 189, 248, 0.12)' },
-  { id: 'amber', name: 'Ámbar', color: '#f59e0b', border: 'rgba(245, 158, 11, 0.4)', bg: 'rgba(245, 158, 11, 0.12)' },
-  { id: 'purple', name: 'Púrpura', color: '#a855f7', border: 'rgba(168, 85, 247, 0.4)', bg: 'rgba(168, 85, 247, 0.12)' },
-  { id: 'pink', name: 'Rosa', color: '#ec4899', border: 'rgba(236, 72, 153, 0.4)', bg: 'rgba(236, 72, 153, 0.12)' },
-  { id: 'teal', name: 'Verde Mar', color: '#14b8a6', border: 'rgba(20, 184, 166, 0.4)', bg: 'rgba(20, 184, 166, 0.12)' },
-  { id: 'indigo', name: 'Índigo', color: '#6366f1', border: 'rgba(99, 102, 241, 0.4)', bg: 'rgba(99, 102, 241, 0.12)' },
-  { id: 'orange', name: 'Naranja', color: '#f97316', border: 'rgba(249, 115, 22, 0.4)', bg: 'rgba(249, 115, 22, 0.12)' },
-  { id: 'yellow', name: 'Dorado', color: '#eab308', border: 'rgba(234, 179, 8, 0.4)', bg: 'rgba(234, 179, 8, 0.12)' },
-  { id: 'violet', name: 'Violeta', color: '#8b5cf6', border: 'rgba(139, 92, 246, 0.4)', bg: 'rgba(139, 92, 246, 0.12)' },
+// Paleta Curada Táctica Nórdica Universal (10 Tonos Armónicos Adaptables a Temas)
+const RAW_PALETTE_COLORS = [
+  { id: 'emerald', name: 'Primario', color: 'var(--primary)' },
+  { id: 'sky', name: 'Acento', color: 'var(--accent)' },
+  { id: 'amber', name: 'Aviso', color: 'var(--warning)' },
+  { id: 'rose', name: 'Crítico', color: 'var(--danger)' },
+  { id: 'teal', name: 'Verde Mar', color: 'color-mix(in srgb, var(--primary) 70%, var(--accent))' },
+  { id: 'indigo', name: 'Índigo', color: 'color-mix(in srgb, var(--accent) 75%, var(--primary))' },
+  { id: 'orange', name: 'Naranja', color: 'color-mix(in srgb, var(--warning) 70%, var(--danger))' },
+  { id: 'yellow', name: 'Dorado', color: 'color-mix(in srgb, var(--warning) 85%, var(--text-high))' },
+  { id: 'violet', name: 'Violeta', color: 'color-mix(in srgb, var(--accent) 55%, var(--danger))' },
+  { id: 'purple', name: 'Púrpura', color: 'color-mix(in srgb, var(--accent) 40%, var(--danger))' },
 ];
+
+export const NORDIC_PALETTE = RAW_PALETTE_COLORS.map((p) => ({
+  ...p,
+  border: `color-mix(in srgb, ${p.color} 35%, transparent)`,
+  bg: `color-mix(in srgb, ${p.color} 12%, transparent)`
+}));
 
 // Emojis Curados para Selección Rápida en el Personalizador
 export const CURATED_EMOJIS = [
@@ -24,10 +30,8 @@ export const CURATED_EMOJIS = [
 export const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
 export const STORAGE_MATRIX_KEY = 'aegis_matrix_quadrant_config';
 
-// Presets base (fallback si no hay personalización explícita del usuario)
-export const DEFAULT_PRESETS = {
-  'Aegis': { icon: '🛡️', colorId: 'emerald' },
-};
+// Presets base (agnósticos, sin hardcode de proyectos específicos)
+export const DEFAULT_PRESETS = {};
 
 // Generador determinista de color basado en hash de texto para cualquier proyecto desconocido
 export function hashStringToPalette(str) {
@@ -182,36 +186,36 @@ export function resolveQuadrantData(targetKey, allFilteredTasks, activeHubs, ava
   if (resolvedKey === 'urgent') {
     return {
       title: '🚨 Urgente & Crítico',
-      color: '#fbbf24',
-      bgColor: 'rgba(245, 158, 11, 0.08)',
-      borderColor: 'rgba(245, 158, 11, 0.3)',
+      color: 'var(--warning)',
+      bgColor: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--warning) 30%, transparent)',
       tasks: allFilteredTasks.filter((t) => !t.completed && (t.priority === 'high' || t.dueDate))
     };
   }
   if (resolvedKey === 'focus') {
     return {
       title: '🔥 En Foco',
-      color: '#f97316',
-      bgColor: 'rgba(249, 115, 22, 0.08)',
-      borderColor: 'rgba(249, 115, 22, 0.3)',
+      color: 'var(--accent)',
+      bgColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
       tasks: allFilteredTasks.filter((t) => !t.completed && t.priority === 'high')
     };
   }
   if (resolvedKey === 'backlog') {
     return {
       title: '📥 Backlog General',
-      color: '#94a3b8',
-      bgColor: 'rgba(148, 163, 184, 0.06)',
-      borderColor: 'rgba(148, 163, 184, 0.25)',
+      color: 'var(--text-muted)',
+      bgColor: 'color-mix(in srgb, var(--text-muted) 8%, transparent)',
+      borderColor: 'var(--border-color)',
       tasks: allFilteredTasks.filter((t) => !t.completed && t.priority !== 'high' && !t.dueDate)
     };
   }
   if (resolvedKey === 'done') {
     return {
       title: '✅ Completadas',
-      color: '#10b981',
-      bgColor: 'rgba(16, 185, 129, 0.08)',
-      borderColor: 'rgba(16, 185, 129, 0.3)',
+      color: 'var(--primary)',
+      bgColor: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+      borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)',
       tasks: allFilteredTasks.filter((t) => t.completed)
     };
   }
@@ -240,8 +244,8 @@ export function resolveQuadrantData(targetKey, allFilteredTasks, activeHubs, ava
 
   return {
     title: 'Tareas',
-    color: '#94a3b8',
-    bgColor: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--text-muted)',
+    bgColor: 'color-mix(in srgb, var(--text-high) 4%, transparent)',
     borderColor: 'var(--border-color)',
     tasks: allFilteredTasks
   };

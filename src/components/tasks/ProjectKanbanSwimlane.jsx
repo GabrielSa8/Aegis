@@ -18,7 +18,7 @@ export function ProjectKanbanSwimlane({
   return (
     <div
       style={{
-        background: 'rgba(0, 0, 0, 0.32)',
+        background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
         border: `1px solid ${theme.border}`,
         borderRadius: '7px',
         overflow: 'hidden',
@@ -40,7 +40,7 @@ export function ProjectKanbanSwimlane({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          {isCollapsed ? <ChevronRight size={13} color="#94a3b8" /> : <ChevronDown size={13} color={theme.color} />}
+          {isCollapsed ? <ChevronRight size={13} color="var(--text-muted)" /> : <ChevronDown size={13} color={theme.color} />}
           <span style={{ fontSize: '0.9rem' }}>{theme.icon}</span>
           <span style={{ fontSize: '0.8rem', fontWeight: 800, color: theme.color, letterSpacing: '0.02em' }}>
             {projectName}
@@ -51,7 +51,7 @@ export function ProjectKanbanSwimlane({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '55px', height: '4px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ width: '55px', height: '4px', background: 'color-mix(in srgb, var(--text-high) 8%, transparent)', borderRadius: '2px', overflow: 'hidden' }}>
             <div style={{ width: `${pPercent}%`, height: '100%', background: theme.color, transition: 'width 0.3s ease' }} />
           </div>
           <span style={{ fontSize: '0.64rem', color: theme.color, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
@@ -68,14 +68,14 @@ export function ProjectKanbanSwimlane({
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
             gap: '0.55rem',
-            background: 'rgba(0, 0, 0, 0.18)'
+            background: 'color-mix(in srgb, var(--bg-main) 40%, transparent)'
           }}
         >
           {/* Por Hacer */}
           <div
             style={{
-              background: 'rgba(0, 0, 0, 0.25)',
-              border: '1px solid rgba(148, 163, 184, 0.15)',
+              background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+              border: '1px solid var(--border-color)',
               borderRadius: '5px',
               overflow: 'hidden'
             }}
@@ -83,8 +83,8 @@ export function ProjectKanbanSwimlane({
             <div
               style={{
                 padding: '4px 8px',
-                background: 'rgba(255, 255, 255, 0.02)',
-                borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+                background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
+                borderBottom: '1px solid var(--border-color)',
                 fontSize: '0.66rem',
                 fontWeight: 700,
                 color: 'var(--text-muted)',
@@ -110,8 +110,8 @@ export function ProjectKanbanSwimlane({
           {/* En Foco */}
           <div
             style={{
-              background: 'rgba(245, 158, 11, 0.04)',
-              border: '1px solid rgba(245, 158, 11, 0.25)',
+              background: 'color-mix(in srgb, var(--warning) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
               borderRadius: '5px',
               overflow: 'hidden'
             }}
@@ -119,18 +119,18 @@ export function ProjectKanbanSwimlane({
             <div
               style={{
                 padding: '4px 8px',
-                background: 'rgba(245, 158, 11, 0.08)',
-                borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
+                background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+                borderBottom: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
                 fontSize: '0.66rem',
                 fontWeight: 700,
-                color: '#fbbf24',
+                color: 'var(--warning)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Flame size={11} color="#fbbf24" />
+                <Flame size={11} color="var(--warning)" />
                 🔥 En Foco
               </span>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{focusTasks.length}</span>
@@ -149,8 +149,8 @@ export function ProjectKanbanSwimlane({
           {/* Completadas */}
           <div
             style={{
-              background: 'rgba(16, 185, 129, 0.03)',
-              border: '1px solid rgba(16, 185, 129, 0.18)',
+              background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
               borderRadius: '5px',
               overflow: 'hidden'
             }}
@@ -158,11 +158,11 @@ export function ProjectKanbanSwimlane({
             <div
               style={{
                 padding: '4px 8px',
-                background: 'rgba(16, 185, 129, 0.06)',
-                borderBottom: '1px solid rgba(16, 185, 129, 0.18)',
+                background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+                borderBottom: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
                 fontSize: '0.66rem',
                 fontWeight: 700,
-                color: '#34d399',
+                color: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between'

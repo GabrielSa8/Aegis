@@ -33,11 +33,11 @@ export function KanbanBoard({
               <div
                 key={hubName}
                 style={{
-                  background: 'linear-gradient(180deg, rgba(20, 26, 24, 0.85) 0%, rgba(14, 18, 17, 0.95) 100%)',
-                  border: '1px solid rgba(52, 211, 153, 0.22)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   overflow: 'hidden',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+                  boxShadow: 'var(--shadow-lg)'
                 }}
               >
                 {/* Banner del Hub */}
@@ -48,16 +48,16 @@ export function KanbanBoard({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.55rem 0.95rem',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderBottom: isHubCollapsed ? 'none' : '1px solid rgba(52, 211, 153, 0.15)',
+                    background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
+                    borderBottom: isHubCollapsed ? 'none' : '1px solid var(--border-color)',
                     cursor: 'pointer',
                     userSelect: 'none'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {isHubCollapsed ? <ChevronRight size={15} color="#94a3b8" /> : <ChevronDown size={15} color="#34d399" />}
-                    <FolderGit2 size={15} color="#34d399" />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#f1f5f9' }}>
+                    {isHubCollapsed ? <ChevronRight size={15} color="var(--text-muted)" /> : <ChevronDown size={15} color="var(--primary)" />}
+                    <FolderGit2 size={15} color="var(--primary)" />
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-high)' }}>
                       {hubName}
                     </span>
                     <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
@@ -66,10 +66,10 @@ export function KanbanBoard({
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '60px', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${hubPercent}%`, height: '100%', background: '#10b981' }} />
+                    <div style={{ width: '60px', height: '4px', background: 'color-mix(in srgb, var(--text-high) 6%, transparent)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: `${hubPercent}%`, height: '100%', background: 'var(--primary)' }} />
                     </div>
-                    <span style={{ fontSize: '0.66rem', color: '#34d399', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.66rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                       {hubDone}/{hubTotal} ({hubPercent}%)
                     </span>
                   </div>
@@ -176,7 +176,7 @@ export function KanbanBoard({
         onToggle={onToggle}
         onSelectTask={onSelectTask}
         headerColor="var(--text-high)"
-        accentColor="rgba(148, 163, 184, 0.3)"
+        accentColor="var(--border-color)"
         emptyMessage="Sin tareas en cola"
       />
 
@@ -186,8 +186,8 @@ export function KanbanBoard({
         tasks={kanbanColumns.focus}
         onToggle={onToggle}
         onSelectTask={onSelectTask}
-        headerColor="#fbbf24"
-        accentColor="rgba(245, 158, 11, 0.4)"
+        headerColor="var(--warning)"
+        accentColor="color-mix(in srgb, var(--warning) 35%, transparent)"
         highlight
         emptyMessage="Sin tareas urgentes en foco"
       />
@@ -198,8 +198,8 @@ export function KanbanBoard({
         tasks={kanbanColumns.done}
         onToggle={onToggle}
         onSelectTask={onSelectTask}
-        headerColor="#34d399"
-        accentColor="rgba(16, 185, 129, 0.3)"
+        headerColor="var(--primary)"
+        accentColor="color-mix(in srgb, var(--primary) 35%, transparent)"
         emptyMessage="Aún no has completado tareas hoy"
       />
     </div>

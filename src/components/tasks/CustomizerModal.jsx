@@ -81,8 +81,8 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                background: 'rgba(0, 0, 0, 0.38)',
-                border: isPickerOpen ? '1px solid #34d399' : `1px solid ${currentTheme.border}`,
+                background: 'color-mix(in srgb, var(--bg-card) 75%, transparent)',
+                border: isPickerOpen ? '1px solid var(--primary)' : `1px solid ${currentTheme.border}`,
                 borderRadius: '8px',
                 overflow: 'hidden',
                 transition: 'border-color 0.15s ease'
@@ -132,14 +132,14 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                       height: '34px',
                       padding: '2px 8px',
                       borderRadius: '6px',
-                      background: isPickerOpen ? 'rgba(52, 211, 153, 0.2)' : 'rgba(0, 0, 0, 0.5)',
-                      border: isPickerOpen ? '1.5px solid #34d399' : '1px solid var(--border-color)',
+                      background: isPickerOpen ? 'color-mix(in srgb, var(--primary) 20%, transparent)' : 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+                      border: isPickerOpen ? '1.5px solid var(--primary)' : '1px solid var(--border-color)',
                       fontSize: '1.25rem',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      boxShadow: isPickerOpen ? '0 0 10px rgba(52, 211, 153, 0.4)' : 'none',
+                      boxShadow: isPickerOpen ? '0 0 10px color-mix(in srgb, var(--primary) 40%, transparent)' : 'none',
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -161,7 +161,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                             borderRadius: '50%',
                             background: pal.color,
                             cursor: 'pointer',
-                            border: isSelected ? '2px solid #ffffff' : '1px solid rgba(0, 0, 0, 0.5)',
+                            border: isSelected ? '2px solid var(--text-high)' : '1px solid var(--border-color)',
                             transform: isSelected ? 'scale(1.25)' : 'none',
                             boxShadow: isSelected ? `0 0 8px ${pal.color}` : 'none',
                             transition: 'all 0.15s ease'
@@ -178,14 +178,14 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                 <div
                   style={{
                     padding: '0.65rem 0.85rem',
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'color-mix(in srgb, var(--bg-card) 95%, transparent)',
+                    borderTop: '1px solid var(--border-color)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '6px'
                   }}
                 >
-                  <div style={{ fontSize: '0.66rem', color: '#34d399', fontWeight: 700, textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: '0.66rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase' }}>
                     Selecciona un emoji para {proj}:
                   </div>
 
@@ -206,8 +206,8 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                         }}
                         style={{
                           height: '32px',
-                          background: currentTheme.icon === emoji ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255, 255, 255, 0.03)',
-                          border: currentTheme.icon === emoji ? '1px solid #34d399' : '1px solid transparent',
+                          background: currentTheme.icon === emoji ? 'color-mix(in srgb, var(--primary) 25%, transparent)' : 'color-mix(in srgb, var(--text-high) 4%, transparent)',
+                          border: currentTheme.icon === emoji ? '1px solid var(--primary)' : '1px solid transparent',
                           borderRadius: '4px',
                           fontSize: '1.15rem',
                           display: 'flex',
@@ -241,10 +241,10 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                         width: '60px',
                         height: '24px',
                         textAlign: 'center',
-                        background: 'rgba(0,0,0,0.5)',
+                        background: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
                         border: '1px solid var(--border-color)',
                         borderRadius: '4px',
-                        color: '#f1f5f9',
+                        color: 'var(--text-high)',
                         fontSize: '0.85rem'
                       }}
                     />

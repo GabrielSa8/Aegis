@@ -31,11 +31,11 @@ export function TasksListView({
             <div
               key={hubName}
               style={{
-                background: 'linear-gradient(180deg, rgba(22, 28, 25, 0.8) 0%, rgba(15, 19, 18, 0.9) 100%)',
-                border: '1px solid rgba(52, 211, 153, 0.2)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.25)'
+                boxShadow: 'var(--shadow-lg)'
               }}
             >
               {/* Cabecera del Hub */}
@@ -46,15 +46,15 @@ export function TasksListView({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0.6rem 0.95rem',
-                  background: 'rgba(255, 255, 255, 0.025)',
-                  borderBottom: isHubCollapsed ? 'none' : '1px solid rgba(52, 211, 153, 0.15)',
+                  background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
+                  borderBottom: isHubCollapsed ? 'none' : '1px solid var(--border-color)',
                   cursor: 'pointer',
                   userSelect: 'none'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isHubCollapsed ? <ChevronRight size={15} color="#94a3b8" /> : <ChevronDown size={15} color="#34d399" />}
-                  <FolderGit2 size={15} color="#34d399" />
+                  {isHubCollapsed ? <ChevronRight size={15} color="var(--text-muted)" /> : <ChevronDown size={15} color="var(--primary)" />}
+                  <FolderGit2 size={15} color="var(--primary)" />
                   <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-high)' }}>
                     {hubName}
                   </span>
@@ -62,7 +62,7 @@ export function TasksListView({
                     style={{
                       fontSize: '0.64rem',
                       color: 'var(--text-muted)',
-                      background: 'rgba(255, 255, 255, 0.04)',
+                      background: 'color-mix(in srgb, var(--text-high) 5%, transparent)',
                       padding: '1px 6px',
                       borderRadius: '4px'
                     }}
@@ -72,10 +72,10 @@ export function TasksListView({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '70px', height: '5px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ width: `${hubPercent}%`, height: '100%', background: '#10b981', transition: 'width 0.3s ease' }} />
+                  <div style={{ width: '70px', height: '5px', background: 'color-mix(in srgb, var(--text-high) 8%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${hubPercent}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.3s ease' }} />
                   </div>
-                  <span style={{ fontSize: '0.68rem', color: '#34d399', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
                     {hubDone}/{hubTotal} ({hubPercent}%)
                   </span>
                 </div>
@@ -96,7 +96,7 @@ export function TasksListView({
                       <div
                         key={projectName}
                         style={{
-                          background: 'rgba(0, 0, 0, 0.3)',
+                          background: 'color-mix(in srgb, var(--bg-main) 60%, transparent)',
                           border: `1px solid ${theme.border}`,
                           borderRadius: '6px',
                           overflow: 'hidden'
@@ -117,7 +117,7 @@ export function TasksListView({
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {isProjCollapsed ? <ChevronRight size={13} color="#94a3b8" /> : <ChevronDown size={13} color={theme.color} />}
+                            {isProjCollapsed ? <ChevronRight size={13} color="var(--text-muted)" /> : <ChevronDown size={13} color={theme.color} />}
                             <span style={{ fontSize: '0.85rem' }}>{theme.icon}</span>
                             <span style={{ fontSize: '0.78rem', fontWeight: 800, color: theme.color, letterSpacing: '0.02em' }}>
                               {projectName}
@@ -166,7 +166,7 @@ export function TasksListView({
             <div
               key={projectName}
               style={{
-                background: 'rgba(0, 0, 0, 0.35)',
+                background: 'var(--bg-card)',
                 border: `1px solid ${theme.border}`,
                 borderRadius: '8px',
                 overflow: 'hidden'
@@ -186,7 +186,7 @@ export function TasksListView({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isProjCollapsed ? <ChevronRight size={14} color="#94a3b8" /> : <ChevronDown size={14} color={theme.color} />}
+                  {isProjCollapsed ? <ChevronRight size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color={theme.color} />}
                   <span style={{ fontSize: '0.9rem' }}>{theme.icon}</span>
                   <span style={{ fontSize: '0.82rem', fontWeight: 800, color: theme.color }}>
                     {projectName}
@@ -197,7 +197,7 @@ export function TasksListView({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '60px', height: '4px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: '60px', height: '4px', background: 'color-mix(in srgb, var(--text-high) 8%, transparent)', borderRadius: '2px', overflow: 'hidden' }}>
                     <div style={{ width: `${pPercent}%`, height: '100%', background: theme.color }} />
                   </div>
                   <span style={{ fontSize: '0.66rem', color: theme.color, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
@@ -241,13 +241,13 @@ export function TasksListView({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0.55rem 0.85rem',
-                  background: 'rgba(255, 255, 255, 0.02)',
+                  background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
                   borderBottom: isCollapsed ? 'none' : '1px solid var(--border-color)',
                   cursor: 'pointer'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} color="#34d399" />}
+                  {isCollapsed ? <ChevronRight size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--primary)" />}
                   <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)' }}>
                     {hubName}
                   </span>
@@ -257,8 +257,8 @@ export function TasksListView({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '60px', height: '4px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ width: `${hubPercent}%`, height: '100%', background: '#10b981' }} />
+                  <div style={{ width: '60px', height: '4px', background: 'color-mix(in srgb, var(--text-high) 8%, transparent)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${hubPercent}%`, height: '100%', background: 'var(--primary)' }} />
                   </div>
                   <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                     {hubDone}/{hubTotal} ({hubPercent}%)

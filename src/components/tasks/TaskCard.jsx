@@ -39,24 +39,22 @@ export function TaskCard({
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        padding: compact ? '7px 9px' : '8px 12px',
+        padding: compact ? '6px 8px' : '7px 11px',
         borderRadius: '6px',
         background: task.completed
-          ? 'rgba(15, 20, 18, 0.4)'
+          ? 'color-mix(in srgb, var(--bg-card) 50%, transparent)'
           : isBlocked
-          ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(20, 24, 22, 0.85) 100%)'
+          ? 'linear-gradient(135deg, color-mix(in srgb, var(--danger) 8%, transparent) 0%, var(--bg-card) 100%)'
           : highlight
-          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(20, 24, 22, 0.85) 100%)'
-          : 'linear-gradient(135deg, rgba(26, 32, 29, 0.75) 0%, rgba(18, 22, 21, 0.85) 100%)',
+          ? 'linear-gradient(135deg, color-mix(in srgb, var(--warning) 8%, transparent) 0%, var(--bg-card) 100%)'
+          : 'var(--bg-card)',
         border: isBlocked
-          ? '1px solid rgba(239, 68, 68, 0.35)'
+          ? '1px solid color-mix(in srgb, var(--danger) 35%, transparent)'
           : highlight
-          ? '1px solid rgba(245, 158, 11, 0.35)'
-          : task.completed
-          ? '1px solid rgba(255, 255, 255, 0.05)'
-          : '1px solid rgba(52, 211, 153, 0.15)',
+          ? '1px solid color-mix(in srgb, var(--warning) 35%, transparent)'
+          : '1px solid var(--border-color)',
         boxShadow: highlight
-          ? '0 2px 10px rgba(245, 158, 11, 0.08)'
+          ? '0 2px 10px color-mix(in srgb, var(--warning) 10%, transparent)'
           : task.completed
           ? 'none'
           : '0 2px 8px rgba(0, 0, 0, 0.25)',
@@ -69,21 +67,25 @@ export function TaskCard({
       onMouseEnter={(e) => {
         if (!task.completed) {
           e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.borderColor = isBlocked ? 'rgba(239, 68, 68, 0.6)' : 'rgba(52, 211, 153, 0.45)';
+          e.currentTarget.style.borderColor = isBlocked
+            ? 'var(--danger)'
+            : 'color-mix(in srgb, var(--primary) 60%, transparent)';
           e.currentTarget.style.boxShadow = isBlocked
-            ? '0 6px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(239, 68, 68, 0.15)'
-            : '0 6px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(52, 211, 153, 0.12)';
+            ? '0 4px 14px color-mix(in srgb, var(--danger) 25%, transparent)'
+            : '0 4px 14px color-mix(in srgb, var(--primary) 20%, transparent)';
         }
       }}
       onMouseLeave={(e) => {
         if (!task.completed) {
           e.currentTarget.style.transform = 'none';
           e.currentTarget.style.borderColor = isBlocked
-            ? 'rgba(239, 68, 68, 0.35)'
+            ? 'color-mix(in srgb, var(--danger) 35%, transparent)'
             : highlight
-            ? 'rgba(245, 158, 11, 0.35)'
-            : 'rgba(52, 211, 153, 0.15)';
-          e.currentTarget.style.boxShadow = highlight ? '0 2px 10px rgba(245, 158, 11, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.25)';
+            ? 'color-mix(in srgb, var(--warning) 35%, transparent)'
+            : 'var(--border-color)';
+          e.currentTarget.style.boxShadow = highlight
+            ? '0 2px 10px color-mix(in srgb, var(--warning) 10%, transparent)'
+            : '0 2px 8px rgba(0, 0, 0, 0.25)';
         }
       }}
     >
@@ -122,12 +124,12 @@ export function TaskCard({
                 width: '16px',
                 height: '16px',
                 borderRadius: '4px',
-                background: 'rgba(16, 185, 129, 0.2)',
+                background: 'color-mix(in srgb, var(--primary) 20%, transparent)',
                 border: '1.5px solid var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 6px rgba(16, 185, 129, 0.3)'
+                boxShadow: '0 0 6px color-mix(in srgb, var(--primary) 30%, transparent)'
               }}
             >
               <CheckSquare size={13} color="var(--primary)" />
@@ -153,8 +155,8 @@ export function TaskCard({
                 width: '16px',
                 height: '16px',
                 borderRadius: '4px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1.5px solid rgba(148, 163, 184, 0.35)',
+                background: 'color-mix(in srgb, var(--text-high) 4%, transparent)',
+                border: '1.5px solid var(--border-color)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
