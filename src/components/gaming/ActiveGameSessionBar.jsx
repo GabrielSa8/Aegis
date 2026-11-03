@@ -1,12 +1,13 @@
 import React from 'react';
-import { Play, Square, Trophy, X, Flame } from 'lucide-react';
+import { Play, Square, Trophy, X, Flame, Bot } from 'lucide-react';
 import TacticalButton from '../ui/TacticalButton';
 
 export default function ActiveGameSessionBar({
   activeSession,
   onStopSession,
   onCancelSession,
-  onOpenDetails
+  onOpenDetails,
+  onOpenCompanion
 }) {
   if (!activeSession) return null;
 
@@ -97,6 +98,16 @@ export default function ActiveGameSessionBar({
 
       {/* Acciones */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <TacticalButton
+          variant="secondary"
+          size="xs"
+          icon={Bot}
+          onClick={onOpenCompanion}
+          style={{ height: '26px' }}
+        >
+          Companion IA
+        </TacticalButton>
+
         <TacticalButton
           variant="secondary"
           size="xs"

@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import { Gamepad2, Trophy, Clock, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Gamepad2, Trophy, Clock, BookOpen, Bot } from 'lucide-react';
 import ModalWrapper from '../ui/ModalWrapper';
 import TabsBar from '../ui/TabsBar';
 import GameAchievementsTab from './GameAchievementsTab';
 import GameSessionsTab from './GameSessionsTab';
 import GameReviewTab from './GameReviewTab';
+import GameCompanionTab from './GameCompanionTab';
 
 export default function GameDetailModal({
   isOpen,
   onClose,
   game,
   isSteam,
+  initialTab = 'achievements',
   gameStats,
   onRefreshStats
 }) {
-  const [activeTab, setActiveTab] = useState('achievements');
+  const [activeTab, setActiveTab] = useState(initialTab || 'achievements');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   if (!game) return null;
 
@@ -30,7 +38,8 @@ export default function GameDetailModal({
   const tabs = [
     { id: 'achievements', label: 'Logros', icon: Trophy },
     { id: 'sessions', label: 'Tiempos & Sesiones', icon: Clock },
-    { id: 'review', label: 'Bitácora & Reseña', icon: BookOpen }
+    { id: 'review', label: 'Bitácora & Reseña', icon: BookOpen },
+    { id: 'companion', label: 'Asistente IA', icon: Bot }
   ];
 
   return (
@@ -128,6 +137,14 @@ export default function GameDetailModal({
               isSteam={isSteam}
               gameStats={gameStats}
               onReviewSaved={onRefreshStats}
+            />
+          )}
+
+          {activeTab === 'companion' && (
+            <GameCompanionTab
+              gameId={gameId}
+              gameTitle={gameTitle}
+              isSteam={isSteam}
             />
           )}
         </div>

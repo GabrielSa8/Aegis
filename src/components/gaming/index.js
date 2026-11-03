@@ -8,3 +8,7 @@ export { default as GameDetailModal } from './GameDetailModal';
 export { default as GameAchievementsTab } from './GameAchievementsTab';
 export { default as GameSessionsTab } from './GameSessionsTab';
 export { default as GameReviewTab } from './GameReviewTab';
+export { default as GameCompanionTab } from './GameCompanionTab';
+export { default as GameCompanionQuickActions } from './GameCompanionQuickActions';
+export { default as GameCompanionMessageItem } from './GameCompanionMessageItem';
+export { useGameCompanion } from './useGameCompanion';

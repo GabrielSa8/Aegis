@@ -275,7 +275,8 @@ export function useGaming() {
       setGameFormData(INITIAL_GAME_FORM);
       setShowGameModal(true);
     },
-    openGameDetail: (game, isSteam) => setSelectedGameForDetail({ game, isSteam }),
+    openGameDetail: (game, isSteam, initialTab = 'achievements') =>
+      setSelectedGameForDetail({ game, isSteam, initialTab }),
     closeGameDetail: () => setSelectedGameForDetail(null)
   };
 }

@@ -104,7 +104,24 @@ export default function LeisureView() {
                 name: activeSession.gameTitle,
                 title: activeSession.gameTitle
               },
-              isStm
+              isStm,
+              'achievements'
+            );
+          }}
+          onOpenCompanion={() => {
+            const isStm = activeSession.isSteam;
+            const fullGame = isStm
+              ? steamGames.find((g) => g.appId === activeSession.gameId)
+              : customGames.find((g) => g.id === activeSession.gameId);
+            openGameDetail(
+              fullGame || {
+                id: activeSession.gameId,
+                appId: activeSession.gameId,
+                name: activeSession.gameTitle,
+                title: activeSession.gameTitle
+              },
+              isStm,
+              'companion'
             );
           }}
         />
@@ -176,6 +193,7 @@ export default function LeisureView() {
           onClose={closeGameDetail}
           game={selectedGameForDetail.game}
           isSteam={selectedGameForDetail.isSteam}
+          initialTab={selectedGameForDetail.initialTab || 'achievements'}
           gameStats={
             gameStatsMap[
               selectedGameForDetail.isSteam

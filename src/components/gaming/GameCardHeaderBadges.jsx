@@ -65,9 +65,9 @@ export default function GameCardHeaderBadges({
         </button>
       </div>
 
-      {/* Tag de Categoría & Badge de Logros Superior */}
+      {/* Badges Superior Derecha: Logros y Plataforma */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {achTotal > 0 ? (
+        {achTotal > 0 && (
           <div
             style={{
               display: 'flex',
@@ -88,26 +88,6 @@ export default function GameCardHeaderBadges({
           >
             <Trophy size={10} color={achUnlocked > 0 ? 'var(--primary)' : 'var(--text-muted)'} />
             <span>{achUnlocked}/{achTotal}</span>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              background: 'color-mix(in srgb, var(--bg-card) 90%, black)',
-              padding: '2px 5px',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.58rem',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              border: '1px solid var(--border-color)',
-              opacity: 0.7
-            }}
-            title="Sin logros registrados"
-          >
-            <Trophy size={9} color="var(--text-muted)" />
-            <span>0</span>
           </div>
         )}
 

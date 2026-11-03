@@ -137,6 +137,8 @@ pub fn run() {
             leisure::toggle_game_achievement,
             leisure::delete_custom_achievement,
             leisure::save_game_review_and_sync,
+            leisure::get_game_agent_context,
+            leisure::save_game_companion_note,
             cortex::cortex_record_signal,
             cortex::cortex_get_telemetry,
             cortex::cortex_resolve_proposal

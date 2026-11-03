@@ -1573,3 +1573,297 @@ tags:
         None => "Reseña guardada en SQLite local.".to_string(),
     })
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PendingAchievementInfo {
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GameAgentContext {
+    pub game_id: String,
+    pub game_title: String,
+    pub is_steam: bool,
+    pub platform: String,
+    pub total_play_time_seconds: i64,
+    pub play_time_hours: f64,
+    pub sessions_count: usize,
+    pub rating: Option<i32>,
+    pub review: Option<String>,
+    pub achievements_total: usize,
+    pub achievements_unlocked: usize,
+    pub pending_achievements: Vec<PendingAchievementInfo>,
+    pub obsidian_note_exists: bool,
+    pub obsidian_note_path: Option<String>,
+    pub gamemode_active: bool,
+    pub mangohud_installed: bool,
+    pub system_prompt: String,
+}
+
+#[tauri::command]
+pub fn get_game_agent_context(
+    game_id: String,
+    game_title: String,
+    is_steam: bool,
+) -> Result<GameAgentContext, String> {
+    let conn = get_db_connection()?;
+    let platform_str = if is_steam {
+        "Steam".to_string()
+    } else {
+        "Lanzador Personalizado / Emulador".to_string()
+    };
+
+    // 1. Estadísticas de tiempo y notas del juego
+    let (total_secs, rating, review, obsidian_path): (
+        i64,
+        Option<i32>,
+        Option<String>,
+        Option<String>,
+    ) = conn
+        .query_row(
+            "SELECT total_play_time_seconds, rating, review, obsidian_note_path FROM game_stats WHERE game_id = ?1",
+            params![game_id],
+            |r| Ok((r.get(0).unwrap_or(0), r.get(1).ok(), r.get(2).ok(), r.get(3).ok())),
+        )
+        .unwrap_or((0, None, None, None));
+
+    let sessions_count: usize = conn
+        .query_row(
+            "SELECT COUNT(*) FROM game_sessions WHERE game_id = ?1",
+            params![game_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+
+    let play_time_hours = (total_secs as f64) / 3600.0;
+
+    // 2. Reporte de logros
+    let ach_report = get_game_achievements(game_id.clone(), is_steam).unwrap_or(
+        GameAchievementsReport {
+            total: 0,
+            unlocked: 0,
+            percentage: 0.0,
+            items: Vec::new(),
+        },
+    );
+
+    let achievements_total = ach_report.total;
+    let achievements_unlocked = ach_report.unlocked;
+    let pending_achievements: Vec<PendingAchievementInfo> = ach_report
+        .items
+        .into_iter()
+        .filter(|a| !a.unlocked)
+        .take(8)
+        .map(|a| PendingAchievementInfo {
+            name: a.name,
+            description: a.description,
+        })
+        .collect();
+
+    // 3. Telemetría de hardware y optimización activa
+    let gaming_status = get_gaming_status().unwrap_or(GamingStatus {
+        gamemode_active: false,
+        gamemode_installed: false,
+        mangohud_installed: false,
+        gamescope_installed: false,
+        gpu_driver: "Desconocido".to_string(),
+        default_launch_command: String::new(),
+    });
+
+    // 4. Búsqueda de notas en la bóveda de Obsidian
+    let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let vault_root = PathBuf::from(&cfg.vault_path);
+    let safe_title: String = game_title
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '-',
+            other => other,
+        })
+        .collect();
+    let note_path = vault_root
+        .join("03 Personal y Ocio")
+        .join("Gaming")
+        .join(format!("Bitacora - {}.md", safe_title.trim()));
+
+    let (obsidian_exists, obsidian_excerpt) = if note_path.exists() {
+        if let Ok(content) = fs::read_to_string(&note_path) {
+            let excerpt = if content.len() > 1200 {
+                format!("{}...", &content[..1200])
+            } else {
+                content
+            };
+            (true, Some(excerpt))
+        } else {
+            (true, None)
+        }
+    } else {
+        (false, None)
+    };
+
+    // 5. Prompt del Sistema Táctico
+    let mut system_prompt = format!(
+        "Eres el Game Companion Táctico de Aegis, asistente experto de gaming y optimización para el usuario Gabriel en su equipo Intel N150 (4 Cores Alder Lake-N, Intel UHD Graphics 24 EUs, 16GB RAM, Fedora Linux).
+Directrices:
+- Respuestas directas, concisas y tácticas en formato Markdown.
+- Considera las capacidades del Intel N150: gráficos integrados UHD, 720p/540p con FSR/Gamescope recomendados para juegos 3D, 60 FPS estables para 2D/Pixel Art/Indies, 30 FPS para juegos 3D más exigentes, variables de entorno Proton/Wine.
+- Si el usuario pide builds o estrategias, proporciona tablas o listas con pros y contras específicos.
+- Si el usuario pide guías para logros, proporciona requisitos exactos, rutas óptimas y secretos conocidos.
+
+[INFORMACIÓN DEL JUEGO SELECCIONADO]
+- Título: {}
+- Plataforma: {} (ID: {})
+- Tiempo jugado acumulado: {:.1} horas ({} partidas registradas)
+- Valoración del usuario: {}
+- Logros: {}/{} completados ({:.0}%)
+- Entorno de Hardware: Intel N150 (4T), Intel UHD, 16GB RAM | GameMode: {} | MangoHud: {}",
+        game_title,
+        platform_str,
+        game_id,
+        play_time_hours,
+        sessions_count,
+        rating.map(|r| format!("{}/5 ⭐", r)).unwrap_or_else(|| "Sin calificar".to_string()),
+        achievements_unlocked,
+        achievements_total,
+        if achievements_total > 0 {
+            (achievements_unlocked as f64 / achievements_total as f64) * 100.0
+        } else {
+            0.0
+        },
+        if gaming_status.gamemode_active { "Activo" } else { "Inactivo" },
+        if gaming_status.mangohud_installed { "Disponible" } else { "No instalado" }
+    );
+
+    if let Some(ref rev) = review {
+        if !rev.trim().is_empty() {
+            system_prompt.push_str(&format!("\n- Reseña previa del usuario: \"{}\"", rev.trim()));
+        }
+    }
+
+    if !pending_achievements.is_empty() {
+        system_prompt.push_str("\n\n[PRÓXIMOS LOGROS BLOQUEADOS PENDIENTES]\n");
+        for (idx, ach) in pending_achievements.iter().enumerate() {
+            system_prompt.push_str(&format!("{}. **{}**: {}\n", idx + 1, ach.name, ach.description));
+        }
+    }
+
+    if let Some(ref excerpt) = obsidian_excerpt {
+        system_prompt.push_str(&format!("\n\n[NOTAS PREVIAS EN OBSIDIAN]\n{}\n", excerpt.trim()));
+    }
+
+    Ok(GameAgentContext {
+        game_id,
+        game_title,
+        is_steam,
+        platform: platform_str,
+        total_play_time_seconds: total_secs,
+        play_time_hours,
+        sessions_count,
+        rating,
+        review,
+        achievements_total,
+        achievements_unlocked,
+        pending_achievements,
+        obsidian_note_exists: obsidian_exists,
+        obsidian_note_path: if obsidian_exists {
+            Some(note_path.to_string_lossy().to_string())
+        } else {
+            obsidian_path
+        },
+        gamemode_active: gaming_status.gamemode_active,
+        mangohud_installed: gaming_status.mangohud_installed,
+        system_prompt,
+    })
+}
+
+#[tauri::command]
+pub fn save_game_companion_note(
+    game_id: String,
+    game_title: String,
+    is_steam: bool,
+    section_title: String,
+    note_content: String,
+) -> Result<String, String> {
+    let conn = get_db_connection()?;
+    let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let vault_root = PathBuf::from(&cfg.vault_path);
+    let gaming_dir = vault_root.join("03 Personal y Ocio").join("Gaming");
+    if !gaming_dir.exists() {
+        let _ = fs::create_dir_all(&gaming_dir);
+    }
+
+    let safe_title: String = game_title
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '-',
+            other => other,
+        })
+        .collect();
+
+    let note_filename = format!("Bitacora - {}.md", safe_title.trim());
+    let note_path = gaming_dir.join(&note_filename);
+
+    let now_dt: String = conn
+        .query_row("SELECT datetime('now', 'localtime')", [], |r| r.get(0))
+        .unwrap_or_else(|_| "2026-11-03 00:00".to_string());
+
+    let entry = format!(
+        "\n\n### 🤖 Guía Táctica del Asistente ({}): {}\n\n{}\n",
+        now_dt,
+        section_title.trim(),
+        note_content.trim()
+    );
+
+    if note_path.exists() {
+        let mut file = fs::OpenOptions::new()
+            .append(true)
+            .open(&note_path)
+            .map_err(|e| format!("Error abriendo nota en Obsidian: {}", e))?;
+        use std::io::Write;
+        file.write_all(entry.as_bytes())
+            .map_err(|e| format!("Error agregando guía a nota en Obsidian: {}", e))?;
+    } else {
+        let platform_str = if is_steam { "Steam" } else { "Lanzador Custom" };
+        let now_date: String = conn
+            .query_row("SELECT date('now')", [], |r| r.get(0))
+            .unwrap_or_else(|_| "2026-11-03".to_string());
+
+        let initial_content = format!(
+            r#"---
+tipo: Bitácora Gaming
+juego: "{title}"
+plataforma: "{platform}"
+fecha_registro: {date}
+tags:
+  - ocio/gaming
+  - bitacora-juegos
+  - guia-tactica
+---
+
+# 🎮 Bitácora: {title}
+
+> [!NOTE] Metadatos Tácticos (Aegis Soberano)
+> - **Plataforma:** {platform}
+> - **Fecha:** {date}
+
+{entry}
+---
+*Vinculado desde Aegis Gaming & Aceleración Soberana — [[MOC - Personal y Ocio]]*
+"#,
+            title = game_title,
+            platform = platform_str,
+            date = now_date,
+            entry = entry
+        );
+        fs::write(&note_path, initial_content)
+            .map_err(|e| format!("Error creando nota en Obsidian: {}", e))?;
+    }
+
+    let note_str = note_path.to_string_lossy().to_string();
+    let _ = conn.execute(
+        "UPDATE game_stats SET obsidian_note_path = ?1 WHERE game_id = ?2",
+        params![note_str, game_id],
+    );
+
+    Ok(format!("Guía guardada en Obsidian: {}", note_filename))
+}

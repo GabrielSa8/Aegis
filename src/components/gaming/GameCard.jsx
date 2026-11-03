@@ -74,7 +74,7 @@ const GameCard = memo(function GameCard({
         </div>
       )}
 
-      {/* Badges Superiores (Tag, Acciones, Contador de Logros) */}
+      {/* Badges Superiores (Tag Plataforma, Logros y Acciones) */}
       <GameCardHeaderBadges
         game={game}
         isSteam={isSteam}
@@ -94,11 +94,9 @@ const GameCard = memo(function GameCard({
         flexDirection: 'column',
         gap: '4px'
       }}>
-        {/* Metadatos Tácticos (Horas + Logros + Rating) */}
+        {/* Metadatos Tácticos (Horas + Rating) */}
         <GameCardFooterMeta
           playtimeStr={playtimeStr}
-          achUnlocked={achUnlocked}
-          achTotal={achTotal}
           rating={rating}
         />
 
