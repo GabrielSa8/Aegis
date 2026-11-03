@@ -5,7 +5,9 @@ import {
   GameCard,
   GamingHeader,
   AccelerationBar,
-  CustomGameModal
+  CustomGameModal,
+  ActiveGameSessionBar,
+  GameDetailModal
 } from './gaming';
 
 export default function LeisureView() {
@@ -13,6 +15,7 @@ export default function LeisureView() {
     gamingStatus,
     steamGames,
     customGames,
+    gameStatsMap,
     searchQuery,
     setSearchQuery,
     categoryFilter,
@@ -22,22 +25,29 @@ export default function LeisureView() {
     useMangohud,
     launchMessage,
     loading,
+    activeSession,
     showGameModal,
     setShowGameModal,
     gameFormData,
     setGameFormData,
+    selectedGameForDetail,
     gamepadConnected,
     fetchData,
+    refreshStats,
     handleToggleGamescope,
     handleChangeRes,
     handleToggleMangohud,
     handleLaunchGame,
+    handleStopSession,
+    handleCancelSession,
     handleSaveCustomGame,
     handleDeleteCustomGame,
     filteredSteam,
     filteredCustom,
     totalTitles,
-    openNewGameModal
+    openNewGameModal,
+    openGameDetail,
+    closeGameDetail
   } = useGaming();
 
   return (
@@ -76,6 +86,30 @@ export default function LeisureView() {
         mangohudInstalled={gamingStatus?.mangohudInstalled}
       />
 
+      {/* ⏱️ HUD Flotante: Sesión Activa de Juego */}
+      {activeSession && (
+        <ActiveGameSessionBar
+          activeSession={activeSession}
+          onStopSession={handleStopSession}
+          onCancelSession={handleCancelSession}
+          onOpenDetails={() => {
+            const isStm = activeSession.isSteam;
+            const fullGame = isStm
+              ? steamGames.find((g) => g.appId === activeSession.gameId)
+              : customGames.find((g) => g.id === activeSession.gameId);
+            openGameDetail(
+              fullGame || {
+                id: activeSession.gameId,
+                appId: activeSession.gameId,
+                name: activeSession.gameTitle,
+                title: activeSession.gameTitle
+              },
+              isStm
+            );
+          }}
+        />
+      )}
+
       {/* 🎮 Cuadrícula: Cards Full Portada (2:3) Minimalistas */}
       <div style={{
         display: 'grid',
@@ -83,22 +117,26 @@ export default function LeisureView() {
         gap: '12px',
         paddingBottom: '12px'
       }}>
-        {filteredSteam.map(game => (
+        {filteredSteam.map((game) => (
           <GameCard
             key={game.appId}
             game={game}
             isSteam={true}
+            gameStats={gameStatsMap[game.appId]}
             onLaunch={handleLaunchGame}
+            onOpenDetails={openGameDetail}
           />
         ))}
 
-        {filteredCustom.map(game => (
+        {filteredCustom.map((game) => (
           <GameCard
             key={game.id}
             game={game}
             isSteam={false}
+            gameStats={gameStatsMap[game.id]}
             onLaunch={handleLaunchGame}
             onDelete={handleDeleteCustomGame}
+            onOpenDetails={openGameDetail}
           />
         ))}
       </div>
@@ -130,6 +168,24 @@ export default function LeisureView() {
         setGameFormData={setGameFormData}
         onSubmit={handleSaveCustomGame}
       />
+
+      {/* 🪟 Modal Táctico: Detalle de Juego (Logros, Tiempos, Reseña & Obsidian) */}
+      {selectedGameForDetail && (
+        <GameDetailModal
+          isOpen={Boolean(selectedGameForDetail)}
+          onClose={closeGameDetail}
+          game={selectedGameForDetail.game}
+          isSteam={selectedGameForDetail.isSteam}
+          gameStats={
+            gameStatsMap[
+              selectedGameForDetail.isSteam
+                ? selectedGameForDetail.game.appId
+                : selectedGameForDetail.game.id
+            ]
+          }
+          onRefreshStats={refreshStats}
+        />
+      )}
     </div>
   );
 }

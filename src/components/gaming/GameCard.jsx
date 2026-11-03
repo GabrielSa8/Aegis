@@ -1,26 +1,37 @@
-import { useState, memo } from 'react';
-import { Gamepad2, Play, Trash2 } from 'lucide-react';
+import React, { useState, memo } from 'react';
+import { Gamepad2, Play } from 'lucide-react';
+import { formatPlayDuration } from './gameHelpers';
+import GameCardHeaderBadges from './GameCardHeaderBadges';
+import GameCardFooterMeta from './GameCardFooterMeta';
 
-/**
- * Componente Memoizado de Tarjeta de Juego (Zero re-renders innecesarios)
- */
-const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
+const GameCard = memo(function GameCard({
+  game,
+  isSteam,
+  gameStats,
+  onLaunch,
+  onDelete,
+  onOpenDetails
+}) {
   const [imgFailed, setImgFailed] = useState(false);
   const coverSrc = isSteam ? game.coverImage : game.bannerUrl;
   const hasCover = Boolean(coverSrc) && !imgFailed;
 
+  const totalSecs = gameStats?.totalPlayTimeSeconds || 0;
+  const rating = gameStats?.rating || 0;
+  const achUnlocked = gameStats?.achievementsUnlocked ?? game.achievementsUnlocked ?? 0;
+  const achTotal = gameStats?.achievementsTotal ?? game.achievementsTotal ?? 0;
+  const playtimeStr = formatPlayDuration(totalSecs);
+
   return (
     <div
-      onClick={() => onLaunch(isSteam ? `steam:${game.appId}` : game.id, isSteam ? null : game.launchType, isSteam ? null : game.launchTarget)}
       style={{
         position: 'relative',
         aspectRatio: '2 / 3',
         borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
-        background: 'linear-gradient(145deg, #161c19, #0c100e)',
+        background: 'color-mix(in srgb, var(--bg-card) 92%, black)',
         border: '1px solid var(--border-color)',
-        cursor: 'pointer',
-        transition: 'transform 0.15s ease, border-color 0.15s ease',
+        transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-end',
@@ -29,12 +40,13 @@ const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-3px)';
         e.currentTarget.style.borderColor = 'var(--primary)';
+        e.currentTarget.style.boxShadow = '0 6px 14px color-mix(in srgb, var(--primary) 15%, transparent)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.borderColor = 'var(--border-color)';
+        e.currentTarget.style.boxShadow = 'none';
       }}
-      title={`Lanzar ${game.name || game.title}`}
     >
       {/* Portada Full Image si está disponible */}
       {hasCover ? (
@@ -44,16 +56,9 @@ const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
           loading="lazy"
           decoding="async"
           onError={() => setImgFailed(true)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover'
-          }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : (
-        /* Tarjeta Estilizada Minimalista cuando no hay portada local */
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -61,71 +66,46 @@ const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'radial-gradient(circle at center, rgba(16,185,129,0.08) 0%, rgba(0,0,0,0.5) 100%)',
+          background: 'radial-gradient(circle at center, color-mix(in srgb, var(--primary) 12%, transparent) 0%, color-mix(in srgb, var(--bg-card) 95%, black) 100%)',
           padding: '16px',
           textAlign: 'center'
         }}>
-          <Gamepad2 size={36} color="rgba(255,255,255,0.15)" />
+          <Gamepad2 size={36} color="var(--text-muted)" style={{ opacity: 0.3 }} />
         </div>
       )}
 
-      {/* Tag de Categoría / Tipo en Esquina Superior */}
-      <div style={{
-        position: 'absolute',
-        top: '8px',
-        right: '8px',
-        background: 'rgba(10, 14, 12, 0.88)',
-        padding: '2px 6px',
-        borderRadius: 'var(--radius-sm)',
-        fontSize: '0.6rem',
-        fontWeight: 700,
-        color: isSteam ? '#a7f3d0' : 'var(--primary)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        zIndex: 2,
-        pointerEvents: 'none'
-      }}>
-        {isSteam ? 'STEAM' : (game.category || 'CUSTOM').toUpperCase()}
-      </div>
-
-      {/* Botón Eliminar para juegos personalizados */}
-      {!isSteam && onDelete && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(game.id);
-          }}
-          style={{
-            position: 'absolute',
-            top: '8px',
-            left: '8px',
-            background: 'rgba(10, 14, 12, 0.88)',
-            border: 'none',
-            color: '#ef4444',
-            cursor: 'pointer',
-            padding: '3px 5px',
-            borderRadius: 'var(--radius-sm)',
-            zIndex: 3
-          }}
-          title="Eliminar este lanzador"
-        >
-          <Trash2 size={11} />
-        </button>
-      )}
+      {/* Badges Superiores (Tag, Acciones, Contador de Logros) */}
+      <GameCardHeaderBadges
+        game={game}
+        isSteam={isSteam}
+        achUnlocked={achUnlocked}
+        achTotal={achTotal}
+        onDelete={onDelete}
+        onOpenDetails={onOpenDetails}
+      />
 
       {/* Degradado Inferior & Título Minimalista */}
       <div style={{
         position: 'relative',
         zIndex: 2,
-        background: 'linear-gradient(to top, rgba(8,12,10,0.96) 0%, rgba(8,12,10,0.7) 65%, transparent 100%)',
+        background: 'linear-gradient(to top, color-mix(in srgb, var(--bg-card) 96%, black) 0%, color-mix(in srgb, var(--bg-card) 75%, transparent) 70%, transparent 100%)',
         padding: '12px 10px 10px 10px',
         display: 'flex',
         flexDirection: 'column',
         gap: '4px'
       }}>
+        {/* Metadatos Tácticos (Horas + Logros + Rating) */}
+        <GameCardFooterMeta
+          playtimeStr={playtimeStr}
+          achUnlocked={achUnlocked}
+          achTotal={achTotal}
+          rating={rating}
+        />
+
         <span style={{
-          fontSize: '0.82rem',
+          fontSize: '0.8rem',
           fontWeight: 800,
-          color: '#fff',
+          color: 'var(--text-high)',
           lineHeight: '1.15',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -143,25 +123,40 @@ const GameCard = memo(function GameCard({ game, isSteam, onLaunch, onDelete }) {
           marginTop: '2px'
         }}>
           <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-            {isSteam 
+            {isSteam
               ? (game.sizeMb > 1024 ? `${(game.sizeMb / 1024).toFixed(1)} GB` : `${game.sizeMb} MB`)
               : (game.launchType ? game.launchType.toUpperCase() : 'URL')}
           </span>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: 'var(--primary)',
-            color: '#052e16',
-            padding: '2px 8px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '0.66rem',
-            fontWeight: 800
-          }}>
-            <Play size={10} fill="#052e16" />
-            <span>Jugar</span>
-          </div>
+          <button
+            onClick={() => onLaunch(
+              isSteam ? `steam:${game.appId}` : game.id,
+              isSteam ? null : game.launchType,
+              isSteam ? null : game.launchTarget,
+              game.name || game.title,
+              isSteam
+            )}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'var(--primary)',
+              color: 'var(--bg-card)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.66rem',
+              fontWeight: 800,
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'filter 0.15s ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+            title={`Lanzar ${game.name || game.title}`}
+          >
+            <Play size={10} fill="currentColor" />
+            JUGAR
+          </button>
         </div>
       </div>
     </div>

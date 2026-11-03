@@ -19,11 +19,13 @@ export function TabsBar({
   items,
   activeTab,
   onChange,
+  onTabChange,
   variant = 'pills',
   size = 'sm',
   className = '',
   style = {}
 }) {
+  const handleTabSelect = onChange || onTabChange;
   const sizeStyles = {
     xs: { padding: '2px 6px', fontSize: '11px', height: '24px', gap: '4px' },
     sm: { padding: '3px 8px', fontSize: '12px', height: '28px', gap: '6px' },
@@ -91,7 +93,7 @@ export function TabsBar({
             type="button"
             disabled={isDisabled}
             title={tab.title}
-            onClick={() => !isDisabled && onChange && onChange(tab.id)}
+            onClick={() => !isDisabled && handleTabSelect && handleTabSelect(tab.id)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

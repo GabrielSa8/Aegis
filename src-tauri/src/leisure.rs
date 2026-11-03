@@ -1,10 +1,59 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use crate::db::get_db_connection;
 use rusqlite::params;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameStats {
+    pub game_id: String,
+    pub game_title: String,
+    pub is_steam: bool,
+    pub total_play_time_seconds: i64,
+    pub sessions_count: i64,
+    pub rating: i32,
+    pub review: Option<String>,
+    pub obsidian_note_path: Option<String>,
+    pub last_played: Option<String>,
+    pub achievements_unlocked: Option<usize>,
+    pub achievements_total: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameSession {
+    pub id: String,
+    pub game_id: String,
+    pub game_title: String,
+    pub is_steam: bool,
+    pub duration_seconds: i64,
+    pub started_at: String,
+    pub ended_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AchievementItem {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub icon_url: Option<String>,
+    pub unlocked: bool,
+    pub unlocked_at: Option<String>,
+    pub is_custom: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameAchievementsReport {
+    pub total: usize,
+    pub unlocked: usize,
+    pub percentage: f32,
+    pub items: Vec<AchievementItem>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +75,8 @@ pub struct SteamGame {
     pub size_mb: u64,
     pub last_played: u64,
     pub cover_image: Option<String>,
+    pub achievements_unlocked: Option<usize>,
+    pub achievements_total: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +92,8 @@ pub struct CustomGame {
     pub play_time_minutes: i64,
     pub last_played: Option<String>,
     pub created_at: String,
+    pub achievements_unlocked: Option<usize>,
+    pub achievements_total: Option<usize>,
 }
 
 fn to_base64(bytes: &[u8]) -> String {
@@ -244,6 +297,7 @@ pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
     let mut games = Vec::new();
     let mut seen_appids = HashSet::new();
     let library_folders = collect_steam_library_folders();
+    let prog_map = get_steam_achievement_progress_map();
 
     for steamapps in library_folders {
         if let Ok(entries) = fs::read_dir(&steamapps) {
@@ -292,6 +346,10 @@ pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
                                 && seen_appids.insert(appid.clone())
                             {
                                 let cover_image = get_local_steam_cover(&appid);
+                                let (ach_unlocked, ach_total) = match prog_map.get(&appid) {
+                                    Some(&(u, t)) if t > 0 => (Some(u), Some(t)),
+                                    _ => (None, None),
+                                };
                                 games.push(SteamGame {
                                     app_id: appid,
                                     name,
@@ -299,6 +357,8 @@ pub fn get_installed_steam_games() -> Result<Vec<SteamGame>, String> {
                                     size_mb: size_bytes / (1024 * 1024),
                                     last_played,
                                     cover_image,
+                                    achievements_unlocked: ach_unlocked,
+                                    achievements_total: ach_total,
                                 });
                             }
                         }
@@ -456,6 +516,23 @@ pub fn launch_game(
 #[tauri::command]
 pub fn sqlite_get_custom_games() -> Result<Vec<CustomGame>, String> {
     let conn = get_db_connection()?;
+
+    let mut custom_ach_counts: HashMap<String, (usize, usize)> = HashMap::new();
+    if let Ok(mut ach_stmt) = conn.prepare(
+        "SELECT game_id, COUNT(*), SUM(CASE WHEN unlocked = 1 THEN 1 ELSE 0 END) FROM custom_achievements GROUP BY game_id",
+    ) {
+        if let Ok(rows) = ach_stmt.query_map([], |row| {
+            let gid: String = row.get(0)?;
+            let tot: i64 = row.get(1)?;
+            let unl: i64 = row.get(2)?;
+            Ok((gid, (unl as usize, tot as usize)))
+        }) {
+            for r in rows.flatten() {
+                custom_ach_counts.insert(r.0, r.1);
+            }
+        }
+    }
+
     let mut stmt = conn
         .prepare(
             "SELECT id, title, category, launch_type, launch_target, description, banner_url, play_time_minutes, last_played, created_at
@@ -465,8 +542,13 @@ pub fn sqlite_get_custom_games() -> Result<Vec<CustomGame>, String> {
 
     let rows = stmt
         .query_map([], |row| {
+            let id: String = row.get(0)?;
+            let (ach_unlocked, ach_total) = match custom_ach_counts.get(&id) {
+                Some(&(u, t)) if t > 0 => (Some(u), Some(t)),
+                _ => (None, None),
+            };
             Ok(CustomGame {
-                id: row.get(0)?,
+                id,
                 title: row.get(1)?,
                 category: row.get(2)?,
                 launch_type: row.get(3)?,
@@ -476,6 +558,8 @@ pub fn sqlite_get_custom_games() -> Result<Vec<CustomGame>, String> {
                 play_time_minutes: row.get(7)?,
                 last_played: row.get(8)?,
                 created_at: row.get(9)?,
+                achievements_unlocked: ach_unlocked,
+                achievements_total: ach_total,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -541,4 +625,951 @@ pub fn sqlite_record_game_session(id: String, minutes: i64) -> Result<String, St
     )
     .map_err(|e| e.to_string())?;
     Ok("Sesión registrada.".to_string())
+}
+
+// =========================================================================
+// 🏆 Fase 7.4: Steam Offline Cache, Sesiones, Tiempos, Logros y Bóveda
+// =========================================================================
+
+fn get_steam_librarycache_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let base_userdata = [
+        format!("{}/.local/share/Steam/userdata", home),
+        format!("{}/.steam/steam/userdata", home),
+        format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/userdata", home),
+    ];
+
+    for base in &base_userdata {
+        let p = Path::new(base);
+        if let Ok(entries) = fs::read_dir(p) {
+            for entry in entries.flatten() {
+                let cache_dir = entry.path().join("config").join("librarycache");
+                if cache_dir.exists() {
+                    dirs.push(cache_dir);
+                }
+            }
+        }
+    }
+    dirs
+}
+
+fn get_steam_achievement_progress_map() -> HashMap<String, (usize, usize)> {
+    let mut map = HashMap::new();
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let stats_dirs = [
+        format!("{}/.local/share/Steam/appcache/stats", home),
+        format!("{}/.steam/steam/appcache/stats", home),
+        format!("{}/.var/app/com.valvesoftware.Steam/data/Steam/appcache/stats", home),
+    ];
+
+    for cache_dir in get_steam_librarycache_dirs() {
+        // 1. Parsear archivo global de progreso si existe
+        let prog_file = cache_dir.join("achievement_progress.json");
+        if let Ok(content) = fs::read_to_string(&prog_file) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(arr) = val.get("mapCache").and_then(|v| v.as_array()) {
+                    for entry in arr {
+                        if let Some(pair) = entry.as_array() {
+                            if pair.len() == 2 {
+                                let appid = pair[0].to_string();
+                                if let Some(obj) = pair[1].as_object() {
+                                    let unlocked = obj.get("unlocked").and_then(|u| u.as_u64()).unwrap_or(0) as usize;
+                                    let total = obj.get("total").and_then(|t| t.as_u64()).unwrap_or(0) as usize;
+                                    if total > 0 {
+                                        map.insert(appid, (unlocked, total));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Escaneo de archivos individuales <appid>.json (buscando nTotal y nAchieved en todo el contenido)
+        if let Ok(entries) = fs::read_dir(&cache_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(fname) = path.file_name().and_then(|n| n.to_str()) {
+                    if fname.ends_with(".json") && fname != "achievement_progress.json" {
+                        let appid = fname.trim_end_matches(".json").to_string();
+                        if appid.chars().all(|c| c.is_ascii_digit()) {
+                            if let Ok(content) = fs::read_to_string(&path) {
+                                let mut n_total = None;
+                                let mut n_achieved = None;
+
+                                if let Some(t_idx) = content.find("\"nTotal\":") {
+                                    let sub = &content[t_idx + 9..];
+                                    let num_str: String = sub
+                                        .chars()
+                                        .take_while(|c| c.is_ascii_digit() || c.is_whitespace())
+                                        .filter(|c| c.is_ascii_digit())
+                                        .collect();
+                                    if let Ok(n) = num_str.parse::<usize>() {
+                                        n_total = Some(n);
+                                    }
+                                }
+                                if let Some(a_idx) = content.find("\"nAchieved\":") {
+                                    let sub = &content[a_idx + 12..];
+                                    let num_str: String = sub
+                                        .chars()
+                                        .take_while(|c| c.is_ascii_digit() || c.is_whitespace())
+                                        .filter(|c| c.is_ascii_digit())
+                                        .collect();
+                                    if let Ok(n) = num_str.parse::<usize>() {
+                                        n_achieved = Some(n);
+                                    }
+                                }
+
+                                if let (Some(tot), Some(ach)) = (n_total, n_achieved) {
+                                    if tot > 0 {
+                                        map.insert(appid.clone(), (ach, tot));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fallback AppCache: leer total de UserGameStatsSchema_<appid>.bin
+    for sdir in &stats_dirs {
+        let p_sdir = Path::new(sdir);
+        if let Ok(entries) = fs::read_dir(p_sdir) {
+            for entry in entries.flatten() {
+                let fname = entry.file_name().to_string_lossy().to_string();
+                if fname.starts_with("UserGameStatsSchema_") && fname.ends_with(".bin") {
+                    let appid = fname
+                        .trim_start_matches("UserGameStatsSchema_")
+                        .trim_end_matches(".bin")
+                        .to_string();
+
+                    let needs_total = map.get(&appid).map(|(_, t)| *t == 0).unwrap_or(true);
+                    if needs_total {
+                        if let Ok(bytes) = fs::read(entry.path()) {
+                            let icon_pattern = b"icon\x00";
+                            let icon_count = bytes.windows(icon_pattern.len()).filter(|w| *w == icon_pattern).count();
+                            if icon_count > 0 {
+                                let curr_ach = map.get(&appid).map(|(a, _)| *a).unwrap_or(0);
+                                map.insert(appid.clone(), (curr_ach, icon_count));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Fallback AppCache: leer logros desbloqueados de UserGameStats_*.bin
+    for sdir in &stats_dirs {
+        let p_sdir = Path::new(sdir);
+        if let Ok(entries) = fs::read_dir(p_sdir) {
+            for entry in entries.flatten() {
+                let fname = entry.file_name().to_string_lossy().to_string();
+                if fname.starts_with("UserGameStats_") && !fname.starts_with("UserGameStatsSchema_") && fname.ends_with(".bin") {
+                    let parts: Vec<&str> = fname.trim_end_matches(".bin").split('_').collect();
+                    if parts.len() >= 3 {
+                        let appid = parts[2].to_string();
+                        let curr_ach = map.get(&appid).map(|(a, _)| *a).unwrap_or(0);
+                        if curr_ach == 0 {
+                            if let Ok(bytes) = fs::read(entry.path()) {
+                                let ach_pattern = b"AchievementTimes\x00";
+                                if let Some(pos) = bytes.windows(ach_pattern.len()).position(|w| w == ach_pattern) {
+                                    let sub = &bytes[pos + ach_pattern.len()..];
+                                    let mut unlocked_count = 0;
+                                    let mut i = 0;
+                                    while i < sub.len() {
+                                        if sub[i] == 0x02 {
+                                            if let Some(null_pos) = sub[i + 1..].iter().position(|&b| b == 0x00) {
+                                                let key_bytes = &sub[i + 1..i + 1 + null_pos];
+                                                if !key_bytes.is_empty() && key_bytes.iter().all(|&b| b.is_ascii_digit()) {
+                                                    unlocked_count += 1;
+                                                    i += 1 + null_pos + 1 + 4;
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        i += 1;
+                                    }
+                                    if unlocked_count > 0 {
+                                        let curr_tot = map.get(&appid).map(|(_, t)| *t).unwrap_or(unlocked_count);
+                                        map.insert(appid, (unlocked_count, curr_tot.max(unlocked_count)));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Integrar desbloqueos soberanos de SQLite (game_achievement_unlocks)
+    if let Ok(conn) = get_db_connection() {
+        if let Ok(mut stmt) = conn.prepare(
+            "SELECT game_id, SUM(CASE WHEN unlocked = 1 THEN 1 ELSE 0 END) FROM game_achievement_unlocks GROUP BY game_id",
+        ) {
+            if let Ok(rows) = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)? as usize))) {
+                for (gid, local_unl) in rows.flatten() {
+                    let (curr_unl, curr_tot) = map.get(&gid).copied().unwrap_or((0, 0));
+                    map.insert(gid, (curr_unl.max(local_unl), curr_tot.max(local_unl)));
+                }
+            }
+        }
+    }
+
+    map
+}
+
+fn parse_steam_stats_schema(app_id: &str) -> Vec<AchievementItem> {
+    let mut items = Vec::new();
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let possible_paths = [
+        format!("{}/.local/share/Steam/appcache/stats/UserGameStatsSchema_{}.bin", home, app_id),
+        format!("{}/.steam/steam/appcache/stats/UserGameStatsSchema_{}.bin", home, app_id),
+        format!("{}/.steam/root/appcache/stats/UserGameStatsSchema_{}.bin", home, app_id),
+    ];
+
+    let mut data: Option<Vec<u8>> = None;
+    for p in &possible_paths {
+        if let Ok(bytes) = fs::read(p) {
+            data = Some(bytes);
+            break;
+        }
+    }
+
+    let bytes = match data {
+        Some(b) => b,
+        None => return items,
+    };
+
+    let mut i = 0;
+    let len = bytes.len();
+
+    let read_null_str = |pos: &mut usize| -> String {
+        let start = *pos;
+        while *pos < len && bytes[*pos] != 0 {
+            *pos += 1;
+        }
+        let s = String::from_utf8_lossy(&bytes[start..*pos]).to_string();
+        if *pos < len {
+            *pos += 1;
+        }
+        s
+    };
+
+    let mut stack: Vec<String> = Vec::new();
+    let mut curr_id = String::new();
+    let mut curr_name_sp = String::new();
+    let mut curr_name_en = String::new();
+    let mut curr_desc_sp = String::new();
+    let mut curr_desc_en = String::new();
+    let mut curr_icon = String::new();
+
+    while i < len {
+        let btype = bytes[i];
+        i += 1;
+        if btype == 0x08 {
+            if let Some(_closed) = stack.pop() {
+                if stack.last().map(|s| s.as_str()) == Some("bits") {
+                    let display_name = if !curr_name_sp.is_empty() {
+                        curr_name_sp.clone()
+                    } else if !curr_name_en.is_empty() {
+                        curr_name_en.clone()
+                    } else {
+                        curr_id.clone()
+                    };
+
+                    let display_desc = if !curr_desc_sp.is_empty() {
+                        curr_desc_sp.clone()
+                    } else {
+                        curr_desc_en.clone()
+                    };
+
+                    let icon_url = if !curr_icon.is_empty() {
+                        Some(format!(
+                            "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/{}/{}",
+                            app_id, curr_icon
+                        ))
+                    } else {
+                        None
+                    };
+
+                    if !curr_id.is_empty() {
+                        items.push(AchievementItem {
+                            id: curr_id.clone(),
+                            name: display_name,
+                            description: display_desc,
+                            icon_url,
+                            unlocked: false,
+                            unlocked_at: None,
+                            is_custom: false,
+                        });
+                    }
+
+                    curr_id.clear();
+                    curr_name_sp.clear();
+                    curr_name_en.clear();
+                    curr_desc_sp.clear();
+                    curr_desc_en.clear();
+                    curr_icon.clear();
+                }
+            }
+            continue;
+        }
+
+        let key = read_null_str(&mut i);
+        match btype {
+            0x00 => {
+                stack.push(key);
+            }
+            0x01 => {
+                let val = read_null_str(&mut i);
+                let in_bits = stack.iter().any(|s| s == "bits");
+                if in_bits {
+                    let parent = stack.last().map(|s| s.as_str()).unwrap_or("");
+                    let grandparent = if stack.len() >= 2 {
+                        stack[stack.len() - 2].as_str()
+                    } else {
+                        ""
+                    };
+
+                    if key == "name" && (parent != "name" && parent != "display") {
+                        curr_id = val;
+                    } else if grandparent == "display" && parent == "name" {
+                        if key == "spanish" {
+                            curr_name_sp = val;
+                        } else if key == "english" {
+                            curr_name_en = val;
+                        }
+                    } else if grandparent == "display" && parent == "desc" {
+                        if key == "spanish" {
+                            curr_desc_sp = val;
+                        } else if key == "english" {
+                            curr_desc_en = val;
+                        }
+                    } else if key == "icon" {
+                        curr_icon = val;
+                    }
+                }
+            }
+            0x02 | 0x03 => {
+                i = (i + 4).min(len);
+            }
+            0x07 => {
+                i = (i + 8).min(len);
+            }
+            _ => {}
+        }
+    }
+
+    items
+}
+
+fn get_steam_game_achievements(app_id: &str) -> Option<GameAchievementsReport> {
+    let prog_map = get_steam_achievement_progress_map();
+    let (prog_unlocked, prog_total) = prog_map.get(app_id).copied().unwrap_or((0, 0));
+
+    // Cargar overrides locales de usuario desde SQLite
+    let mut overrides: HashMap<String, bool> = HashMap::new();
+    if let Ok(conn) = get_db_connection() {
+        if let Ok(mut stmt) = conn.prepare("SELECT achievement_id, unlocked FROM game_achievement_unlocks WHERE game_id = ?1") {
+            if let Ok(rows) = stmt.query_map(params![app_id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)? == 1))) {
+                for (aid, unl) in rows.flatten() {
+                    overrides.insert(aid, unl);
+                }
+            }
+        }
+    }
+
+    for cache_dir in get_steam_librarycache_dirs() {
+        let json_file = cache_dir.join(format!("{}.json", app_id));
+        if !json_file.exists() {
+            continue;
+        }
+        if let Ok(content) = fs::read_to_string(&json_file) {
+            let stream = serde_json::Deserializer::from_str(&content).into_iter::<serde_json::Value>();
+            for val_res in stream {
+                if let Ok(val) = val_res {
+                    if let Some(arr) = val.as_array() {
+                        for item in arr {
+                            if let Some(pair) = item.as_array() {
+                                if pair.len() == 2 && pair[0] == "achievements" {
+                                    if let Some(data) = pair[1].get("data") {
+                                        let n_total = data.get("nTotal").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                                        let n_achieved = data.get("nAchieved").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                                        let mut items = Vec::new();
+                                        let mut seen_ids = HashSet::new();
+
+                                        let vector_keys = ["vecHighlight", "vecAchievedHidden", "vecUnachieved"];
+                                        for vkey in vector_keys {
+                                            if let Some(vec_arr) = data.get(vkey).and_then(|v| v.as_array()) {
+                                                for h in vec_arr {
+                                                    let id = h.get("strID").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                                    if id.is_empty() || !seen_ids.insert(id.clone()) {
+                                                        continue;
+                                                    }
+                                                    let name = h.get("strName").and_then(|v| v.as_str()).unwrap_or("Logro").to_string();
+                                                    let desc = h.get("strDescription").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                                    let icon = h.get("strImage").and_then(|v| v.as_str()).map(|s| {
+                                                        s.replace("https://shared.steamstatic.com/community_assets/images/apps/", "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/")
+                                                    });
+                                                    let steam_unlocked = h.get("bAchieved").and_then(|v| v.as_bool()).unwrap_or(false);
+                                                    let unlocked = overrides.get(&id).copied().unwrap_or(steam_unlocked);
+                                                    let rt_unlocked = h.get("rtUnlocked").and_then(|v| v.as_i64()).unwrap_or(0);
+                                                    let unlocked_at = if rt_unlocked > 0 {
+                                                        Some(rt_unlocked.to_string())
+                                                    } else {
+                                                        None
+                                                    };
+
+                                                    items.push(AchievementItem {
+                                                        id,
+                                                        name,
+                                                        description: desc,
+                                                        icon_url: icon,
+                                                        unlocked,
+                                                        unlocked_at,
+                                                        is_custom: false,
+                                                    });
+                                                }
+                                            }
+                                        }
+
+                                        // Enriquecer e incorporar la totalidad de logros bloqueados desde el Schema binario oficial
+                                        let schema_items = parse_steam_stats_schema(app_id);
+                                        for mut s_item in schema_items {
+                                            if !seen_ids.insert(s_item.id.clone()) {
+                                                // Ya existía en items, enriquecer icon si faltaba
+                                                if let Some(pos) = items.iter().position(|it| it.id == s_item.id) {
+                                                    if items[pos].icon_url.is_none() && s_item.icon_url.is_some() {
+                                                        items[pos].icon_url = s_item.icon_url;
+                                                    }
+                                                    if items[pos].description.is_empty() && !s_item.description.is_empty() {
+                                                        items[pos].description = s_item.description;
+                                                    }
+                                                }
+                                            } else {
+                                                let is_unl = overrides.get(&s_item.id).copied().unwrap_or(false);
+                                                s_item.unlocked = is_unl;
+                                                items.push(s_item);
+                                            }
+                                        }
+
+                                        let final_total = n_total.max(items.len()).max(prog_total);
+                                        let final_unlocked = if !overrides.is_empty() || n_achieved == 0 {
+                                            items.iter().filter(|i| i.unlocked).count().max(prog_unlocked)
+                                        } else {
+                                            n_achieved.max(prog_unlocked).max(items.iter().filter(|i| i.unlocked).count())
+                                        };
+
+                                        let percentage = if final_total > 0 {
+                                            (final_unlocked as f32 / final_total as f32) * 100.0
+                                        } else {
+                                            0.0
+                                        };
+
+                                        return Some(GameAchievementsReport {
+                                            total: final_total,
+                                            unlocked: final_unlocked,
+                                            percentage,
+                                            items,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: si no hubo archivo librarycache, pero sí existe el Schema binario
+    let schema_items = parse_steam_stats_schema(app_id);
+    if !schema_items.is_empty() {
+        let mut full_items = Vec::new();
+        for mut s in schema_items {
+            let is_unl = overrides.get(&s.id).copied().unwrap_or(false);
+            s.unlocked = is_unl;
+            full_items.push(s);
+        }
+        let total = full_items.len().max(prog_total);
+        let unlocked = full_items.iter().filter(|i| i.unlocked).count().max(prog_unlocked);
+        let percentage = if total > 0 {
+            (unlocked as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+        return Some(GameAchievementsReport {
+            total,
+            unlocked,
+            percentage,
+            items: full_items,
+        });
+    }
+
+    if prog_total > 0 {
+        return Some(GameAchievementsReport {
+            total: prog_total,
+            unlocked: prog_unlocked,
+            percentage: (prog_unlocked as f32 / prog_total as f32) * 100.0,
+            items: Vec::new(),
+        });
+    }
+
+    None
+}
+
+#[tauri::command]
+pub fn record_game_session(
+    game_id: String,
+    game_title: String,
+    is_steam: bool,
+    duration_seconds: i64,
+    started_at: String,
+    ended_at: String,
+) -> Result<GameStats, String> {
+    let conn = get_db_connection()?;
+    let session_id = format!(
+        "sess_{}_{}",
+        game_id,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+    let steam_int = if is_steam { 1 } else { 0 };
+
+    conn.execute(
+        "INSERT INTO game_sessions (id, game_id, game_title, is_steam, duration_seconds, started_at, ended_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![session_id, game_id, game_title, steam_int, duration_seconds, started_at, ended_at],
+    )
+    .map_err(|e| format!("Error guardando sesión: {}", e))?;
+
+    conn.execute(
+        "INSERT INTO game_stats (game_id, game_title, is_steam, total_play_time_seconds, sessions_count, last_played)
+         VALUES (?1, ?2, ?3, ?4, 1, ?5)
+         ON CONFLICT(game_id) DO UPDATE SET
+            game_title = excluded.game_title,
+            total_play_time_seconds = total_play_time_seconds + excluded.total_play_time_seconds,
+            sessions_count = sessions_count + 1,
+            last_played = excluded.last_played",
+        params![game_id, game_title, steam_int, duration_seconds, ended_at],
+    )
+    .map_err(|e| format!("Error actualizando estadísticas de juego: {}", e))?;
+
+    if !is_steam {
+        let mins = duration_seconds / 60;
+        let _ = conn.execute(
+            "UPDATE custom_games SET play_time_minutes = play_time_minutes + ?1, last_played = ?2 WHERE id = ?3",
+            params![mins, ended_at, game_id],
+        );
+    }
+
+    get_game_stats(game_id)?.ok_or_else(|| "Error recuperando estadísticas actualizadas".to_string())
+}
+
+#[tauri::command]
+pub fn get_game_stats(game_id: String) -> Result<Option<GameStats>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT game_id, game_title, is_steam, total_play_time_seconds, sessions_count, rating, review, obsidian_note_path, last_played
+             FROM game_stats WHERE game_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let mut rows = stmt
+        .query_map(params![game_id], |row| {
+            let is_steam_int: i64 = row.get(2)?;
+            Ok(GameStats {
+                game_id: row.get(0)?,
+                game_title: row.get(1)?,
+                is_steam: is_steam_int == 1,
+                total_play_time_seconds: row.get(3)?,
+                sessions_count: row.get(4)?,
+                rating: row.get(5)?,
+                review: row.get(6)?,
+                obsidian_note_path: row.get(7)?,
+                last_played: row.get(8)?,
+                achievements_unlocked: None,
+                achievements_total: None,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    if let Some(r) = rows.next() {
+        let mut stats = r.map_err(|e| e.to_string())?;
+        if stats.is_steam {
+            let prog_map = get_steam_achievement_progress_map();
+            if let Some((unlocked, total)) = prog_map.get(&stats.game_id) {
+                stats.achievements_unlocked = Some(*unlocked);
+                stats.achievements_total = Some(*total);
+            }
+        }
+        Ok(Some(stats))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn get_all_game_stats() -> Result<Vec<GameStats>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT game_id, game_title, is_steam, total_play_time_seconds, sessions_count, rating, review, obsidian_note_path, last_played
+             FROM game_stats ORDER BY last_played DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let prog_map = get_steam_achievement_progress_map();
+
+    let rows = stmt
+        .query_map([], |row| {
+            let is_steam_int: i64 = row.get(2)?;
+            Ok(GameStats {
+                game_id: row.get(0)?,
+                game_title: row.get(1)?,
+                is_steam: is_steam_int == 1,
+                total_play_time_seconds: row.get(3)?,
+                sessions_count: row.get(4)?,
+                rating: row.get(5)?,
+                review: row.get(6)?,
+                obsidian_note_path: row.get(7)?,
+                last_played: row.get(8)?,
+                achievements_unlocked: None,
+                achievements_total: None,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+    for r in rows.flatten() {
+        let mut item = r;
+        if item.is_steam {
+            if let Some((unlocked, total)) = prog_map.get(&item.game_id) {
+                item.achievements_unlocked = Some(*unlocked);
+                item.achievements_total = Some(*total);
+            }
+        }
+        result.push(item);
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn get_game_sessions(game_id: String) -> Result<Vec<GameSession>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, game_id, game_title, is_steam, duration_seconds, started_at, ended_at
+             FROM game_sessions WHERE game_id = ?1 ORDER BY started_at DESC LIMIT 30",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![game_id], |row| {
+            let steam_int: i64 = row.get(3)?;
+            Ok(GameSession {
+                id: row.get(0)?,
+                game_id: row.get(1)?,
+                game_title: row.get(2)?,
+                is_steam: steam_int == 1,
+                duration_seconds: row.get(4)?,
+                started_at: row.get(5)?,
+                ended_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut sessions = Vec::new();
+    for s in rows.flatten() {
+        sessions.push(s);
+    }
+    Ok(sessions)
+}
+
+#[tauri::command]
+pub fn get_game_achievements(game_id: String, is_steam: bool) -> Result<GameAchievementsReport, String> {
+    let mut custom_items = Vec::new();
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, title, description, unlocked, unlocked_at FROM custom_achievements WHERE game_id = ?1 ORDER BY created_at ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![game_id], |row| {
+            let unl: i64 = row.get(3)?;
+            Ok(AchievementItem {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                icon_url: None,
+                unlocked: unl == 1,
+                unlocked_at: row.get(4)?,
+                is_custom: true,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    for r in rows.flatten() {
+        custom_items.push(r);
+    }
+
+    if is_steam {
+        if let Some(mut steam_report) = get_steam_game_achievements(&game_id) {
+            for ci in custom_items {
+                if ci.unlocked {
+                    steam_report.unlocked += 1;
+                }
+                steam_report.total += 1;
+                steam_report.items.push(ci);
+            }
+            if steam_report.total > 0 {
+                steam_report.percentage = (steam_report.unlocked as f32 / steam_report.total as f32) * 100.0;
+            }
+            return Ok(steam_report);
+        }
+    }
+
+    let total = custom_items.len();
+    let unlocked = custom_items.iter().filter(|i| i.unlocked).count();
+    let percentage = if total > 0 {
+        (unlocked as f32 / total as f32) * 100.0
+    } else {
+        0.0
+    };
+
+    Ok(GameAchievementsReport {
+        total,
+        unlocked,
+        percentage,
+        items: custom_items,
+    })
+}
+
+#[tauri::command]
+pub fn create_custom_achievement(
+    game_id: String,
+    title: String,
+    description: Option<String>,
+) -> Result<AchievementItem, String> {
+    let conn = get_db_connection()?;
+    let ach_id = format!(
+        "ach_{}_{}",
+        game_id,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+    let desc = description.unwrap_or_default();
+
+    conn.execute(
+        "INSERT INTO custom_achievements (id, game_id, title, description, unlocked, unlocked_at, created_at)
+         VALUES (?1, ?2, ?3, ?4, 0, NULL, datetime('now'))",
+        params![ach_id, game_id, title, desc],
+    )
+    .map_err(|e| format!("Error creando logro personalizado: {}", e))?;
+
+    Ok(AchievementItem {
+        id: ach_id,
+        name: title,
+        description: desc,
+        icon_url: None,
+        unlocked: false,
+        unlocked_at: None,
+        is_custom: true,
+    })
+}
+
+#[tauri::command]
+pub fn toggle_custom_achievement(id: String) -> Result<bool, String> {
+    let conn = get_db_connection()?;
+    let current_unlocked: i64 = conn
+        .query_row(
+            "SELECT unlocked FROM custom_achievements WHERE id = ?1",
+            params![id],
+            |r| r.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let new_state = if current_unlocked == 1 { 0 } else { 1 };
+    let now_date = if new_state == 1 {
+        Some(
+            conn.query_row("SELECT datetime('now')", [], |r| r.get::<_, String>(0))
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    };
+
+    conn.execute(
+        "UPDATE custom_achievements SET unlocked = ?1, unlocked_at = ?2 WHERE id = ?3",
+        params![new_state, now_date, id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(new_state == 1)
+}
+
+#[tauri::command]
+pub fn delete_custom_achievement(id: String) -> Result<String, String> {
+    let conn = get_db_connection()?;
+    conn.execute("DELETE FROM custom_achievements WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok("Logro eliminado.".to_string())
+}
+
+#[tauri::command]
+pub fn toggle_game_achievement(
+    game_id: String,
+    achievement_id: String,
+    unlocked: bool,
+) -> Result<bool, String> {
+    let conn = get_db_connection()?;
+    let new_state = if unlocked { 1 } else { 0 };
+    let now_date = if unlocked {
+        Some(
+            conn.query_row("SELECT datetime('now')", [], |r| r.get::<_, String>(0))
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    };
+
+    conn.execute(
+        "INSERT INTO game_achievement_unlocks (game_id, achievement_id, unlocked, unlocked_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(game_id, achievement_id) DO UPDATE SET unlocked = excluded.unlocked, unlocked_at = excluded.unlocked_at",
+        params![game_id, achievement_id, new_state, now_date],
+    )
+    .map_err(|e| format!("Error guardando estado de logro: {}", e))?;
+
+    Ok(unlocked)
+}
+
+#[tauri::command]
+pub fn save_game_review_and_sync(
+    game_id: String,
+    game_title: String,
+    is_steam: bool,
+    rating: i32,
+    review: Option<String>,
+    sync_to_obsidian: bool,
+) -> Result<String, String> {
+    let conn = get_db_connection()?;
+    let steam_int = if is_steam { 1 } else { 0 };
+    let rev_str = review.unwrap_or_default();
+
+    let mut obsidian_path: Option<String> = None;
+
+    if sync_to_obsidian {
+        let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+        let vault_root = PathBuf::from(&cfg.vault_path);
+        let gaming_dir = vault_root.join("03 Personal y Ocio").join("Gaming");
+        if !gaming_dir.exists() {
+            let _ = fs::create_dir_all(&gaming_dir);
+        }
+
+        let safe_title: String = game_title
+            .chars()
+            .map(|c| match c {
+                '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '-',
+                other => other,
+            })
+            .collect();
+
+        let note_filename = format!("Bitacora - {}.md", safe_title.trim());
+        let note_path = gaming_dir.join(&note_filename);
+
+        let total_secs: i64 = conn
+            .query_row(
+                "SELECT total_play_time_seconds FROM game_stats WHERE game_id = ?1",
+                params![game_id],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+        let total_hours = (total_secs as f64) / 3600.0;
+
+        let stars = "⭐".repeat(rating.clamp(1, 5) as usize);
+        let platform_str = if is_steam {
+            "Steam"
+        } else {
+            "Lanzador Personalizado / Emulador"
+        };
+        let now_date: String = conn
+            .query_row("SELECT date('now')", [], |r| r.get(0))
+            .unwrap_or_else(|_| "2026-11-03".to_string());
+
+        let note_content = format!(
+            r#"---
+tipo: Reseña Gaming
+juego: "{title}"
+calificacion: {rating}/5
+tiempo_jugado_horas: {hours:.1}
+plataforma: "{platform}"
+fecha_registro: {date}
+tags:
+  - ocio/gaming
+  - bitacora-juegos
+---
+
+# 🎮 Reseña: {title}
+
+> [!NOTE] Metadatos Tácticos (Aegis Soberano)
+> - **Plataforma:** {platform}
+> - **Tiempo Acumulado:** {hours:.1} h ({total_secs} s)
+> - **Puntuación:** {stars} ({rating}/5)
+> - **Fecha de Registro:** {date}
+
+## 📝 Impresiones & Notas de Partida
+{rev}
+
+---
+*Vinculado desde Aegis Gaming & Aceleración Soberana — [[MOC - Personal y Ocio]]*
+"#,
+            title = game_title,
+            rating = rating,
+            hours = total_hours,
+            platform = platform_str,
+            date = now_date,
+            total_secs = total_secs,
+            stars = stars,
+            rev = if rev_str.trim().is_empty() {
+                "*(Sin notas adicionales)*"
+            } else {
+                &rev_str
+            },
+        );
+
+        fs::write(&note_path, note_content)
+            .map_err(|e| format!("Error escribiendo nota en Obsidian: {}", e))?;
+        obsidian_path = Some(note_path.to_string_lossy().to_string());
+    }
+
+    conn.execute(
+        "INSERT INTO game_stats (game_id, game_title, is_steam, rating, review, obsidian_note_path)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(game_id) DO UPDATE SET
+            game_title = excluded.game_title,
+            rating = excluded.rating,
+            review = excluded.review,
+            obsidian_note_path = COALESCE(excluded.obsidian_note_path, game_stats.obsidian_note_path)",
+        params![game_id, game_title, steam_int, rating, rev_str, obsidian_path],
+    )
+    .map_err(|e| format!("Error guardando reseña en SQLite: {}", e))?;
+
+    Ok(match obsidian_path {
+        Some(p) => format!("Reseña guardada y sincronizada en Obsidian ({})", p),
+        None => "Reseña guardada en SQLite local.".to_string(),
+    })
 }

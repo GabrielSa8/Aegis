@@ -162,6 +162,50 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             created_at TEXT NOT NULL
         );
 
+        -- Tablas v2.7.0 (Fase 7.4): Registro Soberano de Sesiones, Tiempos, Reseñas y Logros
+        CREATE TABLE IF NOT EXISTS game_sessions (
+            id TEXT PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            game_title TEXT NOT NULL,
+            is_steam INTEGER NOT NULL,
+            duration_seconds INTEGER NOT NULL,
+            started_at TEXT NOT NULL,
+            ended_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_game_sessions_game ON game_sessions(game_id, started_at DESC);
+
+        CREATE TABLE IF NOT EXISTS game_stats (
+            game_id TEXT PRIMARY KEY,
+            game_title TEXT NOT NULL,
+            is_steam INTEGER NOT NULL,
+            total_play_time_seconds INTEGER NOT NULL DEFAULT 0,
+            sessions_count INTEGER NOT NULL DEFAULT 0,
+            rating INTEGER DEFAULT 0,
+            review TEXT,
+            obsidian_note_path TEXT,
+            last_played TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS custom_achievements (
+            id TEXT PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            unlocked INTEGER NOT NULL DEFAULT 0,
+            unlocked_at TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_custom_achievements_game ON custom_achievements(game_id);
+
+        CREATE TABLE IF NOT EXISTS game_achievement_unlocks (
+            game_id TEXT NOT NULL,
+            achievement_id TEXT NOT NULL,
+            unlocked INTEGER NOT NULL DEFAULT 1,
+            unlocked_at TEXT,
+            PRIMARY KEY (game_id, achievement_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_game_achievement_unlocks ON game_achievement_unlocks(game_id);
+
         -- Tablas v2.1.6: Hermes Cortex (Logger de Hábitos y Auto-Evolución)
         CREATE TABLE IF NOT EXISTS cortex_habits (
             topic TEXT PRIMARY KEY,

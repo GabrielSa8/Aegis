@@ -71,7 +71,7 @@ export default function GamingHeader({
                   fontSize: '0.68rem',
                   background: isActive ? 'var(--primary-glow)' : 'transparent',
                   border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border-color)'}`,
-                  color: isActive ? '#a7f3d0' : 'var(--text-muted)',
+                  color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                   borderRadius: 'var(--radius-sm)',
                   cursor: 'pointer',
                   fontWeight: isActive ? 700 : 500
@@ -87,7 +87,7 @@ export default function GamingHeader({
       {/* Telemetría & Acciones */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {launchMessage && (
-          <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
             {launchMessage}
           </span>
         )}
@@ -96,7 +96,7 @@ export default function GamingHeader({
           <span style={{
             fontSize: '0.66rem',
             color: 'var(--text-muted)',
-            background: 'rgba(255,255,255,0.03)',
+            background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
             padding: '2px 7px',
             borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--border-color)'
@@ -106,34 +106,34 @@ export default function GamingHeader({
         )}
 
         <div style={{
-          background: gamepadConnected ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255,255,255,0.03)',
-          border: `1px solid ${gamepadConnected ? '#38bdf8' : 'var(--border-color)'}`,
+          background: gamepadConnected ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
+          border: `1px solid ${gamepadConnected ? 'var(--accent)' : 'var(--border-color)'}`,
           padding: '2px 8px',
           borderRadius: 'var(--radius-sm)',
           fontSize: '0.68rem',
-          color: gamepadConnected ? '#38bdf8' : 'var(--text-muted)',
+          color: gamepadConnected ? 'var(--accent)' : 'var(--text-muted)',
           fontWeight: 700,
           display: 'flex',
           alignItems: 'center',
           gap: '5px'
         }}>
-          <Gamepad2 size={12} color={gamepadConnected ? '#38bdf8' : '#9ca3af'} />
+          <Gamepad2 size={12} color={gamepadConnected ? 'var(--accent)' : 'var(--text-muted)'} />
           <span>{gamepadConnected ? 'MANDO' : 'SIN MANDO'}</span>
         </div>
 
         <div style={{
-          background: gamingStatus?.gamemodeActive ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
+          background: gamingStatus?.gamemodeActive ? 'var(--primary-glow)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
           border: `1px solid ${gamingStatus?.gamemodeActive ? 'var(--primary)' : 'var(--border-color)'}`,
           padding: '2px 8px',
           borderRadius: 'var(--radius-sm)',
           fontSize: '0.68rem',
-          color: gamingStatus?.gamemodeActive ? '#a7f3d0' : 'var(--text-muted)',
+          color: gamingStatus?.gamemodeActive ? 'var(--primary)' : 'var(--text-muted)',
           fontWeight: 700,
           display: 'flex',
           alignItems: 'center',
           gap: '5px'
         }}>
-          <Flame size={12} color={gamingStatus?.gamemodeActive ? 'var(--primary)' : '#9ca3af'} />
+          <Flame size={12} color={gamingStatus?.gamemodeActive ? 'var(--primary)' : 'var(--text-muted)'} />
           <span>GameMode: {gamingStatus?.gamemodeActive ? 'ACTIVO' : 'STANDBY'}</span>
         </div>
 
