@@ -865,3 +865,699 @@ pub fn clean_system_memory() -> Result<String, String> {
     }
     Ok("Sincronización I/O y compactación ZRAM completadas.".to_string())
 }
+
+// ==========================================
+// FASE 6.3: MANTENIMIENTO DEL SISTEMA & LIMPIADOR DE DISCO
+// ==========================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanableTarget {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub path: String,
+    pub size_bytes: u64,
+    pub size_formatted: String,
+    pub file_count: usize,
+    pub safe_to_delete: bool,
+    pub exists: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiskCleanReport {
+    pub targets: Vec<CleanableTarget>,
+    pub total_size_bytes: u64,
+    pub total_size_formatted: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PurgeResult {
+    pub target_id: String,
+    pub freed_bytes: u64,
+    pub freed_formatted: String,
+    pub message: String,
+    pub success: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemUpdatesReport {
+    pub manager: String,
+    pub updates_available: usize,
+    pub packages: Vec<String>,
+    pub status_message: String,
+    pub update_command: String,
+}
+
+fn get_user_home() -> Option<std::path::PathBuf> {
+    std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .ok()
+        .map(std::path::PathBuf::from)
+}
+
+fn dir_size_and_count(path: &std::path::Path) -> (u64, usize) {
+    let mut total_size = 0;
+    let mut count = 0;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_file() {
+                    total_size += meta.len();
+                    count += 1;
+                } else if meta.is_dir() {
+                    let (sub_sz, sub_cnt) = dir_size_and_count(&entry.path());
+                    total_size += sub_sz;
+                    count += sub_cnt;
+                }
+            }
+        }
+    }
+    (total_size, count)
+}
+
+fn clean_dir_contents(path: &std::path::Path) -> (u64, usize) {
+    let mut freed_bytes = 0;
+    let mut count = 0;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if let Ok(meta) = entry.metadata() {
+                let sz = if meta.is_file() {
+                    meta.len()
+                } else {
+                    let (sub_sz, _) = dir_size_and_count(&p);
+                    sub_sz
+                };
+                let removed = if meta.is_dir() {
+                    fs::remove_dir_all(&p).is_ok()
+                } else {
+                    fs::remove_file(&p).is_ok()
+                };
+                if removed {
+                    freed_bytes += sz;
+                    count += 1;
+                }
+            }
+        }
+    }
+    (freed_bytes, count)
+}
+
+fn format_bytes(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 * 1024 {
+        format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0))
+    } else if bytes >= 1024 * 1024 {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else if bytes >= 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
+static CLEAN_CACHE: Mutex<Option<(std::time::Instant, DiskCleanReport)>> = Mutex::new(None);
+static UPDATES_CACHE: Mutex<Option<(std::time::Instant, SystemUpdatesReport)>> = Mutex::new(None);
+static AUTOSTART_CACHE: Mutex<Option<(std::time::Instant, Vec<AutostartItem>)>> = Mutex::new(None);
+
+#[tauri::command]
+pub fn scan_cleanable_targets(force: Option<bool>) -> Result<DiskCleanReport, String> {
+    if force != Some(true) {
+        if let Ok(guard) = CLEAN_CACHE.lock() {
+            if let Some((instant, ref report)) = *guard {
+                if instant.elapsed().as_secs() < 120 {
+                    return Ok(report.clone());
+                }
+            }
+        }
+    }
+
+    let home = get_user_home().ok_or_else(|| "No se pudo determinar el directorio de usuario".to_string())?;
+    let mut targets = Vec::new();
+    let mut total_bytes = 0u64;
+
+    let target_defs = vec![
+        (
+            "thumbnails",
+            "Miniaturas del Sistema",
+            "Vistas previas cacheadas de imágenes, videos y documentos.",
+            home.join(".cache/thumbnails"),
+            true
+        ),
+        (
+            "npm_cache",
+            "Caché de Paquetes NPM",
+            "Archivos temporales e instaladores cacheados por Node.js y npm.",
+            home.join(".npm/_cacache"),
+            true
+        ),
+        (
+            "cargo_cache",
+            "Caché de Crates Rust/Cargo",
+            "Archivos .crate comprimidos y registry cache de dependencias Cargo.",
+            home.join(".cargo/registry/cache"),
+            true
+        ),
+        (
+            "pip_cache",
+            "Caché de Paquetes Python (PIP)",
+            "Paquetes wheel y tarballs descargados en instalaciones de Python.",
+            home.join(".cache/pip"),
+            true
+        ),
+        (
+            "dnf_cache",
+            "Caché DNF / libdnf5 (Usuario)",
+            "Metadatos de repositorios y caches de paquetes a nivel de usuario.",
+            home.join(".cache/libdnf5"),
+            true
+        ),
+        (
+            "system_tmp",
+            "Archivos Temporales (/tmp)",
+            "Archivos temporales del sistema creados por sesiones y apps de usuario.",
+            std::path::PathBuf::from("/tmp"),
+            false
+        ),
+    ];
+
+    for (id, name, desc, path, safe) in target_defs {
+        if path.exists() {
+            let (size, count) = if id == "system_tmp" {
+                let mut sz = 0;
+                let mut cnt = 0;
+                if let Ok(entries) = fs::read_dir(&path) {
+                    for entry in entries.flatten().take(120) {
+                        if let Ok(meta) = entry.metadata() {
+                            if meta.is_file() {
+                                sz += meta.len();
+                                cnt += 1;
+                            }
+                        }
+                    }
+                }
+                (sz, cnt)
+            } else {
+                dir_size_and_count(&path)
+            };
+
+            total_bytes += size;
+            targets.push(CleanableTarget {
+                id: id.to_string(),
+                name: name.to_string(),
+                description: desc.to_string(),
+                path: path.to_string_lossy().to_string(),
+                size_bytes: size,
+                size_formatted: format_bytes(size),
+                file_count: count,
+                safe_to_delete: safe,
+                exists: true,
+            });
+        }
+    }
+
+    if std::process::Command::new("which").arg("flatpak").output().map(|o| o.status.success()).unwrap_or(false) {
+        targets.push(CleanableTarget {
+            id: "flatpak_unused".to_string(),
+            name: "Runtimes Huérfanos Flatpak".to_string(),
+            description: "Runtimes y extensiones de Flatpak no vinculados a apps activas.".to_string(),
+            path: "flatpak runtimes".to_string(),
+            size_bytes: 0,
+            size_formatted: "Auto-purga".to_string(),
+            file_count: 0,
+            safe_to_delete: true,
+            exists: true,
+        });
+    }
+
+    let report = DiskCleanReport {
+        total_size_bytes: total_bytes,
+        total_size_formatted: format_bytes(total_bytes),
+        targets,
+    };
+
+    if let Ok(mut guard) = CLEAN_CACHE.lock() {
+        *guard = Some((std::time::Instant::now(), report.clone()));
+    }
+
+    Ok(report)
+}
+
+#[tauri::command]
+pub fn purge_cleanable_target(target_id: String) -> Result<PurgeResult, String> {
+    let home = get_user_home().ok_or_else(|| "No se pudo determinar el directorio de usuario".to_string())?;
+
+    match target_id.as_str() {
+        "thumbnails" => {
+            let p = home.join(".cache/thumbnails");
+            let (freed, count) = clean_dir_contents(&p);
+            Ok(PurgeResult {
+                target_id,
+                freed_bytes: freed,
+                freed_formatted: format_bytes(freed),
+                message: format!("Eliminados {} archivos de miniaturas ({} liberados).", count, format_bytes(freed)),
+                success: true,
+            })
+        }
+        "npm_cache" => {
+            let p = home.join(".npm/_cacache");
+            let (freed, count) = clean_dir_contents(&p);
+            let _ = std::process::Command::new("npm").args(["cache", "clean", "--force"]).status();
+            Ok(PurgeResult {
+                target_id,
+                freed_bytes: freed,
+                freed_formatted: format_bytes(freed),
+                message: format!("Caché de NPM purgada: {} archivos ({} liberados).", count, format_bytes(freed)),
+                success: true,
+            })
+        }
+        "cargo_cache" => {
+            let p = home.join(".cargo/registry/cache");
+            let (freed, count) = clean_dir_contents(&p);
+            Ok(PurgeResult {
+                target_id,
+                freed_bytes: freed,
+                freed_formatted: format_bytes(freed),
+                message: format!("Caché de Cargo purgada: {} crates ({} liberados).", count, format_bytes(freed)),
+                success: true,
+            })
+        }
+        "pip_cache" => {
+            let p = home.join(".cache/pip");
+            let (freed, count) = clean_dir_contents(&p);
+            Ok(PurgeResult {
+                target_id,
+                freed_bytes: freed,
+                freed_formatted: format_bytes(freed),
+                message: format!("Caché de PIP purgada: {} paquetes ({} liberados).", count, format_bytes(freed)),
+                success: true,
+            })
+        }
+        "dnf_cache" => {
+            let p1 = home.join(".cache/libdnf5");
+            let p2 = home.join(".cache/dnf");
+            let (f1, c1) = clean_dir_contents(&p1);
+            let (f2, c2) = clean_dir_contents(&p2);
+            let total_f = f1 + f2;
+            let total_c = c1 + c2;
+            Ok(PurgeResult {
+                target_id,
+                freed_bytes: total_f,
+                freed_formatted: format_bytes(total_f),
+                message: format!("Caché DNF de usuario purgada: {} archivos ({} liberados).", total_c, format_bytes(total_f)),
+                success: true,
+            })
+        }
+        "flatpak_unused" => {
+            let output = std::process::Command::new("flatpak")
+                .args(["uninstall", "--unused", "--noninteractive", "-y"])
+                .output();
+            match output {
+                Ok(out) if out.status.success() => {
+                    let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                    let summary = if msg.is_empty() || msg.contains("Nada") {
+                        "No había runtimes huérfanos de Flatpak pendientes de desinstalación.".to_string()
+                    } else {
+                        "Runtimes huérfanos de Flatpak desinstalados correctamente.".to_string()
+                    };
+                    Ok(PurgeResult {
+                        target_id,
+                        freed_bytes: 0,
+                        freed_formatted: "OK".to_string(),
+                        message: summary,
+                        success: true,
+                    })
+                }
+                Ok(out) => {
+                    let err = String::from_utf8_lossy(&out.stderr);
+                    Ok(PurgeResult {
+                        target_id,
+                        freed_bytes: 0,
+                        freed_formatted: "0 B".to_string(),
+                        message: format!("Flatpak: {}", err.trim()),
+                        success: false,
+                    })
+                }
+                Err(e) => Err(format!("Error ejecutando flatpak: {}", e)),
+            }
+        }
+        _ => Err(format!("Target de limpieza no reconocido o restringido: {}", target_id)),
+    }
+}
+
+#[tauri::command]
+pub fn purge_all_cleanable_targets() -> Result<Vec<PurgeResult>, String> {
+    let report = scan_cleanable_targets(Some(true))?;
+    let mut results = Vec::new();
+    for target in report.targets {
+        if target.safe_to_delete && (target.size_bytes > 0 || target.id == "flatpak_unused") {
+            if let Ok(res) = purge_cleanable_target(target.id) {
+                results.push(res);
+            }
+        }
+    }
+    if let Ok(mut guard) = CLEAN_CACHE.lock() {
+        *guard = None;
+    }
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn check_system_updates(force: Option<bool>) -> Result<SystemUpdatesReport, String> {
+    if force != Some(true) {
+        if let Ok(guard) = UPDATES_CACHE.lock() {
+            if let Some((instant, ref report)) = *guard {
+                if instant.elapsed().as_secs() < 300 {
+                    return Ok(report.clone());
+                }
+            }
+        }
+    }
+    let report = if let Ok(output) = std::process::Command::new("dnf").args(["check-update", "-C", "-q"]).output() {
+        let code = output.status.code().unwrap_or(0);
+        if code == 100 {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut pkgs = Vec::new();
+            for line in stdout.lines() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() && !trimmed.starts_with("Last metadata") && !trimmed.starts_with("Última") {
+                    if let Some(pkg_name) = trimmed.split_whitespace().next() {
+                        pkgs.push(pkg_name.to_string());
+                    }
+                }
+            }
+            let count = pkgs.len();
+            SystemUpdatesReport {
+                manager: "DNF (Fedora / RHEL)".to_string(),
+                updates_available: count,
+                packages: pkgs,
+                status_message: format!("{} actualizaciones listas para instalar.", count),
+                update_command: "sudo dnf upgrade -y".to_string(),
+            }
+        } else if code == 0 {
+            SystemUpdatesReport {
+                manager: "DNF (Fedora / RHEL)".to_string(),
+                updates_available: 0,
+                packages: Vec::new(),
+                status_message: "Sistema completamente al día (sin parches pendientes).".to_string(),
+                update_command: "sudo dnf upgrade -y".to_string(),
+            }
+        } else {
+            SystemUpdatesReport {
+                manager: "DNF (Fedora / RHEL)".to_string(),
+                updates_available: 0,
+                packages: Vec::new(),
+                status_message: "Sistema al día.".to_string(),
+                update_command: "sudo dnf upgrade -y".to_string(),
+            }
+        }
+    } else if let Ok(output) = std::process::Command::new("apt-get").args(["-s", "-q", "upgrade"]).output() {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut pkgs = Vec::new();
+            for line in stdout.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("Inst ") {
+                    if let Some(pkg) = trimmed.split_whitespace().nth(1) {
+                        pkgs.push(pkg.to_string());
+                    }
+                }
+            }
+            let count = pkgs.len();
+            SystemUpdatesReport {
+                manager: "APT (Debian / Ubuntu)".to_string(),
+                updates_available: count,
+                packages: pkgs,
+                status_message: if count == 0 { "Sistema al día.".to_string() } else { format!("{} paquetes actualizables.", count) },
+                update_command: "sudo apt update && sudo apt upgrade -y".to_string(),
+            }
+        } else {
+            SystemUpdatesReport {
+                manager: "Genérico".to_string(),
+                updates_available: 0,
+                packages: Vec::new(),
+                status_message: "Sin gestor detectado.".to_string(),
+                update_command: "echo 'No package manager detected'".to_string(),
+            }
+        }
+    } else {
+        SystemUpdatesReport {
+            manager: "Genérico".to_string(),
+            updates_available: 0,
+            packages: Vec::new(),
+            status_message: "Sin gestor de paquetes soportado detectado.".to_string(),
+            update_command: "echo 'No package manager detected'".to_string(),
+        }
+    };
+
+    if let Ok(mut guard) = UPDATES_CACHE.lock() {
+        *guard = Some((std::time::Instant::now(), report.clone()));
+    }
+
+    Ok(report)
+}
+
+#[tauri::command]
+pub fn launch_system_update() -> Result<String, String> {
+    let report = check_system_updates(Some(false))?;
+    let cmd_str = report.update_command;
+    let full_script = format!("{}; echo ''; echo 'Proceso completado. Presiona Enter para cerrar esta ventana...'; read", cmd_str);
+
+    #[cfg(target_os = "linux")]
+    {
+        if std::path::Path::new("/usr/bin/ptyxis").exists() {
+            std::process::Command::new("ptyxis")
+                .args(["--new-window", "-T", "Aegis - Actualización del Sistema", "--", "bash", "-c", &full_script])
+                .spawn()
+                .map_err(|e| format!("Error lanzando Ptyxis: {}", e))?;
+            return Ok("Terminal interactiva Ptyxis iniciada para la actualización.".to_string());
+        } else if std::path::Path::new("/usr/bin/gnome-terminal").exists() {
+            std::process::Command::new("gnome-terminal")
+                .args(["--title=Aegis - Actualización del Sistema", "--", "bash", "-c", &full_script])
+                .spawn()
+                .map_err(|e| format!("Error lanzando GNOME Terminal: {}", e))?;
+            return Ok("Terminal interactiva GNOME Terminal iniciada.".to_string());
+        } else if std::path::Path::new("/usr/bin/kgx").exists() {
+            std::process::Command::new("kgx")
+                .args(["-e", &format!("bash -c '{}'", full_script)])
+                .spawn()
+                .map_err(|e| format!("Error lanzando KGX: {}", e))?;
+            return Ok("Terminal interactiva KGX iniciada.".to_string());
+        } else if std::path::Path::new("/usr/bin/xterm").exists() {
+            std::process::Command::new("xterm")
+                .args(["-title", "Aegis - Actualización del Sistema", "-e", "bash", "-c", &full_script])
+                .spawn()
+                .map_err(|e| format!("Error lanzando xterm: {}", e))?;
+            return Ok("Terminal xterm iniciada.".to_string());
+        } else {
+            std::process::Command::new("xdg-terminal-exec")
+                .args(["bash", "-c", &full_script])
+                .spawn()
+                .map_err(|_| "No se encontró ningún emulador de terminal compatible instalado.".to_string())?;
+            return Ok("Terminal iniciada con xdg-terminal-exec.".to_string());
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("powershell")
+            .args(["-NoExit", "-Command", &cmd_str])
+            .spawn()
+            .map_err(|e| format!("Error lanzando PowerShell: {}", e))?;
+        return Ok("Consola PowerShell iniciada.".to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!("tell application \"Terminal\" to do script \"{}\"", full_script);
+        std::process::Command::new("osascript")
+            .args(["-e", &script])
+            .spawn()
+            .map_err(|e| format!("Error lanzando Terminal macOS: {}", e))?;
+        return Ok("Terminal macOS iniciada.".to_string());
+    }
+
+    #[allow(unreachable_code)]
+    Err("Sistema operativo no soportado para terminal interactiva.".to_string())
+}
+
+// ==========================================
+// FASE 6.4: GESTOR DE ARRANQUE (AUTOSTART)
+// ==========================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutostartItem {
+    pub id: String,
+    pub name: String,
+    pub exec: String,
+    pub item_type: String, // "desktop" | "systemd"
+    pub enabled: bool,
+    pub source_path: String,
+    pub description: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_autostart_items(force: Option<bool>) -> Result<Vec<AutostartItem>, String> {
+    if force != Some(true) {
+        if let Ok(guard) = AUTOSTART_CACHE.lock() {
+            if let Some((instant, ref items)) = *guard {
+                if instant.elapsed().as_secs() < 120 {
+                    return Ok(items.clone());
+                }
+            }
+        }
+    }
+
+    let mut items = Vec::new();
+    let home = get_user_home().unwrap_or_default();
+
+    // 1. Archivos .desktop en ~/.config/autostart
+    let autostart_dir = home.join(".config/autostart");
+    if autostart_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&autostart_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("desktop") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        let id = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                        let mut name = id.replace(".desktop", "");
+                        let mut exec = String::new();
+                        let mut enabled = true;
+                        let mut desc = None;
+
+                        for line in content.lines() {
+                            let line = line.trim();
+                            if line.starts_with("Name=") && name == id.replace(".desktop", "") {
+                                name = line["Name=".len()..].trim().to_string();
+                            } else if line.starts_with("Exec=") {
+                                exec = line["Exec=".len()..].trim().to_string();
+                            } else if line.starts_with("Comment=") {
+                                desc = Some(line["Comment=".len()..].trim().to_string());
+                            } else if line.starts_with("X-GNOME-Autostart-enabled=false") || line.starts_with("Hidden=true") {
+                                enabled = false;
+                            }
+                        }
+
+                        items.push(AutostartItem {
+                            id,
+                            name,
+                            exec,
+                            item_type: "desktop".to_string(),
+                            enabled,
+                            source_path: path.to_string_lossy().to_string(),
+                            description: desc,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Servicios de usuario systemd (Linux)
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(output) = std::process::Command::new("systemctl")
+            .args(["--user", "list-unit-files", "--type=service", "--state=enabled,disabled", "--no-legend"])
+            .output()
+        {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for line in stdout.lines() {
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        let service_name = parts[0];
+                        let state = parts[1];
+                        if service_name.starts_with("app-") || service_name.contains('@') {
+                            continue;
+                        }
+                        let enabled = state == "enabled";
+                        let clean_name = service_name.replace(".service", "");
+
+                        items.push(AutostartItem {
+                            id: service_name.to_string(),
+                            name: clean_name,
+                            exec: format!("systemctl --user service ({})", state),
+                            item_type: "systemd".to_string(),
+                            enabled,
+                            source_path: format!("systemd.user:{}", service_name),
+                            description: Some(format!("Servicio de usuario systemd ({})", state)),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if let Ok(mut guard) = AUTOSTART_CACHE.lock() {
+        *guard = Some((std::time::Instant::now(), items.clone()));
+    }
+
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn toggle_autostart_item(id: String, item_type: String, enable: bool) -> Result<String, String> {
+    if let Ok(mut guard) = AUTOSTART_CACHE.lock() {
+        *guard = None;
+    }
+
+    if item_type == "desktop" {
+        let home = get_user_home().ok_or_else(|| "No se pudo resolver directorio home".to_string())?;
+        let file_path = home.join(".config/autostart").join(&id);
+        if !file_path.exists() {
+            return Err(format!("El archivo de inicio {} no existe.", id));
+        }
+
+        let content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+        let mut new_lines = Vec::new();
+        let mut has_gnome = false;
+        let mut has_hidden = false;
+
+        for line in content.lines() {
+            if line.starts_with("X-GNOME-Autostart-enabled=") {
+                new_lines.push(format!("X-GNOME-Autostart-enabled={}", enable));
+                has_gnome = true;
+            } else if line.starts_with("Hidden=") {
+                new_lines.push(format!("Hidden={}", !enable));
+                has_hidden = true;
+            } else {
+                new_lines.push(line.to_string());
+            }
+        }
+
+        if !has_gnome {
+            new_lines.push(format!("X-GNOME-Autostart-enabled={}", enable));
+        }
+        if !has_hidden {
+            new_lines.push(format!("Hidden={}", !enable));
+        }
+
+        fs::write(&file_path, new_lines.join("\n")).map_err(|e| e.to_string())?;
+        Ok(format!("Aplicación {} {}.", id, if enable { "habilitada" } else { "deshabilitada" }))
+    } else if item_type == "systemd" {
+        #[cfg(target_os = "linux")]
+        {
+            let act = if enable { "enable" } else { "disable" };
+            let status = std::process::Command::new("systemctl")
+                .args(["--user", act, &id])
+                .status()
+                .map_err(|e| format!("Error ejecutando systemctl: {}", e))?;
+
+            if status.success() {
+                Ok(format!("Servicio {} {}.", id, if enable { "habilitado" } else { "deshabilitado" }))
+            } else {
+                Err(format!("Fallo al cambiar estado de {}", id))
+            }
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            Err("Systemd solo está soportado en Linux.".to_string())
+        }
+    } else {
+        Err(format!("Tipo de item desconocido: {}", item_type))
+    }
+}

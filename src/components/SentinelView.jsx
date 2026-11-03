@@ -1,10 +1,14 @@
 import {
   useSentinel,
+  useMaintenance,
+  useAutostart,
   SentinelHeader,
   SystemAlertsBanner,
   HardwareGrid,
   AegisProcessFootprint,
-  ProcessManagerSection
+  ProcessManagerSection,
+  MaintenanceSection,
+  AutostartCard
 } from './sentinel';
 
 export default function SentinelView() {
@@ -37,6 +41,33 @@ export default function SentinelView() {
     formattedUptime
   } = useSentinel();
 
+  const {
+    cleanReport,
+    scanningDisk,
+    purgingTargetId,
+    purgingAll,
+    purgeFeedback,
+    scanDisk,
+    purgeTarget,
+    purgeAll,
+    updatesReport,
+    checkingUpdates,
+    launchingUpdate,
+    copiedCommand,
+    checkUpdates,
+    copyUpdateCommand,
+    launchSystemUpdate
+  } = useMaintenance();
+
+  const {
+    autostartItems,
+    loadingAutostart,
+    togglingItemId,
+    fetchAutostart,
+    toggleAutostart,
+    feedback: autostartFeedback
+  } = useAutostart();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
       {/* 🧭 Barra de Telemetría Host Compacta */}
@@ -62,6 +93,35 @@ export default function SentinelView() {
         telemetry={telemetry}
         thermalState={thermalState}
         history={history}
+      />
+
+      {/* 🛠️ Mantenimiento del Sistema & Limpiador de Disco (Fase 6.3) */}
+      <MaintenanceSection
+        cleanReport={cleanReport}
+        scanningDisk={scanningDisk}
+        purgingTargetId={purgingTargetId}
+        purgingAll={purgingAll}
+        purgeFeedback={purgeFeedback}
+        onScanDisk={scanDisk}
+        onPurgeTarget={purgeTarget}
+        onPurgeAll={purgeAll}
+        updatesReport={updatesReport}
+        checkingUpdates={checkingUpdates}
+        launchingUpdate={launchingUpdate}
+        copiedCommand={copiedCommand}
+        onCheckUpdates={checkUpdates}
+        onCopyUpdateCommand={copyUpdateCommand}
+        onLaunchUpdate={launchSystemUpdate}
+      />
+
+      {/* 🚀 Gestor de Arranque (Fase 6.4) */}
+      <AutostartCard
+        items={autostartItems}
+        loading={loadingAutostart}
+        togglingItemId={togglingItemId}
+        feedback={autostartFeedback}
+        onRefresh={fetchAutostart}
+        onToggle={toggleAutostart}
       />
 
       {/* 🛡️ Huella de Proceso Aegis & Host Telemetry */}

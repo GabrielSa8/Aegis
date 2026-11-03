@@ -4,12 +4,26 @@ import { getStatusBadgeConfig, getThermalState, formatUptime } from './sentinelH
 
 const MAX_HISTORY_POINTS = 60; // 60 muestras (buffer circular de 60s/muestras)
 
+// Caché en memoria para transiciones instantáneas a 60fps sin stutter
+let _cachedTelemetry = null;
+let _cachedAlerts = [];
+let _cachedProcesses = [];
+let _cachedHistory = {
+  cpu: [],
+  ram: [],
+  temp: [],
+  netRx: [],
+  netTx: [],
+  diskRead: [],
+  diskWrite: []
+};
+
 export function useSentinel() {
-  const [telemetry, setTelemetry] = useState(null);
-  const [alerts, setAlerts] = useState([]);
-  const [processes, setProcesses] = useState([]);
+  const [telemetry, setTelemetry] = useState(_cachedTelemetry);
+  const [alerts, setAlerts] = useState(_cachedAlerts);
+  const [processes, setProcesses] = useState(_cachedProcesses);
   const [cleanMessage, setCleanMessage] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!_cachedTelemetry);
   const [processSearch, setProcessSearch] = useState('');
   const [processSortMode, setProcessSortMode] = useState('ram'); // 'ram' | 'cpu' | 'io' | 'zombie'
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -17,27 +31,23 @@ export function useSentinel() {
   const [powerProfileSwitching, setPowerProfileSwitching] = useState(false);
 
   // Buffers históricos reactivos
-  const [history, setHistory] = useState({
-    cpu: [],
-    ram: [],
-    temp: [],
-    netRx: [],
-    netTx: [],
-    diskRead: [],
-    diskWrite: []
-  });
+  const [history, setHistory] = useState(_cachedHistory);
 
   const appendHistory = useCallback((data) => {
     if (!data) return;
-    setHistory((prev) => ({
-      cpu: [...prev.cpu, data.cpuPercent || 0].slice(-MAX_HISTORY_POINTS),
-      ram: [...prev.ram, data.ramUsagePercent || 0].slice(-MAX_HISTORY_POINTS),
-      temp: [...prev.temp, data.cpuTempCelsius || 45].slice(-MAX_HISTORY_POINTS),
-      netRx: [...prev.netRx, data.netRxKbs || 0].slice(-MAX_HISTORY_POINTS),
-      netTx: [...prev.netTx, data.netTxKbs || 0].slice(-MAX_HISTORY_POINTS),
-      diskRead: [...prev.diskRead, data.diskReadKbs || 0].slice(-MAX_HISTORY_POINTS),
-      diskWrite: [...prev.diskWrite, data.diskWriteKbs || 0].slice(-MAX_HISTORY_POINTS)
-    }));
+    setHistory((prev) => {
+      const next = {
+        cpu: [...prev.cpu, data.cpuPercent || 0].slice(-MAX_HISTORY_POINTS),
+        ram: [...prev.ram, data.ramUsagePercent || 0].slice(-MAX_HISTORY_POINTS),
+        temp: [...prev.temp, data.cpuTempCelsius || 45].slice(-MAX_HISTORY_POINTS),
+        netRx: [...prev.netRx, data.netRxKbs || 0].slice(-MAX_HISTORY_POINTS),
+        netTx: [...prev.netTx, data.netTxKbs || 0].slice(-MAX_HISTORY_POINTS),
+        diskRead: [...prev.diskRead, data.diskReadKbs || 0].slice(-MAX_HISTORY_POINTS),
+        diskWrite: [...prev.diskWrite, data.diskWriteKbs || 0].slice(-MAX_HISTORY_POINTS)
+      };
+      _cachedHistory = next;
+      return next;
+    });
   }, []);
 
   const fetchTelemetry = useCallback(async () => {
@@ -47,10 +57,14 @@ export function useSentinel() {
         invoke('get_system_alerts'),
         invoke('get_top_processes')
       ]);
+      _cachedTelemetry = data;
+      _cachedAlerts = Array.isArray(alts) ? alts : [];
+      _cachedProcesses = Array.isArray(procs) ? procs : [];
+
       setTelemetry(data);
       appendHistory(data);
-      setAlerts(Array.isArray(alts) ? alts : []);
-      setProcesses(Array.isArray(procs) ? procs : []);
+      setAlerts(_cachedAlerts);
+      setProcesses(_cachedProcesses);
     } catch (e) {
       console.error('Error obteniendo telemetría:', e);
     } finally {
