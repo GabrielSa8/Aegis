@@ -7,6 +7,9 @@ mod sentinel;
 mod leisure;
 mod config;
 mod cortex;
+mod tray;
+mod notifications;
+mod backup;
 
 #[tauri::command]
 fn ping() -> String {
@@ -141,8 +144,14 @@ pub fn run() {
             leisure::save_game_companion_note,
             cortex::cortex_record_signal,
             cortex::cortex_get_telemetry,
-            cortex::cortex_resolve_proposal
+            cortex::cortex_resolve_proposal,
+            tray::toggle_window_visibility,
+            notifications::send_desktop_notification,
+            backup::create_system_backup,
+            backup::list_system_backups,
+            backup::restore_system_backup
         ])
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -151,7 +160,33 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Inicializar System Tray
+            if let Err(e) = tray::create_tray(app.handle()) {
+                eprintln!("[Aegis Tray Warning]: No se pudo inicializar tray icon: {}", e);
+            }
+
+            // Si el usuario configuró iniciar minimizado
+            if let Ok(cfg) = config::get_aegis_config() {
+                if cfg.start_minimized {
+                    use tauri::Manager;
+                    if let Some(w) = app.get_webview_window("main") {
+                        let _ = w.hide();
+                    }
+                }
+            }
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if let Ok(cfg) = config::get_aegis_config() {
+                    if cfg.close_to_tray {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

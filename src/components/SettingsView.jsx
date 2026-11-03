@@ -102,6 +102,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         return (
           <NotificationsSection
             config={config}
+            setConfig={setConfig}
             updateNotifications={updateNotifications}
           />
         );

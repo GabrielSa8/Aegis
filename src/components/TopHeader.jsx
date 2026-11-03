@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { 
   ShieldCheck,
   Search, 
   Settings,
   Pin,
-  PinOff
+  PinOff,
+  Minus
 } from 'lucide-react';
 
 export default function TopHeader({ 
@@ -27,6 +29,14 @@ export default function TopHeader({
       } catch {}
       return next;
     });
+  };
+
+  const handleHideToTray = async () => {
+    try {
+      await invoke('toggle_window_visibility');
+    } catch (e) {
+      console.error('Error ocultando ventana:', e);
+    }
   };
 
   return (
@@ -159,6 +169,36 @@ export default function TopHeader({
           >
             <Settings size={13} />
             <span>Opciones</span>
+          </button>
+
+          {/* Minimizar a Bandeja (Tray) */}
+          <button
+            onClick={handleHideToTray}
+            title="Ocultar en la Bandeja del Sistema (Tray)"
+            style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm, 8px)',
+              padding: '4px 8px',
+              color: 'var(--text-muted)',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = 'var(--accent, #60a5fa)';
+              e.currentTarget.style.borderColor = 'var(--accent, #60a5fa)'; 
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.borderColor = 'var(--border-color)'; 
+            }}
+          >
+            <Minus size={13} />
+            <span>Bandeja</span>
           </button>
 
           {/* Fijar / Auto-ocultar (Pin) */}

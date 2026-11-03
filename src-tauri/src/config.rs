@@ -90,6 +90,18 @@ fn default_ui_scale() -> f32 {
     1.0
 }
 
+fn default_true() -> bool {
+    true
+}
+
+fn default_false() -> bool {
+    false
+}
+
+pub fn get_config_file_path_internal() -> PathBuf {
+    get_config_file_path()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FallbackEntry {
     pub engine: String,
@@ -107,6 +119,12 @@ pub struct AegisConfig {
     pub ui_scale: f32, // 0.9, 1.0, 1.1
     pub enable_gamemode: bool,
     pub enable_gamescope_fsr: bool,
+    #[serde(default = "default_true")]
+    pub close_to_tray: bool,
+    #[serde(default = "default_true")]
+    pub minimize_to_tray: bool,
+    #[serde(default = "default_false")]
+    pub start_minimized: bool,
     pub git_repos: Vec<GitRepoConfig>,
     #[serde(default)]
     pub profile: UserProfile,
@@ -156,6 +174,9 @@ pub fn default_config() -> AegisConfig {
         ui_scale: 1.0,
         enable_gamemode: true,
         enable_gamescope_fsr: false,
+        close_to_tray: true,
+        minimize_to_tray: true,
+        start_minimized: false,
         git_repos,
         profile: UserProfile::default(),
         token_budget: TokenBudgetConfig::default(),

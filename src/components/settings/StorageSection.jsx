@@ -1,4 +1,5 @@
 import { formatBytes } from './settingsHelpers';
+import SystemBackupCard from './SystemBackupCard';
 
 export default function StorageSection({ config, setConfig, storageStats, purgeStatus, onPurgeCaches }) {
   if (!config) return null;
@@ -83,6 +84,9 @@ export default function StorageSection({ config, setConfig, storageStats, purgeS
           Aegis lee y escribe directamente sobre los archivos Markdown sin sincronizaciones opacas.
         </p>
       </div>
+
+      {/* Respaldo Soberano 3-2-1 */}
+      <SystemBackupCard />
     </div>
   );
 }
