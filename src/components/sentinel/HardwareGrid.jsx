@@ -1,18 +1,25 @@
-import { Cpu, Flame, Zap, HardDrive } from 'lucide-react';
+import { Cpu, Flame, Zap, HardDrive, Wifi, Activity } from 'lucide-react';
+import SparklineSvg from './SparklineSvg';
+import { formatRateKbs } from './sentinelHelpers';
 
-export default function HardwareGrid({ telemetry, thermalState }) {
+export default function HardwareGrid({ telemetry, thermalState, history }) {
   const cpuPercent = telemetry?.cpuPercent || 0;
-  const cpuCol = cpuPercent > 80 ? '#ef4444' : cpuPercent > 60 ? '#f59e0b' : '#10b981';
+  const cpuCol = cpuPercent > 80 ? 'var(--danger)' : cpuPercent > 60 ? 'var(--warning)' : 'var(--primary)';
   
   const ramUsagePercent = telemetry?.ramUsagePercent || 0;
-  const ramCol = ramUsagePercent > 85 ? '#ef4444' : '#38bdf8';
+  const ramCol = ramUsagePercent > 85 ? 'var(--danger)' : 'var(--accent)';
 
   const diskUsagePercent = telemetry?.diskUsagePercent || 0;
-  const diskCol = diskUsagePercent > 85 ? '#ef4444' : '#a855f7';
+  const diskCol = diskUsagePercent > 85 ? 'var(--danger)' : 'color-mix(in srgb, var(--accent) 70%, var(--primary))';
+
+  const netRx = telemetry?.netRxKbs || 0;
+  const netTx = telemetry?.netTxKbs || 0;
+  const diskRead = telemetry?.diskReadKbs || 0;
+  const diskWrite = telemetry?.diskWriteKbs || 0;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '10px' }}>
-      {/* 1. Tarjeta CPU & Núcleos */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px' }}>
+      {/* 1. Tarjeta CPU & Núcleos con Sparkline */}
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -20,16 +27,17 @@ export default function HardwareGrid({ telemetry, thermalState }) {
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '8px'
       }}>
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-              <Cpu size={15} color="#10b981" />
+              <Cpu size={15} color="var(--primary)" />
               <span style={{
                 fontSize: '0.78rem',
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--text-high)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
@@ -37,52 +45,42 @@ export default function HardwareGrid({ telemetry, thermalState }) {
                 {telemetry?.cpuModel || 'Procesador'}
               </span>
             </div>
-            <span style={{
-              fontSize: '0.88rem',
-              fontWeight: 800,
-              color: cpuCol,
-              fontFamily: 'var(--font-mono)'
-            }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: cpuCol, fontFamily: 'var(--font-mono)' }}>
               {cpuPercent}%
             </span>
           </div>
 
-          {/* Barra Global de Uso */}
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' }}>
-            <div style={{
-              width: `${Math.min(100, cpuPercent)}%`,
-              height: '100%',
-              background: cpuCol,
-              transition: 'width 0.4s ease'
-            }} />
-          </div>
+          <SparklineSvg
+            data={history?.cpu || []}
+            color={cpuCol}
+            height={26}
+            minVal={0}
+            maxVal={100}
+          />
         </div>
 
         {/* Grilla Adaptativa de Cores */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(auto-fit, minmax(46px, 1fr))`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(42px, 1fr))`,
           gap: '4px'
         }}>
           {(telemetry?.cpuCores || []).map((core) => {
             const coreUsage = Math.round(core.usagePercent);
-            const coreCol = coreUsage > 80 ? '#ef4444' : coreUsage > 50 ? '#f59e0b' : '#34d399';
+            const coreCol = coreUsage > 80 ? 'var(--danger)' : coreUsage > 50 ? 'var(--warning)' : 'var(--primary)';
             return (
-              <div key={core.coreId} style={{ background: 'rgba(0,0,0,0.25)', padding: '4px', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'block' }}>C{core.coreId}</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: coreCol, fontFamily: 'var(--font-mono)' }}>
+              <div key={core.coreId} style={{ background: 'color-mix(in srgb, var(--bg-surface) 70%, transparent)', padding: '3px 4px', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', display: 'block' }}>C{core.coreId}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: coreCol, fontFamily: 'var(--font-mono)' }}>
                   {coreUsage}%
                 </span>
-                <div style={{ width: '100%', height: '3px', background: 'rgba(255,255,255,0.06)', borderRadius: '1.5px', overflow: 'hidden', marginTop: '2px' }}>
-                  <div style={{ width: `${coreUsage}%`, height: '100%', background: coreCol }} />
-                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 2. Tarjeta Térmica */}
+      {/* 2. Tarjeta Térmica con Sparkline */}
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -90,33 +88,27 @@ export default function HardwareGrid({ telemetry, thermalState }) {
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '8px'
       }}>
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Flame size={15} color={thermalState.color} />
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>Temperatura CPU</span>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>Temperatura CPU</span>
             </div>
-            <span style={{
-              fontSize: '0.88rem',
-              fontWeight: 800,
-              color: thermalState.color,
-              fontFamily: 'var(--font-mono)'
-            }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: thermalState.color, fontFamily: 'var(--font-mono)' }}>
               {telemetry?.cpuTempCelsius || 0}°C
             </span>
           </div>
 
-          {/* Barra Térmica Proporcional (25°C - 100°C) */}
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-            <div style={{
-              width: `${Math.min(100, Math.max(5, (((telemetry?.cpuTempCelsius || 40) - 25) / 75) * 100))}%`,
-              height: '100%',
-              background: thermalState.color,
-              transition: 'width 0.4s ease'
-            }} />
-          </div>
+          <SparklineSvg
+            data={history?.temp || []}
+            color={thermalState.color}
+            height={26}
+            minVal={25}
+            maxVal={95}
+          />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
@@ -125,7 +117,7 @@ export default function HardwareGrid({ telemetry, thermalState }) {
         </div>
       </div>
 
-      {/* 3. Tarjeta Memoria RAM & Swap (ZRAM) */}
+      {/* 3. Tarjeta Memoria RAM & ZRAM con Sparkline */}
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -133,38 +125,38 @@ export default function HardwareGrid({ telemetry, thermalState }) {
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '8px'
       }}>
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Zap size={15} color="#38bdf8" />
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>
+              <Zap size={15} color="var(--accent)" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
                 Memoria RAM ({((telemetry?.ramTotalMb || 0) / 1024).toFixed(0)} GB)
               </span>
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: ramCol, fontFamily: 'var(--font-mono)' }}>
               {ramUsagePercent}%
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
-            <div style={{
-              width: `${Math.min(100, ramUsagePercent)}%`,
-              height: '100%',
-              background: ramCol,
-              transition: 'width 0.4s ease'
-            }} />
-          </div>
+          <SparklineSvg
+            data={history?.ram || []}
+            color={ramCol}
+            height={26}
+            minVal={0}
+            maxVal={100}
+          />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
           <span>RAM: {((telemetry?.ramUsedMb || 0) / 1024).toFixed(1)} / {((telemetry?.ramTotalMb || 0) / 1024).toFixed(1)} GB</span>
-          <span>Swap/ZRAM: {((telemetry?.zramUsedMb || 0) / 1024).toFixed(1)} GB</span>
+          <span>ZRAM: {((telemetry?.zramUsedMb || 0) / 1024).toFixed(1)} GB</span>
         </div>
       </div>
 
-      {/* 4. Tarjeta Almacenamiento Raíz (/) */}
+      {/* 4. Tarjeta Monitor de Red (RX / TX en vivo) */}
       <div style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -172,20 +164,93 @@ export default function HardwareGrid({ telemetry, thermalState }) {
         padding: '12px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        gap: '8px'
       }}>
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <HardDrive size={15} color="#a855f7" />
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>Almacenamiento Raíz (/)</span>
+              <Wifi size={15} color="var(--primary)" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>Tráfico de Red</span>
             </div>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#a855f7', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              ↓ {formatRateKbs(netRx)}
+            </span>
+          </div>
+
+          <SparklineSvg
+            data={history?.netRx || []}
+            color="var(--primary)"
+            height={26}
+            minVal={0}
+          />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+          <span>↓ RX: {formatRateKbs(netRx)}</span>
+          <span>↑ TX: {formatRateKbs(netTx)}</span>
+        </div>
+      </div>
+
+      {/* 5. Tarjeta Disco NVMe / I/O en vivo */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: '8px'
+      }}>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={15} color="var(--accent)" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>I/O Disco en Vivo</span>
+            </div>
+            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              R: {formatRateKbs(diskRead)}
+            </span>
+          </div>
+
+          <SparklineSvg
+            data={history?.diskRead || []}
+            color="var(--accent)"
+            height={26}
+            minVal={0}
+          />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+          <span>Lectura: {formatRateKbs(diskRead)}</span>
+          <span>Escritura: {formatRateKbs(diskWrite)}</span>
+        </div>
+      </div>
+
+      {/* 6. Tarjeta Almacenamiento Raíz (/) */}
+      <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: '8px'
+      }}>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <HardDrive size={15} color={diskCol} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>Almacenamiento Raíz (/)</span>
+            </div>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: diskCol, fontFamily: 'var(--font-mono)' }}>
               {diskUsagePercent}%
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginBottom: '8px' }}>
+          <div style={{ width: '100%', height: '6px', background: 'color-mix(in srgb, var(--border-color) 60%, transparent)', borderRadius: '3px', overflow: 'hidden', margin: '8px 0' }}>
             <div style={{
               width: `${Math.min(100, diskUsagePercent)}%`,
               height: '100%',

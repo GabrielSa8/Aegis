@@ -112,6 +112,7 @@ pub fn run() {
             sentinel::get_top_processes,
             sentinel::kill_process,
             sentinel::clean_system_memory,
+            sentinel::set_power_profile,
             leisure::get_gaming_status,
             leisure::get_installed_steam_games,
             leisure::launch_game,

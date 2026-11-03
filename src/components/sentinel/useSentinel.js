@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getStatusBadgeConfig, getThermalState, formatUptime } from './sentinelHelpers';
 
+const MAX_HISTORY_POINTS = 60; // 60 muestras (buffer circular de 60s/muestras)
+
 export function useSentinel() {
   const [telemetry, setTelemetry] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -9,8 +11,34 @@ export function useSentinel() {
   const [cleanMessage, setCleanMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processSearch, setProcessSearch] = useState('');
+  const [processSortMode, setProcessSortMode] = useState('ram'); // 'ram' | 'cpu' | 'io' | 'zombie'
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isPurging, setIsPurging] = useState(false);
+  const [powerProfileSwitching, setPowerProfileSwitching] = useState(false);
+
+  // Buffers históricos reactivos
+  const [history, setHistory] = useState({
+    cpu: [],
+    ram: [],
+    temp: [],
+    netRx: [],
+    netTx: [],
+    diskRead: [],
+    diskWrite: []
+  });
+
+  const appendHistory = useCallback((data) => {
+    if (!data) return;
+    setHistory((prev) => ({
+      cpu: [...prev.cpu, data.cpuPercent || 0].slice(-MAX_HISTORY_POINTS),
+      ram: [...prev.ram, data.ramUsagePercent || 0].slice(-MAX_HISTORY_POINTS),
+      temp: [...prev.temp, data.cpuTempCelsius || 45].slice(-MAX_HISTORY_POINTS),
+      netRx: [...prev.netRx, data.netRxKbs || 0].slice(-MAX_HISTORY_POINTS),
+      netTx: [...prev.netTx, data.netTxKbs || 0].slice(-MAX_HISTORY_POINTS),
+      diskRead: [...prev.diskRead, data.diskReadKbs || 0].slice(-MAX_HISTORY_POINTS),
+      diskWrite: [...prev.diskWrite, data.diskWriteKbs || 0].slice(-MAX_HISTORY_POINTS)
+    }));
+  }, []);
 
   const fetchTelemetry = useCallback(async () => {
     try {
@@ -20,6 +48,7 @@ export function useSentinel() {
         invoke('get_top_processes')
       ]);
       setTelemetry(data);
+      appendHistory(data);
       setAlerts(Array.isArray(alts) ? alts : []);
       setProcesses(Array.isArray(procs) ? procs : []);
     } catch (e) {
@@ -27,18 +56,18 @@ export function useSentinel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [appendHistory]);
 
   useEffect(() => {
     fetchTelemetry();
     if (!autoRefresh) return;
-    const interval = setInterval(fetchTelemetry, 2500);
+    const interval = setInterval(fetchTelemetry, 2000);
     return () => clearInterval(interval);
   }, [fetchTelemetry, autoRefresh]);
 
-  const handleKillProcess = async (pid) => {
+  const handleKillProcess = async (pid, signal = 15) => {
     try {
-      const res = await invoke('kill_process', { pid });
+      const res = await invoke('kill_process', { pid, signal });
       setCleanMessage(res);
       setTimeout(() => setCleanMessage(null), 3000);
       fetchTelemetry();
@@ -63,24 +92,70 @@ export function useSentinel() {
     }
   };
 
+  const handleSetPowerProfile = async (targetProfile) => {
+    setPowerProfileSwitching(true);
+    try {
+      const res = await invoke('set_power_profile', { profile: targetProfile });
+      setCleanMessage(res);
+      setTimeout(() => setCleanMessage(null), 3000);
+      await fetchTelemetry();
+    } catch (err) {
+      setCleanMessage(`Error cambiando perfil: ${err}`);
+      setTimeout(() => setCleanMessage(null), 3000);
+    } finally {
+      setPowerProfileSwitching(false);
+    }
+  };
+
   const statusCfg = useMemo(() => {
     return getStatusBadgeConfig(telemetry?.statusBadge || 'OPTIMAL');
   }, [telemetry?.statusBadge]);
 
+  const zombieCount = useMemo(() => {
+    return processes.filter((p) => p.isZombie || p.state === 'Z').length;
+  }, [processes]);
+
   const filteredProcesses = useMemo(() => {
-    if (!processSearch.trim()) return processes;
-    const q = processSearch.toLowerCase().trim();
-    return processes.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.pid.toString().includes(q) ||
-        p.cmdline.toLowerCase().includes(q)
-    );
-  }, [processes, processSearch]);
+    let list = processes;
+    if (processSearch.trim()) {
+      const q = processSearch.toLowerCase().trim();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.pid.toString().includes(q) ||
+          p.cmdline.toLowerCase().includes(q)
+      );
+    }
+
+    if (processSortMode === 'zombie') {
+      return [...list.filter((p) => p.isZombie || p.state === 'Z')];
+    }
+
+    return [...list].sort((a, b) => {
+      if (processSortMode === 'cpu') {
+        return (b.cpuPercent || 0) - (a.cpuPercent || 0);
+      }
+      if (processSortMode === 'io') {
+        return (b.ioKbs || 0) - (a.ioKbs || 0);
+      }
+      // default: 'ram'
+      return (b.memoryMb || 0) - (a.memoryMb || 0);
+    });
+  }, [processes, processSearch, processSortMode]);
 
   const maxMemoryMb = useMemo(() => {
     if (!processes.length) return 1000;
-    return Math.max(...processes.map((p) => p.memoryMb), 100);
+    return Math.max(...processes.map((p) => p.memoryMb || 0), 100);
+  }, [processes]);
+
+  const maxCpuPercent = useMemo(() => {
+    if (!processes.length) return 100;
+    return Math.max(...processes.map((p) => p.cpuPercent || 0), 10);
+  }, [processes]);
+
+  const maxIoKbs = useMemo(() => {
+    if (!processes.length) return 100;
+    return Math.max(...processes.map((p) => p.ioKbs || 0), 10);
   }, [processes]);
 
   const thermalState = useMemo(() => {
@@ -95,19 +170,27 @@ export function useSentinel() {
     telemetry,
     alerts,
     processes,
+    history,
     cleanMessage,
     loading,
     processSearch,
     setProcessSearch,
+    processSortMode,
+    setProcessSortMode,
+    zombieCount,
     autoRefresh,
     setAutoRefresh,
     isPurging,
+    powerProfileSwitching,
+    handleSetPowerProfile,
     fetchTelemetry,
     handleKillProcess,
     handleCleanMemory,
     statusCfg,
     filteredProcesses,
     maxMemoryMb,
+    maxCpuPercent,
+    maxIoKbs,
     thermalState,
     formattedUptime
   };

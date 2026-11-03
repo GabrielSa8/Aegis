@@ -12,19 +12,27 @@ export default function SentinelView() {
     telemetry,
     alerts,
     processes,
+    history,
     cleanMessage,
     loading,
     processSearch,
     setProcessSearch,
+    processSortMode,
+    setProcessSortMode,
+    zombieCount,
     autoRefresh,
     setAutoRefresh,
     isPurging,
+    powerProfileSwitching,
+    handleSetPowerProfile,
     fetchTelemetry,
     handleKillProcess,
     handleCleanMemory,
     statusCfg,
     filteredProcesses,
     maxMemoryMb,
+    maxCpuPercent,
+    maxIoKbs,
     thermalState,
     formattedUptime
   } = useSentinel();
@@ -42,6 +50,8 @@ export default function SentinelView() {
         statusCfg={statusCfg}
         loading={loading}
         onRefresh={fetchTelemetry}
+        powerProfileSwitching={powerProfileSwitching}
+        onSetPowerProfile={handleSetPowerProfile}
       />
 
       {/* 🚨 Alertas Proactivas */}
@@ -51,6 +61,7 @@ export default function SentinelView() {
       <HardwareGrid
         telemetry={telemetry}
         thermalState={thermalState}
+        history={history}
       />
 
       {/* 🛡️ Huella de Proceso Aegis & Host Telemetry */}
@@ -59,13 +70,18 @@ export default function SentinelView() {
         formattedUptime={formattedUptime}
       />
 
-      {/* ⚡ Gestor de Procesos en Tiempo Real */}
+      {/* ⚡ Gestor de Procesos en Tiempo Real (Process Killer Avanzado) */}
       <ProcessManagerSection
         processes={processes}
         filteredProcesses={filteredProcesses}
         maxMemoryMb={maxMemoryMb}
+        maxCpuPercent={maxCpuPercent}
+        maxIoKbs={maxIoKbs}
         processSearch={processSearch}
         onSearchChange={setProcessSearch}
+        processSortMode={processSortMode}
+        onSortModeChange={setProcessSortMode}
+        zombieCount={zombieCount}
         onKillProcess={handleKillProcess}
       />
     </div>

@@ -8,9 +8,9 @@ export default function SystemAlertsBanner({ alerts }) {
       {alerts.map((alt) => {
         const isDanger = alt.level === 'danger';
         const isWarning = alt.level === 'warning';
-        const col = isDanger ? '#ef4444' : isWarning ? '#f59e0b' : '#10b981';
-        const bg = isDanger ? 'rgba(239, 68, 68, 0.08)' : isWarning ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.08)';
-        const bdr = isDanger ? 'rgba(239, 68, 68, 0.25)' : isWarning ? 'rgba(245, 158, 11, 0.25)' : 'rgba(16, 185, 129, 0.2)';
+        const col = isDanger ? 'var(--danger)' : isWarning ? 'var(--warning)' : 'var(--primary)';
+        const bg = `color-mix(in srgb, ${col} 10%, transparent)`;
+        const bdr = `color-mix(in srgb, ${col} 28%, transparent)`;
 
         return (
           <div
