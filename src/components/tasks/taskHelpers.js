@@ -28,7 +28,6 @@ export const CURATED_EMOJIS = [
 ];
 
 export const STORAGE_CUSTOM_KEY = 'aegis_task_customizations';
-export const STORAGE_MATRIX_KEY = 'aegis_matrix_quadrant_config';
 
 // Presets base (agnósticos, sin hardcode de proyectos específicos)
 export const DEFAULT_PRESETS = {};
@@ -172,81 +171,5 @@ export function parseTask(t, customizations) {
     project: cleanProjectName,
     rawProject,
     theme
-  };
-}
-
-// Resuelve la configuración y tareas de un Cuadrante de la Matriz de Enfoque
-export function resolveQuadrantData(targetKey, allFilteredTasks, activeHubs, availableProjects, customizations) {
-  let resolvedKey = targetKey;
-  if (targetKey === 'auto_1') resolvedKey = 'urgent';
-  if (targetKey === 'auto_2') resolvedKey = activeHubs[0] ? `hub:${activeHubs[0]}` : 'focus';
-  if (targetKey === 'auto_3') resolvedKey = activeHubs[1] ? `hub:${activeHubs[1]}` : 'backlog';
-  if (targetKey === 'auto_4') resolvedKey = activeHubs[2] ? `hub:${activeHubs[2]}` : 'done';
-
-  if (resolvedKey === 'urgent') {
-    return {
-      title: '🚨 Urgente & Crítico',
-      color: 'var(--warning)',
-      bgColor: 'color-mix(in srgb, var(--warning) 10%, transparent)',
-      borderColor: 'color-mix(in srgb, var(--warning) 30%, transparent)',
-      tasks: allFilteredTasks.filter((t) => !t.completed && (t.priority === 'high' || t.dueDate))
-    };
-  }
-  if (resolvedKey === 'focus') {
-    return {
-      title: '🔥 En Foco',
-      color: 'var(--accent)',
-      bgColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
-      borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
-      tasks: allFilteredTasks.filter((t) => !t.completed && t.priority === 'high')
-    };
-  }
-  if (resolvedKey === 'backlog') {
-    return {
-      title: '📥 Backlog General',
-      color: 'var(--text-muted)',
-      bgColor: 'color-mix(in srgb, var(--text-muted) 8%, transparent)',
-      borderColor: 'var(--border-color)',
-      tasks: allFilteredTasks.filter((t) => !t.completed && t.priority !== 'high' && !t.dueDate)
-    };
-  }
-  if (resolvedKey === 'done') {
-    return {
-      title: '✅ Completadas',
-      color: 'var(--primary)',
-      bgColor: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-      borderColor: 'color-mix(in srgb, var(--primary) 30%, transparent)',
-      tasks: allFilteredTasks.filter((t) => t.completed)
-    };
-  }
-  if (resolvedKey.startsWith('hub:')) {
-    const hubName = resolvedKey.slice(4);
-    const theme = hashStringToPalette(hubName);
-    return {
-      title: `📁 ${hubName}`,
-      color: theme.color,
-      bgColor: theme.bg,
-      borderColor: theme.border,
-      tasks: allFilteredTasks.filter((t) => t.hub === hubName)
-    };
-  }
-  if (resolvedKey.startsWith('project:')) {
-    const projName = resolvedKey.slice(8);
-    const theme = resolveProjectTheme(projName, customizations);
-    return {
-      title: `${theme.icon} ${projName}`,
-      color: theme.color,
-      bgColor: theme.bg,
-      borderColor: theme.border,
-      tasks: allFilteredTasks.filter((t) => t.project === projName)
-    };
-  }
-
-  return {
-    title: 'Tareas',
-    color: 'var(--text-muted)',
-    bgColor: 'color-mix(in srgb, var(--text-high) 4%, transparent)',
-    borderColor: 'var(--border-color)',
-    tasks: allFilteredTasks
   };
 }

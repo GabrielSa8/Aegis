@@ -1,22 +1,19 @@
+import { useState } from 'react';
 import {
   SettingsHeader,
   SettingsSidebar,
-  ProfileSection,
-  AppearanceSection,
-  StorageSection,
-  AiBudgetSection,
-  DevOpsSection,
-  NotificationsSection,
-  GamingSection,
-  PluginsSection,
-  P2pSyncSection,
-  TelegramGatewaySection,
-  SecuritySettingsSection,
+  GeneralHub,
+  InterfaceHub,
+  AiHub,
+  SystemHub,
+  ShortcutsModal,
   useSettings
 } from './settings';
 import { useSecurity } from './security/useSecurity';
 
 export default function SettingsView({ onClose, currentTheme, onThemeChange, isFullView = false }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const security = useSecurity();
   const {
     activeSection,
@@ -47,10 +44,10 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     updateTokenBudget
   } = useSettings({ onThemeChange });
 
-  const renderActiveSection = () => {
+  const renderActiveHub = () => {
     if (loading) {
       return (
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', padding: '2rem', textAlign: 'center' }}>
           Cargando parámetros del sistema...
         </div>
       );
@@ -58,49 +55,14 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     if (!config) return null;
 
     switch (activeSection) {
+      case 'general':
       case 'profile':
-        return <ProfileSection config={config} updateProfile={updateProfile} />;
-      case 'security':
-        return <SecuritySettingsSection security={security} onLockVault={security.lockVault} />;
-      case 'plugins':
-        return <PluginsSection config={config} setConfig={setConfig} />;
-      case 'appearance':
-        return (
-          <AppearanceSection
-            config={config}
-            currentTheme={currentTheme}
-            onSelectTheme={handleSelectTheme}
-            onScaleChange={handleScaleChange}
-          />
-        );
-      case 'storage':
-        return (
-          <StorageSection
-            config={config}
-            setConfig={setConfig}
-            storageStats={storageStats}
-            purgeStatus={purgeStatus}
-            onPurgeCaches={handlePurgeCaches}
-          />
-        );
-      case 'p2p':
-        return <P2pSyncSection />;
-      case 'gateway':
-        return <TelegramGatewaySection />;
-      case 'ai':
-        return (
-          <AiBudgetSection
-            config={config}
-            setConfig={setConfig}
-            updateTokenBudget={updateTokenBudget}
-            onOpenExternal={handleOpenExternal}
-          />
-        );
       case 'devops':
         return (
-          <DevOpsSection
+          <GeneralHub
             config={config}
             setConfig={setConfig}
+            updateProfile={updateProfile}
             newRepoName={newRepoName}
             setNewRepoName={setNewRepoName}
             newRepoPath={newRepoPath}
@@ -113,18 +75,46 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
             onRemoveRepo={handleRemoveRepo}
           />
         );
+      case 'interface':
+      case 'appearance':
+      case 'gaming':
       case 'notifications':
         return (
-          <NotificationsSection
+          <InterfaceHub
             config={config}
             setConfig={setConfig}
+            currentTheme={currentTheme}
+            onSelectTheme={handleSelectTheme}
+            onScaleChange={handleScaleChange}
             updateNotifications={updateNotifications}
           />
         );
-      case 'gaming':
-        return <GamingSection config={config} setConfig={setConfig} />;
+      case 'ai':
+        return (
+          <AiHub
+            config={config}
+            setConfig={setConfig}
+            updateTokenBudget={updateTokenBudget}
+            onOpenExternal={handleOpenExternal}
+          />
+        );
+      case 'system':
+      case 'storage':
+      case 'security':
+      case 'plugins':
+      case 'p2p':
+      case 'gateway':
       default:
-        return null;
+        return (
+          <SystemHub
+            config={config}
+            setConfig={setConfig}
+            storageStats={storageStats}
+            purgeStatus={purgeStatus}
+            onPurgeCaches={handlePurgeCaches}
+            security={security}
+          />
+        );
     }
   };
 
@@ -145,26 +135,38 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         saveStatus={saveStatus}
         onSave={handleSaveConfig}
         onClose={onClose}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenShortcuts={() => setShowShortcuts(true)}
       />
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
         <SettingsSidebar
           activeSection={activeSection}
           onSelectSection={setActiveSection}
+          searchQuery={searchQuery}
         />
 
         <div style={{
           flex: 1,
           minWidth: 0,
           overflowY: 'auto',
-          padding: '16px 20px',
+          padding: '20px 28px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px'
+          gap: '16px',
+          width: '100%',
+          boxSizing: 'border-box'
         }}>
-          {renderActiveSection()}
+          {renderActiveHub()}
         </div>
       </div>
+
+      {/* Modal Táctico de Atajos Maestros */}
+      <ShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 
@@ -174,7 +176,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
 
   return (
     <div className="modal-overlay" style={{ zIndex: 2000 }}>
-      <div className="modal-content glass" style={{ maxWidth: '920px', width: '92%', height: '88vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+      <div className="modal-content glass" style={{ maxWidth: '1280px', width: '96%', height: '92vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
         {content}
       </div>
     </div>

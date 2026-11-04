@@ -4,7 +4,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { applyUiScale } from './settingsHelpers';
 
 export function useSettings({ onThemeChange }) {
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState('general');
   const [config, setConfig] = useState(null);
   const [storageStats, setStorageStats] = useState(null);
   const [loading, setLoading] = useState(true);

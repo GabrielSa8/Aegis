@@ -56,17 +56,24 @@ export default function SecuritySettingsSection({
         onLockVault={onLockVault}
       />
 
-      <EncryptionPoliciesCard
-        status={status}
-        onTogglePolicy={handleTogglePolicy}
-        disabled={!status?.masterPasswordEnabled}
-      />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gap: '16px',
+        alignItems: 'start'
+      }}>
+        <EncryptionPoliciesCard
+          status={status}
+          onTogglePolicy={handleTogglePolicy}
+          disabled={!status?.masterPasswordEnabled}
+        />
 
-      <AutoLockCard
-        autoLockMinutes={status?.autoLockMinutes ?? 15}
-        onChange={handleChangeAutoLock}
-        disabled={!status?.masterPasswordEnabled}
-      />
+        <AutoLockCard
+          autoLockMinutes={status?.autoLockMinutes ?? 15}
+          onChange={handleChangeAutoLock}
+          disabled={!status?.masterPasswordEnabled}
+        />
+      </div>
 
       {/* Modales Tácticos */}
       <MasterPasswordModal

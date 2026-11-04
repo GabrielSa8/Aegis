@@ -5,7 +5,6 @@ import {
   TasksHeader,
   TasksListView,
   KanbanBoard,
-  FocusMatrix,
   CustomizerModal,
   TaskInspectorDrawer
 } from './tasks';
@@ -15,8 +14,6 @@ export default function TasksView() {
     loading,
     refreshing,
     customizations,
-    matrixConfig,
-    updateMatrixQuadrant,
     showCustomizer,
     setShowCustomizer,
     selectedHub,
@@ -39,7 +36,6 @@ export default function TasksView() {
     toggleHubCollapse,
     toggleProjectCollapse,
     hubs,
-    activeHubs,
     availableProjects,
     filteredTasks,
     selectedTask,
@@ -48,11 +44,7 @@ export default function TasksView() {
     tasksHierarchy,
     tasksByProject,
     tasksByHub,
-    kanbanColumns,
-    q1Data,
-    q2Data,
-    q3Data,
-    q4Data
+    kanbanColumns
   } = useTasks();
 
   return (
@@ -105,20 +97,6 @@ export default function TasksView() {
             Todas las tareas coinciden como completadas o el filtro actual (Hub/Proyecto) no contiene tareas pendientes.
           </p>
         </div>
-      ) : viewMode === 'list' ? (
-        <TasksListView
-          groupBy={groupBy}
-          tasksHierarchy={tasksHierarchy}
-          tasksByProject={tasksByProject}
-          tasksByHub={tasksByHub}
-          collapsedHubs={collapsedHubs}
-          toggleHubCollapse={toggleHubCollapse}
-          collapsedProjects={collapsedProjects}
-          toggleProjectCollapse={toggleProjectCollapse}
-          customizations={customizations}
-          onToggle={handleToggle}
-          onSelectTask={setSelectedTask}
-        />
       ) : viewMode === 'kanban' ? (
         <KanbanBoard
           kanbanLayout={kanbanLayout}
@@ -135,15 +113,16 @@ export default function TasksView() {
           onSelectTask={setSelectedTask}
         />
       ) : (
-        <FocusMatrix
-          matrixConfig={matrixConfig}
-          q1Data={q1Data}
-          q2Data={q2Data}
-          q3Data={q3Data}
-          q4Data={q4Data}
-          updateMatrixQuadrant={updateMatrixQuadrant}
-          activeHubs={activeHubs}
-          availableProjects={availableProjects}
+        <TasksListView
+          groupBy={groupBy}
+          tasksHierarchy={tasksHierarchy}
+          tasksByProject={tasksByProject}
+          tasksByHub={tasksByHub}
+          collapsedHubs={collapsedHubs}
+          toggleHubCollapse={toggleHubCollapse}
+          collapsedProjects={collapsedProjects}
+          toggleProjectCollapse={toggleProjectCollapse}
+          customizations={customizations}
           onToggle={handleToggle}
           onSelectTask={setSelectedTask}
         />

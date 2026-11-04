@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   STORAGE_CUSTOM_KEY,
-  STORAGE_MATRIX_KEY,
   parseTask,
   resolveProjectTheme
 } from './taskHelpers';
@@ -23,26 +22,6 @@ export function useTasks() {
       return {};
     }
   });
-
-  // Configuración de los 4 Cuadrantes de la Matriz (100% personalizable por usuario)
-  const [matrixConfig, setMatrixConfig] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_MATRIX_KEY);
-      return stored ? JSON.parse(stored) : { q1: 'auto_1', q2: 'auto_2', q3: 'auto_3', q4: 'auto_4' };
-    } catch (_) {
-      return { q1: 'auto_1', q2: 'auto_2', q3: 'auto_3', q4: 'auto_4' };
-    }
-  });
-
-  const updateMatrixQuadrant = (quadrantKey, newTarget) => {
-    setMatrixConfig((prev) => {
-      const next = { ...prev, [quadrantKey]: newTarget };
-      try {
-        localStorage.setItem(STORAGE_MATRIX_KEY, JSON.stringify(next));
-      } catch (_) {}
-      return next;
-    });
-  };
 
   // Filtros dinámicos
   const [selectedHub, setSelectedHub] = useState('Todos');
@@ -211,24 +190,16 @@ export function useTasks() {
   // Estado del Drawer Inspector Táctico de Tarea
   const [selectedTask, setSelectedTask] = useState(null);
 
-  // Derivación de estadísticas, jerarquías, kanban y cuadrantes en hook desacoplado
+  // Derivación de estadísticas, jerarquías y kanban en hook desacoplado
   const {
     stats,
     tasksHierarchy,
     tasksByProject,
     tasksByHub,
-    kanbanColumns,
-    q1Data,
-    q2Data,
-    q3Data,
-    q4Data
+    kanbanColumns
   } = useTaskGroups({
     parsedTasks,
-    filteredTasks,
-    matrixConfig,
-    activeHubs,
-    availableProjects,
-    customizations
+    filteredTasks
   });
 
   return {
@@ -237,8 +208,6 @@ export function useTasks() {
     refreshing,
     error,
     customizations,
-    matrixConfig,
-    updateMatrixQuadrant,
     showCustomizer,
     setShowCustomizer,
     selectedHub,
@@ -273,10 +242,6 @@ export function useTasks() {
     tasksHierarchy,
     tasksByProject,
     tasksByHub,
-    kanbanColumns,
-    q1Data,
-    q2Data,
-    q3Data,
-    q4Data
+    kanbanColumns
   };
 }

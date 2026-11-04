@@ -1,17 +1,12 @@
 import { useMemo } from 'react';
-import { resolveQuadrantData } from './taskHelpers';
 
 /**
- * Custom Hook para derivar agrupaciones, jerarquías y datos de cuadrantes
+ * Custom Hook para derivar agrupaciones y jerarquías (Lista y Kanban)
  * manteniendo useTasks.js estrictamente por debajo de 250 líneas.
  */
 export function useTaskGroups({
   parsedTasks,
-  filteredTasks,
-  matrixConfig,
-  activeHubs,
-  availableProjects,
-  customizations
+  filteredTasks
 }) {
   // Estadísticas globales
   const stats = useMemo(() => {
@@ -73,21 +68,11 @@ export function useTaskGroups({
     return { todo, focus, done };
   }, [filteredTasks]);
 
-  // Cuadrantes de la Matriz de Enfoque
-  const q1Data = useMemo(() => resolveQuadrantData(matrixConfig.q1, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q1, filteredTasks, activeHubs, availableProjects, customizations]);
-  const q2Data = useMemo(() => resolveQuadrantData(matrixConfig.q2, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q2, filteredTasks, activeHubs, availableProjects, customizations]);
-  const q3Data = useMemo(() => resolveQuadrantData(matrixConfig.q3, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q3, filteredTasks, activeHubs, availableProjects, customizations]);
-  const q4Data = useMemo(() => resolveQuadrantData(matrixConfig.q4, filteredTasks, activeHubs, availableProjects, customizations), [matrixConfig.q4, filteredTasks, activeHubs, availableProjects, customizations]);
-
   return {
     stats,
     tasksHierarchy,
     tasksByProject,
     tasksByHub,
-    kanbanColumns,
-    q1Data,
-    q2Data,
-    q3Data,
-    q4Data
+    kanbanColumns
   };
 }

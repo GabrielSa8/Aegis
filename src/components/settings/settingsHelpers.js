@@ -55,7 +55,7 @@ export const THEMES = [
   }
 ];
 
-export const EMOJI_AVATARS = ['🛡️', '⚡', '💻', '🚀', '🦾', '🧠', '🎯', '🌌', '🕹️', '⚔️', '🦅', '🔥'];
+export const AEGIS_VERSION = 'v2.10.1';
 
 export const BILLING_LINKS = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },
@@ -75,18 +75,35 @@ export const MASTER_SHORTCUTS = [
   { key: 'Esc', desc: 'Cerrar modales o búsqueda activa' }
 ];
 
-export const SECTIONS = [
-  { id: 'profile', label: 'Identidad & Perfil', icon: User },
-  { id: 'security', label: 'Seguridad & Cifrado', icon: Lock },
-  { id: 'plugins', label: 'Plugins & Módulos', icon: Puzzle },
-  { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
-  { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },
-  { id: 'p2p', label: 'Sincronización P2P', icon: Radio },
-  { id: 'gateway', label: 'Gateway Telegram', icon: Send },
-  { id: 'ai', label: 'Motores IA & Presupuesto', icon: Bot },
-  { id: 'devops', label: 'Flota Git & DevOps', icon: GitBranch },
-  { id: 'notifications', label: 'Notificaciones SO', icon: Bell },
-  { id: 'gaming', label: 'Modo Gaming', icon: Gamepad2 }
+export const MACRO_HUBS = [
+  {
+    id: 'general',
+    label: 'Operador & Entorno',
+    icon: User,
+    badge: 'Core',
+    keywords: 'nombre alias rol estilo caveman ide editor vscode cursor terminal neovim ptyxis git repositorios flota'
+  },
+  {
+    id: 'interface',
+    label: 'Interfaz & Pantalla',
+    icon: Palette,
+    badge: 'UI/UX',
+    keywords: 'tema colores oled dracula tokyo zoom escala dpi gamemode gamescope fsr aceleracion graficos notificaciones bandeja tray'
+  },
+  {
+    id: 'ai',
+    label: 'Motores IA & Cuotas',
+    icon: Bot,
+    badge: 'LLM',
+    keywords: 'agente agy claude ollama custom fallback tokens presupuesto cuotas facturacion api'
+  },
+  {
+    id: 'system',
+    label: 'Sistema, Datos & Red',
+    icon: HardDrive,
+    badge: 'Host',
+    keywords: 'obsidian vault sqlite backup respaldo actualizaciones releases contraseña master password cifrado p2p wifi telegram bot plugins modulos'
+  }
 ];
 
 export const UI_SCALE_PRESETS = [

@@ -6,8 +6,6 @@ export { KanbanColumn } from './KanbanColumn';
 export { ProjectKanbanSwimlane } from './ProjectKanbanSwimlane';
 export { TasksListView } from './TasksListView';
 export { KanbanBoard } from './KanbanBoard';
-export { ConfigurableMatrixQuadrant } from './ConfigurableMatrixQuadrant';
-export { FocusMatrix } from './FocusMatrix';
 export { CustomizerModal } from './CustomizerModal';
 export { TaskInspectorDrawer } from './TaskInspectorDrawer';
 export { useTasks } from './useTasks';

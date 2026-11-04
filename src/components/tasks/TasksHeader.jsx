@@ -2,7 +2,6 @@ import React from 'react';
 import {
   RefreshCw,
   Search,
-  LayoutGrid,
   ListTodo,
   Kanban,
   FolderGit2,
@@ -15,8 +14,7 @@ import { TasksHudStats } from './TasksHudStats';
 
 const VIEW_TABS = [
   { id: 'list', label: 'Lista', icon: ListTodo },
-  { id: 'kanban', label: 'Kanban', icon: Kanban },
-  { id: 'matrix', label: 'Matriz', icon: LayoutGrid }
+  { id: 'kanban', label: 'Kanban', icon: Kanban }
 ];
 
 export function TasksHeader({
