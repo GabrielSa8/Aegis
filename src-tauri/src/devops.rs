@@ -522,49 +522,51 @@ pub fn open_repo_in_editor(path: String, editor: String) -> Result<(), String> {
         return Err("Ruta no existe".into());
     }
 
-    match editor.as_str() {
-        "cursor" => {
-            Command::new("cursor")
-                .arg(&path)
-                .current_dir(p)
-                .spawn()
-                .map_err(|e| format!("Error abriendo Cursor: {}", e))?;
-        }
-        "code" => {
-            Command::new("code")
-                .arg(&path)
-                .current_dir(p)
-                .spawn()
-                .map_err(|e| format!("Error abriendo VS Code: {}", e))?;
-        }
-        "terminal" => {
-            if Path::new("/usr/bin/ptyxis").exists() {
-                Command::new("ptyxis")
-                    .args(["--new-window", &format!("--working-directory={}", path)])
-                    .current_dir(p)
-                    .spawn()
-                    .map_err(|e| format!("Error abriendo terminal Ptyxis: {}", e))?;
-            } else if Path::new("/usr/bin/kgx").exists() {
-                Command::new("kgx")
-                    .arg(&format!("--working-directory={}", path))
-                    .current_dir(p)
-                    .spawn()
-                    .map_err(|e| format!("Error abriendo terminal KGX: {}", e))?;
-            } else if Path::new("/usr/bin/gnome-terminal").exists() {
-                let arg = format!("--working-directory={}", path);
-                Command::new("gnome-terminal")
-                    .arg(arg)
-                    .current_dir(p)
-                    .spawn()
-                    .map_err(|e| format!("Error abriendo GNOME Terminal: {}", e))?;
-            } else {
-                return Err("No se encontró terminal compatible".into());
-            }
-        }
-        _ => return Err(format!("Editor desconocido: {}", editor)),
-    }
+    let config = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let target = editor.trim().to_lowercase();
 
-    Ok(())
+    match target.as_str() {
+        "terminal" | "preferred_terminal" | "term" => {
+            crate::environment::launch_terminal_in_dir(
+                &path,
+                None,
+                Some("Aegis - Terminal"),
+                None,
+                config.environment.custom_terminal_cmd.as_deref(),
+            ).map(|_| ())
+        }
+        "editor" | "preferred_editor" | "ide" | "" => {
+            crate::environment::launch_editor_in_dir(
+                &path,
+                None,
+                config.environment.custom_editor_cmd.as_deref(),
+            ).map(|_| ())
+        }
+        "cursor" | "code" | "neovim" | "nvim" | "zed" | "subl" | "idea" => {
+            crate::environment::launch_editor_in_dir(
+                &path,
+                Some(&target),
+                config.environment.custom_editor_cmd.as_deref(),
+            ).map(|_| ())
+        }
+        "ptyxis" | "ghostty" | "kitty" | "alacritty" | "kgx" | "gnome-terminal" | "foot" | "konsole" | "wezterm" | "xterm" => {
+            crate::environment::launch_terminal_in_dir(
+                &path,
+                None,
+                Some("Aegis - Terminal"),
+                Some(&target),
+                config.environment.custom_terminal_cmd.as_deref(),
+            ).map(|_| ())
+        }
+        _ => {
+            // Intento genérico: primero como editor, si falla como terminal
+            crate::environment::launch_editor_in_dir(
+                &path,
+                Some(&target),
+                config.environment.custom_editor_cmd.as_deref(),
+            ).map(|_| ())
+        }
+    }
 }
 
 #[tauri::command]

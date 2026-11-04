@@ -266,8 +266,8 @@ export function RepoCard({
             variant="secondary"
             size="xs"
             icon={<Code2 size={10} />}
-            onClick={(e) => onOpenInEditor(repo, 'cursor', e)}
-            title="Abrir repositorio en Cursor"
+            onClick={(e) => onOpenInEditor(repo, 'editor', e)}
+            title="Abrir repositorio en el Editor / IDE preferido"
             style={{ padding: '2px 5px' }}
           />
 
@@ -276,7 +276,7 @@ export function RepoCard({
             size="xs"
             icon={<Terminal size={10} />}
             onClick={(e) => onOpenInEditor(repo, 'terminal', e)}
-            title="Abrir terminal en la ruta del repositorio"
+            title="Abrir emulador de terminal preferido en el repositorio"
             style={{ padding: '2px 5px' }}
           />
         </div>

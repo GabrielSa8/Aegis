@@ -174,10 +174,10 @@ export function RepoInspectorModal({
             variant="secondary"
             size="xs"
             icon={<Code2 size={12} />}
-            onClick={() => onOpenInEditor(repo, 'cursor')}
-            title="Abrir en Cursor"
+            onClick={() => onOpenInEditor(repo, 'editor')}
+            title="Abrir en Editor / IDE preferido"
           >
-            Cursor
+            Editor
           </TacticalButton>
 
           <TacticalButton
@@ -185,7 +185,7 @@ export function RepoInspectorModal({
             size="xs"
             icon={<Terminal size={12} />}
             onClick={() => onOpenInEditor(repo, 'terminal')}
-            title="Abrir en Terminal (Ptyxis)"
+            title="Abrir en Terminal preferida"
           >
             Terminal
           </TacticalButton>

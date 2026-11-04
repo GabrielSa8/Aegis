@@ -312,6 +312,8 @@ pub struct AegisConfig {
     #[serde(default)]
     pub security: SecurityConfig,
     #[serde(default)]
+    pub environment: crate::environment::EnvironmentConfig,
+    #[serde(default)]
     pub community_plugins_enabled: std::collections::HashMap<String, bool>,
 }
 
@@ -363,6 +365,7 @@ pub fn default_config() -> AegisConfig {
         p2p_sync: P2pSyncConfig::default(),
         telegram_gateway: TelegramGatewayConfig::default(),
         security: SecurityConfig::default(),
+        environment: crate::environment::EnvironmentConfig::default(),
         community_plugins_enabled: std::collections::HashMap::new(),
     }
 }

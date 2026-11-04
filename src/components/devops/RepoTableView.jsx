@@ -157,8 +157,8 @@ export function RepoTableView({
                 <TacticalButton
                   variant="secondary"
                   size="xs"
-                  onClick={(e) => onOpenInEditor(repo, 'cursor', e)}
-                  title="Abrir en Cursor"
+                  onClick={(e) => onOpenInEditor(repo, 'editor', e)}
+                  title="Abrir en Editor / IDE preferido"
                   style={{ padding: '2px 4px' }}
                 >
                   <Code2 size={10} />
@@ -167,7 +167,7 @@ export function RepoTableView({
                   variant="secondary"
                   size="xs"
                   onClick={(e) => onOpenInEditor(repo, 'terminal', e)}
-                  title="Abrir Terminal"
+                  title="Abrir en Terminal preferida"
                   style={{ padding: '2px 4px' }}
                 >
                   <Terminal size={10} />

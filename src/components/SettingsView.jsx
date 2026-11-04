@@ -100,6 +100,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         return (
           <DevOpsSection
             config={config}
+            setConfig={setConfig}
             newRepoName={newRepoName}
             setNewRepoName={setNewRepoName}
             newRepoPath={newRepoPath}

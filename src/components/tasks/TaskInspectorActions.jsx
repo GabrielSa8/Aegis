@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Bot, Terminal, ExternalLink, FolderGit2, Copy, Check, FileText } from 'lucide-react';
+import { Bot, Terminal, ExternalLink, FolderGit2, Copy, Check, FileText, Code2 } from 'lucide-react';
 import { TacticalButton } from '../ui/TacticalButton';
 import { queueMacro } from '../agent/macroBus';
 
@@ -26,12 +26,12 @@ export function TaskInspectorActions({ task }) {
     window.dispatchEvent(new CustomEvent('aegis:switch-tab', { detail: { tab: 'vault' } }));
   };
 
-  const handleOpenInEditor = async (editor = 'cursor') => {
+  const handleOpenInEditor = async (editor = 'editor') => {
     try {
       setOpeningEditor(true);
       await invoke('open_repo_in_editor', { path: task.file_path, editor });
     } catch (err) {
-      console.warn('Error abriendo editor externo:', err);
+      console.warn('Error abriendo entorno externo:', err);
     } finally {
       setOpeningEditor(false);
     }
@@ -120,22 +120,22 @@ export function TaskInspectorActions({ task }) {
             <TacticalButton
               variant="secondary"
               size="xs"
-              onClick={() => handleOpenInEditor('cursor')}
+              onClick={() => handleOpenInEditor('editor')}
               disabled={openingEditor}
-              icon={<Terminal size={11} />}
+              icon={<Code2 size={11} />}
               style={{ justifyContent: 'center' }}
             >
-              Abrir en Cursor
+              Abrir en Editor
             </TacticalButton>
             <TacticalButton
               variant="secondary"
               size="xs"
-              onClick={() => handleOpenInEditor('code')}
+              onClick={() => handleOpenInEditor('terminal')}
               disabled={openingEditor}
-              icon={<ExternalLink size={11} />}
+              icon={<Terminal size={11} />}
               style={{ justifyContent: 'center' }}
             >
-              Abrir en Code
+              Abrir Terminal
             </TacticalButton>
           </div>
         </div>

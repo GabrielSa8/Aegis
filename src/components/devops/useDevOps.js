@@ -145,7 +145,15 @@ export function useDevOps() {
     if (e && e.stopPropagation) e.stopPropagation();
     try {
       await invoke('open_repo_in_editor', { path: repo.path, editor });
-      const targetName = editor === 'cursor' ? 'Cursor' : editor === 'code' ? 'VS Code' : 'Terminal (Ptyxis)';
+      const targetName = editor === 'editor'
+        ? 'Editor preferido'
+        : editor === 'terminal'
+        ? 'Terminal preferida'
+        : editor === 'cursor'
+        ? 'Cursor'
+        : editor === 'code'
+        ? 'VS Code'
+        : editor;
       showToast(`Abriendo ${repo.name} en ${targetName}...`);
     } catch (err) {
       console.error('Error abriendo entorno:', err);

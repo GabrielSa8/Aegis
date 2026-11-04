@@ -14,6 +14,7 @@ mod sync;
 mod plugins;
 pub mod gateway;
 pub mod security;
+pub mod environment;
 
 #[tauri::command]
 fn ping() -> String {
@@ -185,7 +186,9 @@ pub fn run() {
             security::change_master_password,
             security::disable_master_password,
             security::update_security_policies,
-            security::record_vault_activity
+            security::record_vault_activity,
+            environment::get_installed_environment_tools,
+            environment::test_environment_tool
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {

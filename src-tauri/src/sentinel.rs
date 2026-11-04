@@ -1351,37 +1351,15 @@ pub fn launch_system_update() -> Result<String, String> {
 
     #[cfg(target_os = "linux")]
     {
-        if std::path::Path::new("/usr/bin/ptyxis").exists() {
-            std::process::Command::new("ptyxis")
-                .args(["--new-window", "-T", "Aegis - Actualización del Sistema", "--", "bash", "-c", &full_script])
-                .spawn()
-                .map_err(|e| format!("Error lanzando Ptyxis: {}", e))?;
-            return Ok("Terminal interactiva Ptyxis iniciada para la actualización.".to_string());
-        } else if std::path::Path::new("/usr/bin/gnome-terminal").exists() {
-            std::process::Command::new("gnome-terminal")
-                .args(["--title=Aegis - Actualización del Sistema", "--", "bash", "-c", &full_script])
-                .spawn()
-                .map_err(|e| format!("Error lanzando GNOME Terminal: {}", e))?;
-            return Ok("Terminal interactiva GNOME Terminal iniciada.".to_string());
-        } else if std::path::Path::new("/usr/bin/kgx").exists() {
-            std::process::Command::new("kgx")
-                .args(["-e", &format!("bash -c '{}'", full_script)])
-                .spawn()
-                .map_err(|e| format!("Error lanzando KGX: {}", e))?;
-            return Ok("Terminal interactiva KGX iniciada.".to_string());
-        } else if std::path::Path::new("/usr/bin/xterm").exists() {
-            std::process::Command::new("xterm")
-                .args(["-title", "Aegis - Actualización del Sistema", "-e", "bash", "-c", &full_script])
-                .spawn()
-                .map_err(|e| format!("Error lanzando xterm: {}", e))?;
-            return Ok("Terminal xterm iniciada.".to_string());
-        } else {
-            std::process::Command::new("xdg-terminal-exec")
-                .args(["bash", "-c", &full_script])
-                .spawn()
-                .map_err(|_| "No se encontró ningún emulador de terminal compatible instalado.".to_string())?;
-            return Ok("Terminal iniciada con xdg-terminal-exec.".to_string());
-        }
+        let config = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+        let working_dir = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        return crate::environment::launch_terminal_in_dir(
+            &working_dir,
+            Some(&full_script),
+            Some("Aegis - Actualización del Sistema"),
+            None,
+            config.environment.custom_terminal_cmd.as_deref(),
+        ).map(|msg| format!("{}: actualización iniciada.", msg));
     }
 
     #[cfg(target_os = "windows")]
