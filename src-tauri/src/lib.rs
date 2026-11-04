@@ -11,6 +11,7 @@ mod tray;
 mod notifications;
 mod backup;
 mod sync;
+mod plugins;
 
 #[tauri::command]
 fn ping() -> String {
@@ -160,7 +161,15 @@ pub fn run() {
             sync::generate_new_pairing_pin,
             sync::pair_with_remote_peer,
             sync::trigger_p2p_replicate,
-            sync::unpair_peer_device
+            sync::unpair_peer_device,
+            plugins::list_installed_community_plugins,
+            plugins::install_plugin_package,
+            plugins::install_plugin_from_url,
+            plugins::uninstall_community_plugin,
+            plugins::toggle_community_plugin,
+            plugins::create_plugin_scaffold,
+            plugins::open_plugins_directory,
+            plugins::fetch_community_plugins_catalog
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {

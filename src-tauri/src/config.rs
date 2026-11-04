@@ -227,6 +227,8 @@ pub struct AegisConfig {
     pub enabled_modules: EnabledModulesConfig,
     #[serde(default)]
     pub p2p_sync: P2pSyncConfig,
+    #[serde(default)]
+    pub community_plugins_enabled: std::collections::HashMap<String, bool>,
 }
 
 pub fn default_config() -> AegisConfig {
@@ -275,6 +277,7 @@ pub fn default_config() -> AegisConfig {
         notifications: NotificationsConfig::default(),
         enabled_modules: EnabledModulesConfig::default(),
         p2p_sync: P2pSyncConfig::default(),
+        community_plugins_enabled: std::collections::HashMap::new(),
     }
 }
 

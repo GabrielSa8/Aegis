@@ -1,0 +1,67 @@
+[
+  {
+    "id": "crypto-live-ticker",
+    "name": "Crypto Live Ticker",
+    "version": "1.0.2",
+    "description": "Monitor en vivo de precios BTC, ETH y SOL con micro-sparklines en el dock superior.",
+    "author": "AegisLab",
+    "category": "Finanzas",
+    "downloadUrl": "",
+    "icon": "Coins",
+    "stars": 142,
+    "downloads": 1250,
+    "permissions": ["network"]
+  },
+  {
+    "id": "weather-radar-hud",
+    "name": "Weather Radar HUD",
+    "version": "1.1.0",
+    "description": "Widget meteorológico minimalista y satelital sin APIs de pago ni rastreo.",
+    "author": "NordicSovereign",
+    "category": "Utilidades",
+    "downloadUrl": "",
+    "icon": "CloudRain",
+    "stars": 89,
+    "downloads": 870,
+    "permissions": ["network"]
+  },
+  {
+    "id": "spotify-mini-controller",
+    "name": "Spotify Mini Controller",
+    "version": "2.0.1",
+    "description": "Control de reproducción nativo para Spotify y clientes MPRIS Linux desde la cabecera.",
+    "author": "AegisLab",
+    "category": "Gaming",
+    "downloadUrl": "",
+    "icon": "Music",
+    "stars": 215,
+    "downloads": 2400,
+    "permissions": ["system:info"]
+  },
+  {
+    "id": "pomodoro-led-sync",
+    "name": "Pomodoro LED Sync",
+    "version": "1.0.0",
+    "description": "Sincronizador de sesiones de enfoque con teclados RGB y notificaciones sutiles de sonido.",
+    "author": "HackerFlow",
+    "category": "Productividad",
+    "downloadUrl": "",
+    "icon": "Timer",
+    "stars": 64,
+    "downloads": 530,
+    "permissions": ["system:info"]
+  },
+  {
+    "id": "github-activity-radar",
+    "name": "GitHub Activity Radar",
+    "version": "1.2.4",
+    "description": "Feed de actividad en tiempo real de tus repositorios y pull requests asignados.",
+    "author": "DevOpsMatrix",
+    "category": "DevOps",
+    "downloadUrl": "",
+    "icon": "GitPullRequest",
+    "stars": 178,
+    "downloads": 1890,
+    "permissions": ["network"]
+  }
+]

@@ -77,7 +77,7 @@ pub fn init_p2p_background_services() {
     let peers_map = get_peers_map();
 
     // 1. Iniciar loop de fondo para broadcast y descubrimiento UDP
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         loop {
             let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
             if !config.p2p_sync.enabled {
@@ -113,7 +113,7 @@ pub fn init_p2p_background_services() {
             let my_name_send = my_name.clone();
 
             // Tarea emisora de beacon cada 3 segundos
-            let beacon_handle = tokio::spawn(async move {
+            let beacon_handle = tauri::async_runtime::spawn(async move {
                 let target: SocketAddr = format!("255.255.255.255:{}", disc_port).parse().unwrap();
                 while P2P_ACTIVE.load(Ordering::Relaxed) {
                     let beacon = BeaconPayload {
@@ -174,7 +174,7 @@ pub fn init_p2p_background_services() {
     });
 
     // 2. Iniciar servidor TCP/HTTP ligero para transferencias P2P
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         loop {
             let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
             if !config.p2p_sync.enabled {
@@ -196,7 +196,7 @@ pub fn init_p2p_background_services() {
 
             while P2P_ACTIVE.load(Ordering::Relaxed) {
                 if let Ok((mut stream, addr)) = listener.accept().await {
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         let _ = handle_peer_connection(&mut stream, addr).await;
                     });
                 }

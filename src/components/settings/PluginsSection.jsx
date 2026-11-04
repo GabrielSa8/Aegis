@@ -5,7 +5,7 @@ import { CORE_MODULES, OPTIONAL_PLUGINS, DEFAULT_ENABLED_MODULES } from '../../p
 import PluginsHeader from './plugins/PluginsHeader';
 import CoreModuleCard from './plugins/CoreModuleCard';
 import PluginCard from './plugins/PluginCard';
-import PluginsMarketplaceBanner from './plugins/PluginsMarketplaceBanner';
+import CommunityPluginsDeck from './plugins/CommunityPluginsDeck';
 
 export default function PluginsSection({ config, setConfig }) {
   const [feedbackMsg, setFeedbackMsg] = useState(null);
@@ -109,8 +109,8 @@ export default function PluginsSection({ config, setConfig }) {
         </div>
       </div>
 
-      {/* 🚀 3. Vista Previa de Tienda & Sideloading (Fase G.5) */}
-      <PluginsMarketplaceBanner onFeedback={showFeedback} />
+      {/* 🚀 3. Ecosistema de Extensiones y Sideloading (Fase G.5.1) */}
+      <CommunityPluginsDeck />
     </div>
   );
 }
