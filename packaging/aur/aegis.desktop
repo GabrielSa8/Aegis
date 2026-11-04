@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Aegis
+Comment=The Sovereign Cognitive Desktop Cockpit & Master Command Center
+Exec=aegis %U
+Icon=com.aegis.cockpit
+Terminal=false
+Type=Application
+Categories=Utility;Development;System;Office;
+StartupNotify=true
+StartupWMClass=aegis
+Keywords=Obsidian;Cockpit;DevOps;Centinela;LifeOS;Agent;Gaming;
+MimeType=x-scheme-handler/aegis;

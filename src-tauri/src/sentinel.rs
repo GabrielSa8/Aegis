@@ -838,32 +838,55 @@ pub fn kill_process(pid: u32, signal: Option<i32>) -> Result<String, String> {
         return Err("Operación denegada: Proceso crítico o Aegis.".to_string());
     }
 
-    let sig = signal.unwrap_or(15);
-    let status = std::process::Command::new("kill")
-        .arg(format!("-{}", sig))
-        .arg(pid.to_string())
-        .status()
-        .map_err(|e| format!("Error enviando señal -{}: {}", sig, e))?;
-
-    if status.success() {
-        Ok(format!("Proceso {} terminado (señal -{}).", pid, sig))
-    } else {
-        // Fallback forzado
-        let _ = std::process::Command::new("kill")
-            .arg("-9")
+    #[cfg(target_os = "windows")]
+    {
+        let status = std::process::Command::new("taskkill")
+            .arg("/F")
+            .arg("/PID")
             .arg(pid.to_string())
-            .status();
-        Ok(format!("Proceso {} forzado con SIGKILL (-9).", pid))
+            .status()
+            .map_err(|e| format!("Error en taskkill: {}", e))?;
+
+        if status.success() {
+            return Ok(format!("Proceso {} terminado con taskkill.", pid));
+        } else {
+            return Err(format!("No se pudo terminar el proceso {} con taskkill.", pid));
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let sig = signal.unwrap_or(15);
+        let status = std::process::Command::new("kill")
+            .arg(format!("-{}", sig))
+            .arg(pid.to_string())
+            .status()
+            .map_err(|e| format!("Error enviando señal -{}: {}", sig, e))?;
+
+        if status.success() {
+            Ok(format!("Proceso {} terminado (señal -{}).", pid, sig))
+        } else {
+            // Fallback forzado
+            let _ = std::process::Command::new("kill")
+                .arg("-9")
+                .arg(pid.to_string())
+                .status();
+            Ok(format!("Proceso {} forzado con SIGKILL (-9).", pid))
+        }
     }
 }
 
 #[tauri::command]
 pub fn clean_system_memory() -> Result<String, String> {
+    #[cfg(unix)]
     let _ = std::process::Command::new("sync").status();
+
+    #[cfg(target_os = "linux")]
     if std::path::Path::new("/sys/block/zram0/compact").exists() {
         let _ = fs::write("/sys/block/zram0/compact", "1");
     }
-    Ok("Sincronización I/O y compactación ZRAM completadas.".to_string())
+
+    Ok("Sincronización I/O y memoria completadas.".to_string())
 }
 
 // ==========================================

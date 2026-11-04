@@ -1,0 +1,38 @@
+app-id: com.aegis.cockpit
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+command: aegis
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --share=network
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --filesystem=xdg-documents:rw
+  - --filesystem=xdg-config/aegis:create
+  - --filesystem=xdg-data/aegis:create
+  - --filesystem=~/.steam:ro
+  - --filesystem=~/.local/share/Steam:ro
+
+modules:
+  - name: aegis
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 aegis /app/bin/aegis
+      - install -Dm644 com.aegis.cockpit.desktop /app/share/applications/com.aegis.cockpit.desktop
+      - install -Dm644 com.aegis.cockpit.metainfo.xml /app/share/metainfo/com.aegis.cockpit.metainfo.xml
+      - install -Dm644 icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.aegis.cockpit.png
+    sources:
+      - type: file
+        path: ../../src-tauri/target/release/aegis
+      - type: file
+        path: com.aegis.cockpit.desktop
+      - type: file
+        path: com.aegis.cockpit.metainfo.xml
+      - type: file
+        path: ../../src-tauri/icons/128x128.png
+        dest-filename: icons/128x128.png

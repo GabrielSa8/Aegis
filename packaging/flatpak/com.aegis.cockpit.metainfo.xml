@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.aegis.cockpit</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Aegis</name>
+  <summary>The Sovereign Cognitive Desktop Cockpit &amp; Master Command Center</summary>
+  <description>
+    <p>
+      Aegis is an ultra-fast, local-first sovereign desktop command center built with Tauri v2 and React.
+      It combines an Omnichannel AI Agent with real-time reasoning and tool interception, an Obsidian Vault
+      knowledge engine with interactive graph, personal finance and Burn-Rate ledger, Git fleet management,
+      Centinela hardware and process monitor, and a Steam/offline gaming nexus with launcher acceleration.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.aegis.cockpit.desktop</launchable>
+  <developer id="com.aegis">
+    <name>Gabriel</name>
+  </developer>
+  <url type="homepage">https://github.com/GabrielSa8/Aegis</url>
+  <url type="bugtracker">https://github.com/GabrielSa8/Aegis/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/GabrielSa8/Aegis/main/docs/screenshot.png</image>
+      <caption>Aegis Master Cockpit &amp; Omnibar</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="2.8.0" date="2026-11-03">
+      <description>
+        <p>Phase G.1 &amp; Phase 7.6 release: Auto game session watcher, multi-platform abstractions and packaging support.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

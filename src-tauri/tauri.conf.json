@@ -47,5 +47,13 @@
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE5RkUwREQ4OUI4REVBQ0MKUlVSSGlaa0QvRWx2V3Nqb3c4TkJ6L2c5Z0kydG81YkJmZ2tzV2M5c1d6RDBhUkZ1aGtYUXN2NzkK",
+      "endpoints": [
+        "https://github.com/GabrielSa8/Aegis/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

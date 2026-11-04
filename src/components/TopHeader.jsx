@@ -8,11 +8,23 @@ import {
   PinOff,
   Minus
 } from 'lucide-react';
+import { useAppUpdater, UpdateCockpitPill, UpdateModal } from './updater';
 
 export default function TopHeader({ 
   onOpenSettings,
   onOpenCommandPalette
 }) {
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const {
+    status: updateStatus,
+    updateInfo,
+    downloadProgress,
+    errorMessage: updateError,
+    downloadAndInstall,
+    restartApp,
+    dismiss: dismissUpdate
+  } = useAppUpdater();
+
   const [isPinned, setIsPinned] = useState(() => {
     try {
       return localStorage.getItem('aegis_top_dock_pinned') === 'true';
@@ -141,6 +153,16 @@ export default function TopHeader({
             <kbd style={{ fontFamily: 'inherit', color: 'var(--text-high)', fontSize: '0.64rem' }}>Ctrl+K</kbd>
           </button>
 
+          {/* Indicador Táctico de Actualización (G.1.3) */}
+          <UpdateCockpitPill
+            status={updateStatus}
+            updateInfo={updateInfo}
+            downloadProgress={downloadProgress}
+            onOpenModal={() => setIsUpdateModalOpen(true)}
+            onRestart={restartApp}
+            onDismiss={dismissUpdate}
+          />
+
           {/* Opciones / Ajustes (Ctrl + ,) */}
           <button
             onClick={onOpenSettings}
@@ -224,6 +246,18 @@ export default function TopHeader({
           </button>
         </div>
       </div>
+
+      {/* Modal Táctico de Novedades y Actualización */}
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        status={updateStatus}
+        updateInfo={updateInfo}
+        downloadProgress={downloadProgress}
+        errorMessage={updateError}
+        onDownloadAndInstall={downloadAndInstall}
+        onRestart={restartApp}
+      />
     </aside>
   );
 }

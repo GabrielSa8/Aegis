@@ -1,0 +1,25 @@
+pkgbase = aegis-bin
+	pkgdesc = Aegis — The Sovereign Cognitive Desktop Cockpit & Master Command Center
+	pkgver = 2.8.0
+	pkgrel = 1
+	url = https://github.com/GabrielSa8/Aegis
+	arch = x86_64
+	license = MIT
+	depends = gtk3
+	depends = webkit2gtk-4.1
+	depends = openssl
+	depends = libayatana-appindicator
+	optdepends = steam: Steam catalog integration
+	optdepends = gamemode: Low-latency gaming accelerator
+	optdepends = gamescope: Micro-compositor for resolution upscaling
+	optdepends = mangohud: Hardware HUD telemetry overlay
+	optdepends = podman: Container daemon management
+	optdepends = android-tools: Android ADB daemon status
+	provides = aegis
+	conflicts = aegis
+	source = https://github.com/GabrielSa8/Aegis/releases/download/v2.8.0/aegis_2.8.0_amd64.tar.gz
+	source = aegis.desktop
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = aegis-bin

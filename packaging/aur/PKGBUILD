@@ -1,0 +1,31 @@
+# Maintainer: Gabriel <https://github.com/GabrielSa8>
+pkgname=aegis-bin
+pkgver=2.8.0
+pkgrel=1
+pkgdesc="Aegis — The Sovereign Cognitive Desktop Cockpit & Master Command Center"
+arch=('x86_64')
+url="https://github.com/GabrielSa8/Aegis"
+license=('MIT')
+depends=('gtk3' 'webkit2gtk-4.1' 'openssl' 'libayatana-appindicator')
+optdepends=(
+    'steam: Steam catalog integration'
+    'gamemode: Low-latency gaming accelerator'
+    'gamescope: Micro-compositor for resolution upscaling'
+    'mangohud: Hardware HUD telemetry overlay'
+    'podman: Container daemon management'
+    'android-tools: Android ADB daemon status'
+)
+provides=('aegis')
+conflicts=('aegis')
+source=("https://github.com/GabrielSa8/Aegis/releases/download/v${pkgver}/aegis_${pkgver}_amd64.tar.gz"
+        "aegis.desktop")
+sha256sums=('SKIP'
+            'SKIP')
+
+package() {
+    install -Dm755 "${srcdir}/aegis" "${pkgdir}/usr/bin/aegis"
+    install -Dm644 "${srcdir}/aegis.desktop" "${pkgdir}/usr/share/applications/com.aegis.cockpit.desktop"
+    if [ -f "${srcdir}/128x128.png" ]; then
+        install -Dm644 "${srcdir}/128x128.png" "${pkgdir}/usr/share/icons/hicolor/128x128/apps/com.aegis.cockpit.png"
+    fi
+}

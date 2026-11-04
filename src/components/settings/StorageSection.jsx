@@ -1,5 +1,6 @@
 import { formatBytes } from './settingsHelpers';
 import SystemBackupCard from './SystemBackupCard';
+import UpdateSettingsCard from './UpdateSettingsCard';
 
 export default function StorageSection({ config, setConfig, storageStats, purgeStatus, onPurgeCaches }) {
   if (!config) return null;
@@ -87,6 +88,9 @@ export default function StorageSection({ config, setConfig, storageStats, purgeS
 
       {/* Respaldo Soberano 3-2-1 */}
       <SystemBackupCard />
+
+      {/* Auto-Actualizaciones de Sistema (G.1.3) */}
+      <UpdateSettingsCard />
     </div>
   );
 }
