@@ -185,6 +185,49 @@ impl Default for P2pSyncConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TelegramGatewayConfig {
+    #[serde(default = "default_false")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub bot_token: String,
+    #[serde(default)]
+    pub authorized_chat_id: Option<i64>,
+    #[serde(default)]
+    pub pairing_code: String,
+    #[serde(default = "default_true")]
+    pub notify_on_start: bool,
+    #[serde(default = "default_true")]
+    pub allow_expenses: bool,
+    #[serde(default = "default_true")]
+    pub allow_tasks: bool,
+    #[serde(default = "default_true")]
+    pub allow_ai_queries: bool,
+    #[serde(default = "default_gateway_inbox")]
+    pub inbox_file: String,
+}
+
+fn default_gateway_inbox() -> String {
+    "00 Sistema/Inbox.md".to_string()
+}
+
+impl Default for TelegramGatewayConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            bot_token: String::new(),
+            authorized_chat_id: None,
+            pairing_code: "582914".to_string(),
+            notify_on_start: true,
+            allow_expenses: true,
+            allow_tasks: true,
+            allow_ai_queries: true,
+            inbox_file: default_gateway_inbox(),
+        }
+    }
+}
+
 pub fn get_config_file_path_internal() -> PathBuf {
     get_config_file_path()
 }
@@ -227,6 +270,8 @@ pub struct AegisConfig {
     pub enabled_modules: EnabledModulesConfig,
     #[serde(default)]
     pub p2p_sync: P2pSyncConfig,
+    #[serde(default)]
+    pub telegram_gateway: TelegramGatewayConfig,
     #[serde(default)]
     pub community_plugins_enabled: std::collections::HashMap<String, bool>,
 }
@@ -277,6 +322,7 @@ pub fn default_config() -> AegisConfig {
         notifications: NotificationsConfig::default(),
         enabled_modules: EnabledModulesConfig::default(),
         p2p_sync: P2pSyncConfig::default(),
+        telegram_gateway: TelegramGatewayConfig::default(),
         community_plugins_enabled: std::collections::HashMap::new(),
     }
 }

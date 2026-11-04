@@ -12,6 +12,7 @@ mod notifications;
 mod backup;
 mod sync;
 mod plugins;
+pub mod gateway;
 
 #[tauri::command]
 fn ping() -> String {
@@ -169,7 +170,13 @@ pub fn run() {
             plugins::toggle_community_plugin,
             plugins::create_plugin_scaffold,
             plugins::open_plugins_directory,
-            plugins::fetch_community_plugins_catalog
+            plugins::fetch_community_plugins_catalog,
+            gateway::test_telegram_bot_token,
+            gateway::get_telegram_gateway_status,
+            gateway::generate_new_gateway_pairing_pin,
+            gateway::unpair_telegram_gateway_chat,
+            gateway::start_telegram_gateway_daemon,
+            gateway::stop_telegram_gateway_daemon
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
@@ -188,6 +195,16 @@ pub fn run() {
 
             // Inicializar Sincronización Soberana P2P en background
             sync::init_p2p_background_services();
+
+            // Auto-arrancar Gateway de Telegram si está habilitado
+            if let Ok(cfg) = config::get_aegis_config() {
+                if cfg.telegram_gateway.enabled && !cfg.telegram_gateway.bot_token.trim().is_empty() {
+                    let handle = app.handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _ = gateway::start_telegram_gateway_daemon(handle).await;
+                    });
+                }
+            }
 
             // Si el usuario configuró iniciar minimizado
             if let Ok(cfg) = config::get_aegis_config() {

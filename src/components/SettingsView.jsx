@@ -10,6 +10,7 @@ import {
   GamingSection,
   PluginsSection,
   P2pSyncSection,
+  TelegramGatewaySection,
   useSettings
 } from './settings';
 
@@ -79,6 +80,8 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         );
       case 'p2p':
         return <P2pSyncSection />;
+      case 'gateway':
+        return <TelegramGatewaySection />;
       case 'ai':
         return (
           <AiBudgetSection

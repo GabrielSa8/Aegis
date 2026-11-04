@@ -7,7 +7,8 @@ import {
   Bell, 
   Gamepad2,
   Puzzle,
-  Radio
+  Radio,
+  Send
 } from 'lucide-react';
 
 export const THEMES = [
@@ -78,6 +79,7 @@ export const SECTIONS = [
   { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
   { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },
   { id: 'p2p', label: 'Sincronización P2P', icon: Radio },
+  { id: 'gateway', label: 'Gateway Telegram', icon: Send },
   { id: 'ai', label: 'Motores IA & Presupuesto', icon: Bot },
   { id: 'devops', label: 'Flota Git & DevOps', icon: GitBranch },
   { id: 'notifications', label: 'Notificaciones SO', icon: Bell },

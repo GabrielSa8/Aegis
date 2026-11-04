@@ -9,5 +9,6 @@ export { default as NotificationsSection } from './NotificationsSection';
 export { default as GamingSection } from './GamingSection';
 export { default as PluginsSection } from './PluginsSection';
 export { default as P2pSyncSection } from './p2p/P2pSyncSection';
+export { TelegramGatewaySection } from './gateway';
 export { useSettings } from './useSettings';
 export * from './settingsHelpers';
