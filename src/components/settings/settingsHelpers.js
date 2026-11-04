@@ -6,7 +6,8 @@ import {
   GitBranch, 
   Bell, 
   Gamepad2,
-  Puzzle 
+  Puzzle,
+  Radio
 } from 'lucide-react';
 
 export const THEMES = [
@@ -76,6 +77,7 @@ export const SECTIONS = [
   { id: 'plugins', label: 'Plugins & Módulos', icon: Puzzle },
   { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
   { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },
+  { id: 'p2p', label: 'Sincronización P2P', icon: Radio },
   { id: 'ai', label: 'Motores IA & Presupuesto', icon: Bot },
   { id: 'devops', label: 'Flota Git & DevOps', icon: GitBranch },
   { id: 'notifications', label: 'Notificaciones SO', icon: Bell },

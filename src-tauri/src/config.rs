@@ -125,6 +125,66 @@ fn default_false() -> bool {
     false
 }
 
+fn default_device_name() -> String {
+    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "Aegis-Host".to_string());
+    format!("Dispositivo {}", hostname)
+}
+
+fn default_discovery_port() -> u16 {
+    53317
+}
+
+fn default_sync_port() -> u16 {
+    53318
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrustedDevice {
+    pub id: String,
+    pub name: String,
+    pub ip: String,
+    pub pairing_code: String,
+    pub approved: bool,
+    pub last_synced_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P2pSyncConfig {
+    #[serde(default = "default_false")]
+    pub enabled: bool,
+    #[serde(default = "default_device_name")]
+    pub device_name: String,
+    #[serde(default = "default_discovery_port")]
+    pub discovery_port: u16,
+    #[serde(default = "default_sync_port")]
+    pub sync_port: u16,
+    #[serde(default)]
+    pub pairing_pin: String,
+    #[serde(default)]
+    pub trusted_devices: Vec<TrustedDevice>,
+    #[serde(default = "default_true")]
+    pub sync_database: bool,
+    #[serde(default = "default_false")]
+    pub sync_vault: bool,
+}
+
+impl Default for P2pSyncConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            device_name: default_device_name(),
+            discovery_port: default_discovery_port(),
+            sync_port: default_sync_port(),
+            pairing_pin: "749201".to_string(),
+            trusted_devices: Vec::new(),
+            sync_database: true,
+            sync_vault: false,
+        }
+    }
+}
+
 pub fn get_config_file_path_internal() -> PathBuf {
     get_config_file_path()
 }
@@ -165,6 +225,8 @@ pub struct AegisConfig {
     pub notifications: NotificationsConfig,
     #[serde(default)]
     pub enabled_modules: EnabledModulesConfig,
+    #[serde(default)]
+    pub p2p_sync: P2pSyncConfig,
 }
 
 pub fn default_config() -> AegisConfig {
@@ -212,6 +274,7 @@ pub fn default_config() -> AegisConfig {
         fallback_entries: Vec::new(),
         notifications: NotificationsConfig::default(),
         enabled_modules: EnabledModulesConfig::default(),
+        p2p_sync: P2pSyncConfig::default(),
     }
 }
 

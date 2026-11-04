@@ -9,6 +9,7 @@ import {
   NotificationsSection,
   GamingSection,
   PluginsSection,
+  P2pSyncSection,
   useSettings
 } from './settings';
 
@@ -76,6 +77,8 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
             onPurgeCaches={handlePurgeCaches}
           />
         );
+      case 'p2p':
+        return <P2pSyncSection />;
       case 'ai':
         return (
           <AiBudgetSection

@@ -10,6 +10,7 @@ mod cortex;
 mod tray;
 mod notifications;
 mod backup;
+mod sync;
 
 #[tauri::command]
 fn ping() -> String {
@@ -152,7 +153,14 @@ pub fn run() {
             notifications::send_desktop_notification,
             backup::create_system_backup,
             backup::list_system_backups,
-            backup::restore_system_backup
+            backup::restore_system_backup,
+            sync::get_p2p_sync_status,
+            sync::toggle_p2p_sync,
+            sync::update_p2p_device_name,
+            sync::generate_new_pairing_pin,
+            sync::pair_with_remote_peer,
+            sync::trigger_p2p_replicate,
+            sync::unpair_peer_device
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
@@ -168,6 +176,9 @@ pub fn run() {
             if let Err(e) = tray::create_tray(app.handle()) {
                 eprintln!("[Aegis Tray Warning]: No se pudo inicializar tray icon: {}", e);
             }
+
+            // Inicializar Sincronización Soberana P2P en background
+            sync::init_p2p_background_services();
 
             // Si el usuario configuró iniciar minimizado
             if let Ok(cfg) = config::get_aegis_config() {
