@@ -1,6 +1,7 @@
 import { Gauge, ExternalLink, Bot, ShieldAlert } from 'lucide-react';
 import { BILLING_LINKS } from './settingsHelpers';
 import FallbackChainSection from './FallbackChainSection';
+import ApiCredentialsCard from './ApiCredentialsCard';
 
 export default function AiBudgetSection({ config, setConfig, updateTokenBudget, onOpenExternal }) {
   if (!config) return null;
@@ -49,12 +50,15 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
               style={{ fontSize: '0.78rem' }}
             >
               <option value="agy">Google Antigravity CLI (agy) — Integrado nativo</option>
-              <option value="claude">Claude Code (claude)</option>
+              <option value="deepseek">DeepSeek (V3 / R1) — API Soberana</option>
+              <option value="anthropic">Anthropic Claude (Haiku / Sonnet / Opus)</option>
+              <option value="openai">OpenAI (4o / 4o-mini / o3-mini)</option>
+              <option value="openrouter">OpenRouter (Multi-Proveedor Agregado)</option>
               <option value="ollama">Ollama Local (Offline / Privado)</option>
               <option value="custom">Comando Shell Personalizado</option>
             </select>
             <p style={{ fontSize: '0.67rem', color: 'var(--text-muted)', margin: 0 }}>
-              Antigravity opera localmente con auto-aprobación y razonamiento avanzado.
+              Antigravity, DeepSeek, Claude, OpenAI u Ollama con selección dinámica de tiers.
             </p>
 
             {config.agentType === 'custom' && (
@@ -75,6 +79,9 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
 
           {/* Cadena Fallback de Proveedores */}
           <FallbackChainSection config={config} setConfig={setConfig} />
+
+          {/* Autenticación Soberana y API Keys */}
+          <ApiCredentialsCard onOpenExternal={onOpenExternal} />
         </div>
 
         {/* Columna Derecha: Presupuesto & Facturación */}

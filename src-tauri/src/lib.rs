@@ -13,6 +13,7 @@ pub mod notifications_cron;
 mod backup;
 mod sync;
 mod plugins;
+pub mod ai_providers;
 pub mod gateway;
 pub mod security;
 pub mod environment;
@@ -189,7 +190,10 @@ pub fn run() {
             security::update_security_policies,
             security::record_vault_activity,
             environment::get_installed_environment_tools,
-            environment::test_environment_tool
+            environment::test_environment_tool,
+            ai_providers::get_ai_providers,
+            ai_providers::get_api_credentials,
+            ai_providers::save_provider_api_key
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {

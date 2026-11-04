@@ -315,6 +315,8 @@ pub struct AegisConfig {
     pub environment: crate::environment::EnvironmentConfig,
     #[serde(default)]
     pub community_plugins_enabled: std::collections::HashMap<String, bool>,
+    #[serde(default)]
+    pub api_keys: std::collections::HashMap<String, String>,
 }
 
 pub fn default_config() -> AegisConfig {
@@ -367,6 +369,7 @@ pub fn default_config() -> AegisConfig {
         security: SecurityConfig::default(),
         environment: crate::environment::EnvironmentConfig::default(),
         community_plugins_enabled: std::collections::HashMap::new(),
+        api_keys: std::collections::HashMap::new(),
     }
 }
 

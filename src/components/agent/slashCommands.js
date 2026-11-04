@@ -217,6 +217,142 @@ export const PROVIDER_COMMANDS = {
       category: 'Motor'
     }
   ],
+  deepseek: [
+    {
+      id: 'compact',
+      command: '/compact',
+      label: 'Compactar Contexto',
+      desc: 'Comprime el historial del chat',
+      icon: 'Minimize2',
+      category: 'Contexto'
+    },
+    {
+      id: 'model',
+      command: '/model',
+      label: 'Modelo DeepSeek',
+      desc: 'Inspecciona o conmuta el modelo activo de DeepSeek',
+      icon: 'Brain',
+      category: 'Motor'
+    },
+    {
+      id: 'model-chat',
+      command: '/model chat',
+      label: 'Modelo: DeepSeek V3 (Chat)',
+      desc: 'Conmutar a DeepSeek V3 MoE balanceado',
+      icon: 'Zap',
+      category: 'Motor'
+    },
+    {
+      id: 'model-r1',
+      command: '/model r1',
+      label: 'Modelo: DeepSeek R1 (Reasoner)',
+      desc: 'Conmutar a DeepSeek R1 con cadena de razonamiento pura',
+      icon: 'Brain',
+      category: 'Motor'
+    }
+  ],
+  anthropic: [
+    {
+      id: 'compact',
+      command: '/compact',
+      label: 'Compactar Contexto',
+      desc: 'Comprime el historial de la conversación',
+      icon: 'Minimize2',
+      category: 'Contexto'
+    },
+    {
+      id: 'model',
+      command: '/model',
+      label: 'Modelo Claude',
+      desc: 'Inspecciona o conmuta el modelo activo en Claude',
+      icon: 'Zap',
+      category: 'Motor'
+    },
+    {
+      id: 'model-sonnet',
+      command: '/model sonnet',
+      label: 'Modelo: Claude 3.5 Sonnet',
+      desc: 'Conmutar a Claude 3.5 Sonnet para desarrollo',
+      icon: 'Code',
+      category: 'Motor'
+    },
+    {
+      id: 'model-opus',
+      command: '/model opus',
+      label: 'Modelo: Claude 3 Opus',
+      desc: 'Conmutar a Claude 3 Opus para cognición profunda',
+      icon: 'Sparkles',
+      category: 'Motor'
+    },
+    {
+      id: 'model-haiku',
+      command: '/model haiku',
+      label: 'Modelo: Claude 3.5 Haiku',
+      desc: 'Conmutar a Claude 3.5 Haiku ultrarrápido',
+      icon: 'Zap',
+      category: 'Motor'
+    }
+  ],
+  openai: [
+    {
+      id: 'compact',
+      command: '/compact',
+      label: 'Compactar Contexto',
+      desc: 'Comprime el historial de la conversación',
+      icon: 'Minimize2',
+      category: 'Contexto'
+    },
+    {
+      id: 'model',
+      command: '/model',
+      label: 'Modelo OpenAI',
+      desc: 'Inspecciona o conmuta el modelo activo de OpenAI',
+      icon: 'Sparkles',
+      category: 'Motor'
+    },
+    {
+      id: 'model-4o',
+      command: '/model 4o',
+      label: 'Modelo: GPT-4o Omnimodal',
+      desc: 'Conmutar a GPT-4o balanceado',
+      icon: 'Sparkles',
+      category: 'Motor'
+    },
+    {
+      id: 'model-mini',
+      command: '/model mini',
+      label: 'Modelo: GPT-4o Mini',
+      desc: 'Conmutar a GPT-4o Mini ultra-ligero',
+      icon: 'Zap',
+      category: 'Motor'
+    },
+    {
+      id: 'model-o3',
+      command: '/model o3',
+      label: 'Modelo: OpenAI o3-mini',
+      desc: 'Conmutar a OpenAI o3-mini (High Reasoning)',
+      icon: 'Brain',
+      category: 'Motor'
+    }
+  ],
+  openrouter: [
+    {
+      id: 'compact',
+      command: '/compact',
+      label: 'Compactar Contexto',
+      desc: 'Comprime el historial del chat',
+      icon: 'Minimize2',
+      category: 'Contexto'
+    },
+    {
+      id: 'model',
+      command: '/model',
+      label: 'Modelo OpenRouter',
+      desc: 'Inspecciona o conmuta el modelo activo vía OpenRouter',
+      icon: 'Globe',
+      category: 'Motor'
+    }
+  ],
   custom: [
     {
       id: 'compact',

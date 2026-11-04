@@ -129,6 +129,135 @@ export const PROVIDER_MODELS = {
       effort: 'low'
     }
   ],
+  deepseek: [
+    {
+      id: 'deepseek-chat',
+      alias: 'chat',
+      shortLabel: 'DeepSeek V3',
+      name: 'DeepSeek V3 (Chat)',
+      provider: 'DeepSeek',
+      family: 'DeepSeek',
+      badge: '⚡ Balanceado',
+      desc: 'Modelo MoE general ultrarrápido y coste ultra-eficiente para tareas continuas.',
+      effort: 'medium'
+    },
+    {
+      id: 'deepseek-reasoner',
+      alias: 'r1',
+      shortLabel: 'DeepSeek R1',
+      name: 'DeepSeek R1 (Reasoner)',
+      provider: 'DeepSeek',
+      family: 'DeepSeek',
+      badge: '🧠 Razonamiento',
+      desc: 'Cadena de razonamiento CoT pura y benchmark de frontera para arquitectura y matemáticas.',
+      effort: 'high'
+    }
+  ],
+  anthropic: [
+    {
+      id: 'claude-3-5-haiku-20241022',
+      alias: 'haiku',
+      shortLabel: 'Haiku 3.5',
+      name: 'Claude 3.5 Haiku',
+      provider: 'Anthropic',
+      family: 'Claude',
+      badge: '⚡ Flash',
+      desc: 'Velocidad extrema y baja latencia para respuestas directas y triage.',
+      effort: 'low'
+    },
+    {
+      id: 'claude-3-5-sonnet-20241022',
+      alias: 'sonnet',
+      shortLabel: 'Sonnet 3.5',
+      name: 'Claude 3.5 Sonnet',
+      provider: 'Anthropic',
+      family: 'Claude',
+      badge: '⚡ Código',
+      desc: 'Modelo insignia para desarrollo de software, testing y refactorización.',
+      effort: 'medium'
+    },
+    {
+      id: 'claude-3-opus-20240229',
+      alias: 'opus',
+      shortLabel: 'Opus 3',
+      name: 'Claude 3 Opus',
+      provider: 'Anthropic',
+      family: 'Claude',
+      badge: '🧠 Cognición',
+      desc: 'Máxima profundidad conceptual y razonamiento complejo sobre bases de código masivas.',
+      effort: 'high'
+    }
+  ],
+  openai: [
+    {
+      id: 'gpt-4o-mini',
+      alias: 'mini',
+      shortLabel: '4o Mini',
+      name: 'GPT-4o Mini',
+      provider: 'OpenAI',
+      family: 'GPT',
+      badge: '⚡ Flash',
+      desc: 'Ligero, rápido y económico para operaciones directas.',
+      effort: 'low'
+    },
+    {
+      id: 'gpt-4o',
+      alias: '4o',
+      shortLabel: 'GPT-4o',
+      name: 'GPT-4o Omnimodal',
+      provider: 'OpenAI',
+      family: 'GPT',
+      badge: '⚡ Balanceado',
+      desc: 'Modelo multimodal insignia equilibrado para razonamiento, visión y código.',
+      effort: 'medium'
+    },
+    {
+      id: 'o3-mini',
+      alias: 'o3',
+      shortLabel: 'o3 Mini',
+      name: 'OpenAI o3-mini (High Reasoning)',
+      provider: 'OpenAI',
+      family: 'GPT',
+      badge: '🧠 Razonamiento',
+      desc: 'Inferencia y razonamiento formal paso a paso para resolución de fallos críticos.',
+      effort: 'high'
+    }
+  ],
+  openrouter: [
+    {
+      id: 'deepseek/deepseek-chat',
+      alias: 'or-deepseek',
+      shortLabel: 'DeepSeek V3',
+      name: 'DeepSeek V3 via OpenRouter',
+      provider: 'DeepSeek (OpenRouter)',
+      family: 'DeepSeek',
+      badge: '🌐 Multi-Cloud',
+      desc: 'Ruta de agregación multi-nube para DeepSeek V3.',
+      effort: 'medium'
+    },
+    {
+      id: 'deepseek/deepseek-r1',
+      alias: 'or-r1',
+      shortLabel: 'DeepSeek R1',
+      name: 'DeepSeek R1 via OpenRouter',
+      provider: 'DeepSeek (OpenRouter)',
+      family: 'DeepSeek',
+      badge: '🧠 Razonamiento',
+      desc: 'Ruta de fallback para DeepSeek R1.',
+      effort: 'high'
+    },
+    {
+      id: 'anthropic/claude-3.5-sonnet',
+      alias: 'or-sonnet',
+      shortLabel: 'Sonnet 3.5 (OR)',
+      name: 'Claude 3.5 Sonnet via OpenRouter',
+      provider: 'Anthropic (OpenRouter)',
+      family: 'Claude',
+      badge: '⚡ Código',
+      desc: 'Claude Sonnet balanceado vía OpenRouter.',
+      effort: 'medium'
+    }
+  ],
   custom: []
 };
 

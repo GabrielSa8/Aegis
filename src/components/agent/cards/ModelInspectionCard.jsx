@@ -32,11 +32,17 @@ function ModelInspectionCard({ activeModel, onSelectModel, agentType = 'agy' }) 
   const CurrentIcon = MODEL_ICONS[currentModel.id] || Zap;
 
   const providerTitle =
-    agentType === 'claude'
-      ? 'Anthropic Claude Code'
-      : agentType === 'ollama'
-        ? 'Ollama Local'
-        : 'Suscripción Google Antigravity';
+    agentType === 'claude' || agentType === 'anthropic'
+      ? 'Anthropic Claude'
+      : agentType === 'deepseek'
+        ? 'DeepSeek (Oficial / Soberano)'
+        : agentType === 'openai'
+          ? 'OpenAI API'
+          : agentType === 'openrouter'
+            ? 'OpenRouter (Multi-Proveedor)'
+            : agentType === 'ollama'
+              ? 'Ollama Local (Offline)'
+              : 'Google Antigravity CLI (agy)';
 
   return (
     <div

@@ -87,11 +87,17 @@ function ModelSelectorDropdown({
   const displayName = (m) => modelDisplayName(m, activeModel);
 
   const providerLabel =
-    agentType === 'claude'
-      ? 'Claude Code'
-      : agentType === 'ollama'
-        ? 'Ollama Local'
-        : 'Suscripción';
+    agentType === 'claude' || agentType === 'anthropic'
+      ? 'Anthropic Claude'
+      : agentType === 'deepseek'
+        ? 'DeepSeek (API)'
+        : agentType === 'openai'
+          ? 'OpenAI'
+          : agentType === 'openrouter'
+            ? 'OpenRouter'
+            : agentType === 'ollama'
+              ? 'Ollama Local'
+              : 'Google Antigravity';
 
   return (
     <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
