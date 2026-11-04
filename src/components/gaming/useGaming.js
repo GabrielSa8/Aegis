@@ -194,8 +194,11 @@ export function useGaming() {
     gamingStatus,
     steamGames,
     customGames,
+    filteredSteam: filteredSteamGames,
+    filteredCustom: filteredCustomGames,
     filteredSteamGames,
     filteredCustomGames,
+    totalTitles: filteredSteamGames.length + filteredCustomGames.length,
     gameStatsMap,
     searchQuery,
     setSearchQuery,
@@ -218,11 +221,20 @@ export function useGaming() {
     gameFormData,
     setGameFormData,
     selectedGameForDetail,
+    openNewGameModal: () => {
+      setGameFormData(INITIAL_GAME_FORM);
+      setShowGameModal(true);
+    },
+    openGameDetail: (game, isSteam = false, initialTab = 'achievements') => {
+      setSelectedGameForDetail({ game, isSteam, initialTab });
+    },
+    closeGameDetail: () => setSelectedGameForDetail(null),
     handleOpenEditModal,
     handleOpenDetailModal,
     handleCloseDetailModal,
     handleSaveCustomGame,
     handleDeleteCustomGame,
+    fetchData,
     refreshStats,
     gamepadConnected
   };
