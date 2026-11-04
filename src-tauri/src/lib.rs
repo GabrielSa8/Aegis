@@ -126,6 +126,7 @@ pub fn run() {
             leisure::get_gaming_status,
             leisure::get_installed_steam_games,
             leisure::launch_game,
+            leisure::cancel_game_session,
             leisure::sqlite_get_custom_games,
             leisure::sqlite_save_custom_game,
             leisure::sqlite_delete_custom_game,

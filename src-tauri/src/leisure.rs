@@ -3,6 +3,10 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter};
 use crate::db::get_db_connection;
 use rusqlite::params;
 
@@ -435,76 +439,314 @@ fn build_accelerated_command(
     }
 }
 
+// ==========================================
+// 🎮 Centinela de Sesión de Juego Automática
+// ==========================================
+
+static ACTIVE_GAME_CANCEL: Mutex<Option<Arc<AtomicBool>>> = Mutex::new(None);
+
+pub fn cancel_current_game_monitor() {
+    if let Ok(mut guard) = ACTIVE_GAME_CANCEL.lock() {
+        if let Some(token) = guard.take() {
+            token.store(true, Ordering::SeqCst);
+        }
+    }
+}
+
+#[tauri::command]
+pub fn cancel_game_session() -> Result<bool, String> {
+    cancel_current_game_monitor();
+    Ok(true)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameSessionAutoEndedPayload {
+    pub game_id: String,
+    pub game_title: String,
+    pub is_steam: bool,
+    pub duration_seconds: i64,
+    pub started_at: String,
+    pub ended_at: String,
+}
+
+fn is_steam_appid_running(target_appid: &str) -> bool {
+    let needle1 = format!("SteamAppId={}", target_appid).into_bytes();
+    let needle2 = format!("SteamGameId={}", target_appid).into_bytes();
+
+    let proc_dir = match std::fs::read_dir("/proc") {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+
+    for entry in proc_dir.flatten() {
+        let file_name = entry.file_name();
+        let name_str = file_name.to_string_lossy();
+        if name_str.chars().all(|c| c.is_ascii_digit()) {
+            let env_path = format!("/proc/{}/environ", name_str);
+            if let Ok(bytes) = std::fs::read(&env_path) {
+                for var in bytes.split(|&b| b == 0) {
+                    if var == needle1.as_slice() || var == needle2.as_slice() {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+fn finish_and_record_auto_session(
+    app: &AppHandle,
+    game_id: &str,
+    game_title: &str,
+    is_steam: bool,
+    duration_seconds: i64,
+    started_at_iso: String,
+) {
+    let ended_at_iso = match get_db_connection() {
+        Ok(conn) => conn
+            .query_row("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')", [], |r| r.get(0))
+            .unwrap_or_else(|_| "now".to_string()),
+        Err(_) => "now".to_string(),
+    };
+
+    let _ = record_game_session(
+        game_id.to_string(),
+        game_title.to_string(),
+        is_steam,
+        duration_seconds,
+        started_at_iso.clone(),
+        ended_at_iso.clone(),
+    );
+
+    let payload = GameSessionAutoEndedPayload {
+        game_id: game_id.to_string(),
+        game_title: game_title.to_string(),
+        is_steam,
+        duration_seconds,
+        started_at: started_at_iso,
+        ended_at: ended_at_iso,
+    };
+    let _ = app.emit("aegis:game-session-auto-ended", payload);
+
+    let mins = std::cmp::max(1, duration_seconds / 60);
+    let _ = crate::notifications::send_desktop_notification(
+        app.clone(),
+        "🎮 Sesión de Juego Finalizada".to_string(),
+        format!("Has jugado a '{}' durante {} min. Sesión guardada.", game_title, mins),
+        None,
+    );
+}
+
 #[tauri::command]
 pub fn launch_game(
-    game_id: String,
+    app: AppHandle,
+    game_id: Option<String>,
+    target: Option<String>,
+    game_title: Option<String>,
+    _is_steam: Option<bool>,
     launch_type: Option<String>,
     launch_target: Option<String>,
-    use_gamemode: bool,
-    use_gamescope_fsr: bool,
+    use_gamemode: Option<bool>,
+    use_gamescope_fsr: Option<bool>,
     use_mangohud: Option<bool>,
     gamescope_res: Option<String>,
 ) -> Result<String, String> {
+    let gamemode_flag = use_gamemode.unwrap_or(true);
+    let gamescope_flag = use_gamescope_fsr.unwrap_or(false);
     let mangohud_flag = use_mangohud.unwrap_or(false);
 
+    let final_game_id = game_id.or(target.clone()).unwrap_or_else(|| "steam".to_string());
+
     let l_type = launch_type.unwrap_or_else(|| {
-        if game_id.starts_with("steam:") || game_id == "steam" {
+        if final_game_id.starts_with("steam:") || final_game_id == "steam" {
             "steam".to_string()
-        } else if game_id.starts_with("http://") || game_id.starts_with("https://") || game_id.starts_with("url:") {
+        } else if final_game_id.starts_with("http://") || final_game_id.starts_with("https://") || final_game_id.starts_with("url:") {
             "url".to_string()
-        } else if game_id.starts_with("flatpak:") {
+        } else if final_game_id.starts_with("flatpak:") {
             "flatpak".to_string()
         } else {
             "cmd".to_string()
         }
     });
 
-    let target = launch_target.unwrap_or_else(|| {
-        if game_id.starts_with("steam:") {
-            game_id[6..].to_string()
-        } else if game_id.starts_with("url:") {
-            game_id[4..].to_string()
-        } else if game_id.starts_with("flatpak:") {
-            game_id[8..].to_string()
-        } else if game_id.starts_with("cmd:") {
-            game_id[4..].to_string()
+    let final_target = launch_target.or(target).unwrap_or_else(|| {
+        if final_game_id.starts_with("steam:") {
+            final_game_id[6..].to_string()
+        } else if final_game_id.starts_with("url:") {
+            final_game_id[4..].to_string()
+        } else if final_game_id.starts_with("flatpak:") {
+            final_game_id[8..].to_string()
+        } else if final_game_id.starts_with("cmd:") {
+            final_game_id[4..].to_string()
         } else {
-            game_id.clone()
+            final_game_id.clone()
         }
     });
 
+    // Cancelar cualquier monitor previo
+    cancel_current_game_monitor();
+    let cancel_token = Arc::new(AtomicBool::new(false));
+    if let Ok(mut guard) = ACTIVE_GAME_CANCEL.lock() {
+        *guard = Some(cancel_token.clone());
+    }
+
+    let started_at_iso = match get_db_connection() {
+        Ok(conn) => conn
+            .query_row("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now')", [], |r| r.get(0))
+            .unwrap_or_else(|_| "now".to_string()),
+        Err(_) => "now".to_string(),
+    };
+    let start_instant = std::time::Instant::now();
+
     match l_type.as_str() {
         "url" => {
-            let _ = Command::new("xdg-open").arg(&target).spawn();
-            Ok(format!("Enlace web abierto: {}", target))
+            let _ = Command::new("xdg-open").arg(&final_target).spawn();
+            Ok(format!("Enlace web abierto: {}", final_target))
         }
         "steam" => {
-            if target == "steam" || target.is_empty() {
-                let mut cmd = build_accelerated_command("steam", &[], use_gamemode, use_gamescope_fsr, mangohud_flag, gamescope_res);
+            if final_target == "steam" || final_target.is_empty() {
+                let mut cmd = build_accelerated_command("steam", &[], gamemode_flag, gamescope_flag, mangohud_flag, gamescope_res);
                 cmd.spawn().map_err(|e| format!("Error iniciando Steam: {}", e))?;
                 Ok("Cliente Steam iniciado con aceleración.".to_string())
             } else {
-                let run_arg = format!("steam://run/{}", target);
-                let mut cmd = build_accelerated_command("steam", &[&run_arg], use_gamemode, use_gamescope_fsr, mangohud_flag, gamescope_res);
-                cmd.spawn().map_err(|e| format!("Error lanzando título Steam {}: {}", target, e))?;
-                Ok(format!("Iniciando título Steam (AppID: {})", target))
+                let run_arg = format!("steam://run/{}", final_target);
+                let mut cmd = build_accelerated_command("steam", &[&run_arg], gamemode_flag, gamescope_flag, mangohud_flag, gamescope_res);
+                cmd.spawn().map_err(|e| format!("Error lanzando título Steam {}: {}", final_target, e))?;
+
+                // Iniciar centinela de proceso Steam en segundo plano
+                let app_clone = app.clone();
+                let g_id = if final_game_id.starts_with("steam:") {
+                    final_game_id[6..].to_string()
+                } else {
+                    final_game_id.clone()
+                };
+                let g_title = game_title.unwrap_or_else(|| format!("Steam App {}", final_target));
+                let target_clone = final_target.clone();
+                let token = cancel_token.clone();
+
+                std::thread::spawn(move || {
+                    // Esperar hasta 60s a que Steam levante el juego
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+                    let mut detected = false;
+                    while std::time::Instant::now() < deadline {
+                        if token.load(Ordering::SeqCst) {
+                            return;
+                        }
+                        if is_steam_appid_running(&target_clone) {
+                            detected = true;
+                            break;
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                    }
+
+                    if !detected {
+                        return;
+                    }
+
+                    // Vigilar hasta que el proceso desaparezca de /proc
+                    loop {
+                        if token.load(Ordering::SeqCst) {
+                            return;
+                        }
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        if token.load(Ordering::SeqCst) {
+                            return;
+                        }
+                        if !is_steam_appid_running(&target_clone) {
+                            // Margen de gracia de 2s para descartar reinicios transitorios
+                            std::thread::sleep(std::time::Duration::from_secs(2));
+                            if !is_steam_appid_running(&target_clone) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if token.load(Ordering::SeqCst) {
+                        return;
+                    }
+
+                    let duration_seconds = start_instant.elapsed().as_secs() as i64;
+                    if duration_seconds >= 5 {
+                        finish_and_record_auto_session(&app_clone, &g_id, &g_title, true, duration_seconds, started_at_iso);
+                    }
+                });
+
+                Ok(format!("Iniciando título Steam (AppID: {})", final_target))
             }
         }
         "flatpak" => {
-            let mut cmd = build_accelerated_command("flatpak", &["run", &target], use_gamemode, use_gamescope_fsr, mangohud_flag, gamescope_res);
-            cmd.spawn().map_err(|e| format!("Error ejecutando Flatpak {}: {}", target, e))?;
-            Ok(format!("Lanzando aplicación Flatpak: {}", target))
+            let mut cmd = build_accelerated_command("flatpak", &["run", &final_target], gamemode_flag, gamescope_flag, mangohud_flag, gamescope_res);
+            let mut child = cmd.spawn().map_err(|e| format!("Error ejecutando Flatpak {}: {}", final_target, e))?;
+
+            let app_clone = app.clone();
+            let g_id = final_game_id.clone();
+            let g_title = game_title.unwrap_or_else(|| final_target.clone());
+            let token = cancel_token.clone();
+
+            std::thread::spawn(move || {
+                loop {
+                    if token.load(Ordering::SeqCst) {
+                        return;
+                    }
+                    match child.try_wait() {
+                        Ok(Some(_status)) => break,
+                        Ok(None) => std::thread::sleep(std::time::Duration::from_millis(1500)),
+                        Err(_) => break,
+                    }
+                }
+
+                if token.load(Ordering::SeqCst) {
+                    return;
+                }
+
+                let duration_seconds = start_instant.elapsed().as_secs() as i64;
+                if duration_seconds >= 5 {
+                    finish_and_record_auto_session(&app_clone, &g_id, &g_title, false, duration_seconds, started_at_iso);
+                }
+            });
+
+            Ok(format!("Lanzando aplicación Flatpak: {}", final_target))
         }
         "cmd" | _ => {
-            let shell_script = if use_gamemode && Path::new("/usr/bin/gamemoded").exists() {
-                format!("gamemoderun {}", target)
+            let shell_script = if gamemode_flag && Path::new("/usr/bin/gamemoded").exists() {
+                format!("gamemoderun {}", final_target)
             } else {
-                target.clone()
+                final_target.clone()
             };
             let mut cmd = Command::new("sh");
             cmd.arg("-c").arg(&shell_script);
-            cmd.spawn().map_err(|e| format!("Error ejecutando comando {}: {}", target, e))?;
-            Ok(format!("Comando iniciado: {}", target))
+            let mut child = cmd.spawn().map_err(|e| format!("Error ejecutando comando {}: {}", final_target, e))?;
+
+            let app_clone = app.clone();
+            let g_id = final_game_id.clone();
+            let g_title = game_title.unwrap_or_else(|| final_target.clone());
+            let token = cancel_token.clone();
+
+            std::thread::spawn(move || {
+                loop {
+                    if token.load(Ordering::SeqCst) {
+                        return;
+                    }
+                    match child.try_wait() {
+                        Ok(Some(_status)) => break,
+                        Ok(None) => std::thread::sleep(std::time::Duration::from_millis(1500)),
+                        Err(_) => break,
+                    }
+                }
+
+                if token.load(Ordering::SeqCst) {
+                    return;
+                }
+
+                let duration_seconds = start_instant.elapsed().as_secs() as i64;
+                if duration_seconds >= 5 {
+                    finish_and_record_auto_session(&app_clone, &g_id, &g_title, false, duration_seconds, started_at_iso);
+                }
+            });
+
+            Ok(format!("Comando iniciado: {}", final_target))
         }
     }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { INITIAL_GAME_FORM, checkGamepadConnected } from './gameHelpers';
+import { useGameSessionTracker } from './useGameSessionTracker';
 
 export function useGaming() {
   const [gamingStatus, setGamingStatus] = useState(null);
@@ -21,9 +22,6 @@ export function useGaming() {
   });
   const [launchMessage, setLaunchMessage] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // ⏱️ Sesión Activa de Juego (Tracker en Vivo)
-  const [activeSession, setActiveSession] = useState(null);
 
   // 🪟 Modales Tácticos
   const [showGameModal, setShowGameModal] = useState(false);
@@ -47,21 +45,6 @@ export function useGaming() {
     };
   }, []);
 
-  // Cronómetro de sesión activa
-  useEffect(() => {
-    if (!activeSession) return;
-    const interval = setInterval(() => {
-      setActiveSession((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          elapsedSeconds: prev.elapsedSeconds + 1
-        };
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [Boolean(activeSession)]);
-
   const refreshStats = useCallback(async () => {
     try {
       const statsList = await invoke('get_all_game_stats').catch(() => []);
@@ -78,6 +61,20 @@ export function useGaming() {
       console.error('Error cargando estadísticas de juego:', err);
     }
   }, []);
+
+  // ⏱️ Tracker de Sesión de Juego (Cronómetro + Centinela de Proceso)
+  const {
+    activeSession,
+    handleLaunchGame,
+    handleStopSession,
+    handleCancelSession
+  } = useGameSessionTracker({
+    useGamescopeFsr,
+    useMangohud,
+    gamescopeRes,
+    refreshStats,
+    setLaunchMessage
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -118,165 +115,115 @@ export function useGaming() {
     localStorage.setItem('aegis_leisure_mangohud', String(val));
   };
 
-  const handleLaunchGame = useCallback(
-    async (gameId, launchType = null, launchTarget = null, gameTitle = null, isSteam = false) => {
-      try {
-        const res = await invoke('launch_game', {
-          gameId,
-          launchType,
-          launchTarget,
-          useGamemode: true,
-          useGamescopeFsr,
-          useMangohud,
-          gamescopeRes
-        });
-        setLaunchMessage(res);
-        setTimeout(() => setLaunchMessage(null), 3500);
-
-        if (gameTitle) {
-          const rawId = isSteam && gameId.startsWith('steam:') ? gameId.slice(6) : gameId;
-          setActiveSession({
-            gameId: rawId,
-            gameTitle,
-            isSteam: Boolean(isSteam),
-            startTime: new Date(),
-            elapsedSeconds: 0
-          });
-        }
-      } catch (e) {
-        setLaunchMessage(`Error: ${e}`);
-        setTimeout(() => setLaunchMessage(null), 3500);
-      }
-    },
-    [useGamescopeFsr, useMangohud, gamescopeRes]
-  );
-
-  const handleStopSession = useCallback(async () => {
-    if (!activeSession) return;
-    try {
-      const now = new Date();
-      await invoke('record_game_session', {
-        gameId: String(activeSession.gameId),
-        gameTitle: activeSession.gameTitle,
-        isSteam: Boolean(activeSession.isSteam),
-        durationSeconds: activeSession.elapsedSeconds,
-        startedAt: activeSession.startTime.toISOString(),
-        endedAt: now.toISOString()
-      });
-      const mins = Math.max(1, Math.round(activeSession.elapsedSeconds / 60));
-      setLaunchMessage(`Sesión registrada (+${mins} min)`);
-      setTimeout(() => setLaunchMessage(null), 3500);
-      setActiveSession(null);
-      await refreshStats();
-    } catch (err) {
-      alert(`Error guardando sesión: ${err}`);
-    }
-  }, [activeSession, refreshStats]);
-
-  const handleCancelSession = useCallback(() => {
-    setActiveSession(null);
-  }, []);
-
   const handleSaveCustomGame = async (e) => {
     e.preventDefault();
     if (!gameFormData.title.trim() || !gameFormData.launchTarget.trim()) return;
 
     try {
       const gameToSave = {
-        id: gameFormData.id || `cg_${Date.now()}`,
-        title: gameFormData.title.trim(),
-        category: gameFormData.category.trim() || 'General',
-        launchType: gameFormData.launchType,
-        launchTarget: gameFormData.launchTarget.trim(),
-        description: gameFormData.description.trim() || null,
-        bannerUrl: gameFormData.bannerUrl.trim() || null,
-        playTimeMinutes: 0,
-        lastPlayed: null,
-        createdAt: new Date().toISOString()
+        ...gameFormData,
+        id: gameFormData.id || `custom_${Date.now()}`
       };
-
       await invoke('sqlite_save_custom_game', { game: gameToSave });
       setShowGameModal(false);
       setGameFormData(INITIAL_GAME_FORM);
       fetchData();
-    } catch (err) {
-      alert(`Error guardando juego: ${err}`);
+    } catch (e) {
+      alert(`Error guardando juego: ${e}`);
     }
   };
 
-  const handleDeleteCustomGame = useCallback(
-    async (id) => {
-      if (!confirm('¿Eliminar este lanzador del catálogo?')) return;
-      try {
-        await invoke('sqlite_delete_custom_game', { id });
-        fetchData();
-      } catch (err) {
-        alert(`Error eliminando juego: ${err}`);
+  const handleDeleteCustomGame = async (id) => {
+    if (!window.confirm('¿Eliminar este juego personalizado de Aegis?')) return;
+    try {
+      await invoke('sqlite_delete_custom_game', { id });
+      if (selectedGameForDetail && selectedGameForDetail.id === id) {
+        setSelectedGameForDetail(null);
       }
-    },
-    [fetchData]
-  );
+      fetchData();
+    } catch (e) {
+      alert(`Error eliminando juego: ${e}`);
+    }
+  };
 
-  const filteredSteam = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+  const handleOpenEditModal = (game) => {
+    setGameFormData({
+      id: game.id,
+      title: game.title,
+      category: game.category || 'emulator',
+      launchType: game.launchType || 'cmd',
+      launchTarget: game.launchTarget || '',
+      description: game.description || '',
+      bannerUrl: game.bannerUrl || ''
+    });
+    setShowGameModal(true);
+  };
+
+  const handleOpenDetailModal = (game) => {
+    setSelectedGameForDetail(game);
+  };
+
+  const handleCloseDetailModal = () => {
+    setSelectedGameForDetail(null);
+  };
+
+  // Filtrado de juegos por búsqueda y categoría
+  const filteredSteamGames = useMemo(() => {
     return steamGames.filter((g) => {
-      if (categoryFilter !== 'all' && categoryFilter !== 'steam') return false;
-      return !q || g.name.toLowerCase().includes(q) || g.appId.includes(q);
+      const matchesSearch =
+        !searchQuery ||
+        g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(g.appId).includes(searchQuery);
+      const matchesCat = categoryFilter === 'all' || categoryFilter === 'steam';
+      return matchesSearch && matchesCat;
     });
   }, [steamGames, searchQuery, categoryFilter]);
 
-  const filteredCustom = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+  const filteredCustomGames = useMemo(() => {
     return customGames.filter((g) => {
-      if (categoryFilter === 'steam') return false;
-      if (categoryFilter === 'web' && g.launchType !== 'url') return false;
-      if (categoryFilter === 'emu' && g.launchType !== 'flatpak' && g.launchType !== 'cmd') return false;
-      return !q || g.title.toLowerCase().includes(q) || (g.category || '').toLowerCase().includes(q);
+      const matchesSearch =
+        !searchQuery ||
+        g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (g.description && g.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCat = categoryFilter === 'all' || categoryFilter === g.category;
+      return matchesSearch && matchesCat;
     });
   }, [customGames, searchQuery, categoryFilter]);
-
-  const totalTitles = filteredSteam.length + filteredCustom.length;
 
   return {
     gamingStatus,
     steamGames,
     customGames,
+    filteredSteamGames,
+    filteredCustomGames,
     gameStatsMap,
     searchQuery,
     setSearchQuery,
     categoryFilter,
     setCategoryFilter,
     useGamescopeFsr,
+    handleToggleGamescope,
     gamescopeRes,
+    handleChangeRes,
     useMangohud,
+    handleToggleMangohud,
     launchMessage,
     loading,
     activeSession,
+    handleLaunchGame,
+    handleStopSession,
+    handleCancelSession,
     showGameModal,
     setShowGameModal,
     gameFormData,
     setGameFormData,
     selectedGameForDetail,
-    gamepadConnected,
-    fetchData,
-    refreshStats,
-    handleToggleGamescope,
-    handleChangeRes,
-    handleToggleMangohud,
-    handleLaunchGame,
-    handleStopSession,
-    handleCancelSession,
+    handleOpenEditModal,
+    handleOpenDetailModal,
+    handleCloseDetailModal,
     handleSaveCustomGame,
     handleDeleteCustomGame,
-    filteredSteam,
-    filteredCustom,
-    totalTitles,
-    openNewGameModal: () => {
-      setGameFormData(INITIAL_GAME_FORM);
-      setShowGameModal(true);
-    },
-    openGameDetail: (game, isSteam, initialTab = 'achievements') =>
-      setSelectedGameForDetail({ game, isSteam, initialTab }),
-    closeGameDetail: () => setSelectedGameForDetail(null)
+    refreshStats,
+    gamepadConnected
   };
 }
