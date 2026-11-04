@@ -1,18 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 import TopHeader from './components/TopHeader';
 import LeftTabsDock from './components/navigation/LeftTabsDock';
 import AgentView from './components/AgentView';
-import FinancesView from './components/FinancesView';
 import VaultView from './components/VaultView';
-import DevOpsView from './components/DevOpsView';
-import TasksView from './components/TasksView';
-import SentinelView from './components/SentinelView';
-import LeisureView from './components/LeisureView';
 import SettingsView from './components/SettingsView';
 import CommandPaletteModal from './components/CommandPaletteModal';
 import ErrorBoundary from './components/ErrorBoundary';
+import { DEFAULT_ENABLED_MODULES, getVisibleTabs } from './plugins/pluginRegistry';
+
+// 🧩 Módulos Secundarios Desacoplables (Lazy Loaded para Cero Consumo de RAM si están apagados)
+const FinancesView = lazy(() => import('./components/FinancesView'));
+const DevOpsView = lazy(() => import('./components/DevOpsView'));
+const TasksView = lazy(() => import('./components/TasksView'));
+const SentinelView = lazy(() => import('./components/SentinelView'));
+const LeisureView = lazy(() => import('./components/LeisureView'));
+
+function ModuleLoader() {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      width: '100%',
+      gap: '12px',
+      color: 'var(--text-muted)',
+      fontSize: '0.75rem'
+    }}>
+      <div style={{
+        width: '24px',
+        height: '24px',
+        border: '2px solid var(--border-color)',
+        borderTopColor: 'var(--primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+      <span>Montando módulo táctico...</span>
+    </div>
+  );
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent');
@@ -20,6 +49,7 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState('nordic-moss');
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [enabledModules, setEnabledModules] = useState(DEFAULT_ENABLED_MODULES);
   const [isDockPinned, setIsDockPinned] = useState(() => {
     try {
       return localStorage.getItem('aegis_dock_pinned') === 'true';
@@ -45,7 +75,7 @@ export default function App() {
     document.documentElement.style.setProperty('--ui-scale', String(s));
   };
 
-  // Cargar tema y escala desde configuración en arranque
+  // Cargar tema, escala y módulos habilitados desde configuración en arranque
   useEffect(() => {
     invoke('get_aegis_config')
       .then((cfg) => {
@@ -53,10 +83,29 @@ export default function App() {
           setCurrentTheme(cfg.theme);
           document.documentElement.setAttribute('data-theme', cfg.theme);
         }
+        if (cfg?.enabledModules) {
+          setEnabledModules(cfg.enabledModules);
+        }
         applyUiScale(cfg?.uiScale);
       })
       .catch(() => {});
   }, []);
+
+  // Escuchar cambios reactivos en la configuración de módulos
+  useEffect(() => {
+    const handleModulesChanged = (e) => {
+      if (e.detail) {
+        setEnabledModules(e.detail);
+        const isLeisureOrGaming = activeTab === 'gaming' || activeTab === 'leisure';
+        const currentDisabled = isLeisureOrGaming ? e.detail.gaming === false : e.detail[activeTab] === false;
+        if (currentDisabled) {
+          setActiveTab('agent');
+        }
+      }
+    };
+    window.addEventListener('aegis:modules-changed', handleModulesChanged);
+    return () => window.removeEventListener('aegis:modules-changed', handleModulesChanged);
+  }, [activeTab]);
 
   const handleThemeChange = (newTheme) => {
     setCurrentTheme(newTheme);
@@ -92,25 +141,19 @@ export default function App() {
       }
 
       if (e.altKey) {
-        const keyMap = {
-          '1': 'agent',
-          '2': 'finances',
-          '3': 'vault',
-          '4': 'devops',
-          '5': 'tasks',
-          '6': 'sentinel',
-          '7': 'gaming',
-          '8': 'settings'
-        };
-        if (keyMap[e.key]) {
-          e.preventDefault();
-          setActiveTab(keyMap[e.key]);
+        const num = parseInt(e.key, 10);
+        if (!isNaN(num) && num >= 1) {
+          const visible = getVisibleTabs(enabledModules);
+          if (num <= visible.length) {
+            e.preventDefault();
+            setActiveTab(visible[num - 1]);
+          }
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCommandPalette, showSettings]);
+  }, [showCommandPalette, showSettings, enabledModules]);
 
   // Ping al núcleo Rust local y escucha de cambio de pestañas táctico
   useEffect(() => {
@@ -159,6 +202,7 @@ export default function App() {
           onSelectTab={setActiveTab}
           isPinned={isDockPinned}
           onTogglePin={handleToggleDockPin}
+          enabledModules={enabledModules}
         />
 
         {/* 🚀 Lienzo de Contenido Ultra-Limpio */}
@@ -176,20 +220,22 @@ export default function App() {
           transition: 'margin-left 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
         }}>
         <ErrorBoundary key={activeTab} name={activeTab}>
-          {activeTab === 'agent' && <AgentView />}
-          {activeTab === 'finances' && <FinancesView />}
-          {activeTab === 'vault' && <VaultView />}
-          {activeTab === 'devops' && <DevOpsView />}
-          {activeTab === 'tasks' && <TasksView />}
-          {activeTab === 'sentinel' && <SentinelView />}
-          {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
-          {activeTab === 'settings' && (
-            <SettingsView 
-              currentTheme={currentTheme} 
-              onThemeChange={handleThemeChange} 
-              isFullView={true} 
-            />
-          )}
+          <Suspense fallback={<ModuleLoader />}>
+            {activeTab === 'agent' && <AgentView />}
+            {activeTab === 'finances' && <FinancesView />}
+            {activeTab === 'vault' && <VaultView />}
+            {activeTab === 'devops' && <DevOpsView />}
+            {activeTab === 'tasks' && <TasksView />}
+            {activeTab === 'sentinel' && <SentinelView />}
+            {(activeTab === 'gaming' || activeTab === 'leisure') && <LeisureView />}
+            {activeTab === 'settings' && (
+              <SettingsView 
+                currentTheme={currentTheme} 
+                onThemeChange={handleThemeChange} 
+                isFullView={true} 
+              />
+            )}
+          </Suspense>
         </ErrorBoundary>
       </main>
       </div>
@@ -210,6 +256,7 @@ export default function App() {
         onSelectTab={setActiveTab}
         onOpenSettings={() => setActiveTab('settings')}
         onThemeChange={handleThemeChange}
+        enabledModules={enabledModules}
       />
     </div>
   );

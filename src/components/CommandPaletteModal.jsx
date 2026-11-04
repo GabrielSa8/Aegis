@@ -7,7 +7,8 @@ export default function CommandPaletteModal({
   onClose,
   onSelectTab,
   onOpenSettings,
-  onThemeChange
+  onThemeChange,
+  enabledModules = {}
 }) {
   const {
     query,
@@ -23,7 +24,8 @@ export default function CommandPaletteModal({
     onClose,
     onSelectTab,
     onOpenSettings,
-    onThemeChange
+    onThemeChange,
+    enabledModules
   });
 
   if (!isOpen) return null;

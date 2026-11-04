@@ -13,22 +13,30 @@ import {
 } from 'lucide-react';
 
 const TABS = [
-  { id: 'agent', label: 'Agente', icon: Bot, shortcut: '1' },
-  { id: 'finances', label: 'Finanzas', icon: PiggyBank, shortcut: '2' },
-  { id: 'vault', label: 'Bóveda', icon: BookOpen, shortcut: '3' },
-  { id: 'devops', label: 'DevOps', icon: GitBranch, shortcut: '4' },
-  { id: 'tasks', label: 'Tareas', icon: CheckSquare, shortcut: '5' },
-  { id: 'sentinel', label: 'Centinela', icon: Activity, shortcut: '6' },
-  { id: 'gaming', label: 'Gaming', icon: Gamepad2, shortcut: '7' },
-  { id: 'settings', label: 'Sistema', icon: Settings, shortcut: '8' }
+  { id: 'agent', label: 'Agente', icon: Bot },
+  { id: 'finances', label: 'Finanzas', icon: PiggyBank },
+  { id: 'vault', label: 'Bóveda', icon: BookOpen },
+  { id: 'devops', label: 'DevOps', icon: GitBranch },
+  { id: 'tasks', label: 'Tareas', icon: CheckSquare },
+  { id: 'sentinel', label: 'Centinela', icon: Activity },
+  { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
+  { id: 'settings', label: 'Sistema', icon: Settings }
 ];
 
 export default function LeftTabsDock({ 
   activeTab, 
   onSelectTab, 
   isPinned: externalIsPinned, 
-  onTogglePin: externalOnTogglePin 
+  onTogglePin: externalOnTogglePin,
+  enabledModules = {}
 }) {
+  const visibleTabs = TABS.filter((tab) => {
+    if (tab.id === 'agent' || tab.id === 'vault' || tab.id === 'settings') return true;
+    return enabledModules[tab.id] !== false;
+  }).map((tab, idx) => ({
+    ...tab,
+    shortcut: String(idx + 1)
+  }));
   const [localPinned, setLocalPinned] = useState(() => {
     try {
       return localStorage.getItem('aegis_dock_pinned') === 'true';
@@ -167,10 +175,10 @@ export default function LeftTabsDock({
           flexDirection: 'column',
           gap: 0
         }}>
-          {TABS.map((tab, idx) => {
+          {visibleTabs.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            const stepRatio = idx / (TABS.length - 1);
+            const stepRatio = visibleTabs.length > 1 ? idx / (visibleTabs.length - 1) : 0;
             
             // Recorrido al 100% del espectro dinámico entre primario y acento
             const primaryPct = Math.round((1 - stepRatio) * 100);
@@ -180,7 +188,7 @@ export default function LeftTabsDock({
               ? `color-mix(in srgb, ${stepColor} 24%, var(--bg-card))` 
               : `color-mix(in srgb, ${stepColor} 8%, var(--bg-card))`;
 
-            const isLast = idx === TABS.length - 1;
+            const isLast = idx === visibleTabs.length - 1;
 
             return (
               <button

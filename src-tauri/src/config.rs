@@ -86,6 +86,33 @@ impl Default for NotificationsConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnabledModulesConfig {
+    #[serde(default = "default_true")]
+    pub finances: bool,
+    #[serde(default = "default_true")]
+    pub tasks: bool,
+    #[serde(default = "default_true")]
+    pub sentinel: bool,
+    #[serde(default = "default_true")]
+    pub devops: bool,
+    #[serde(default = "default_true")]
+    pub gaming: bool,
+}
+
+impl Default for EnabledModulesConfig {
+    fn default() -> Self {
+        Self {
+            finances: true,
+            tasks: true,
+            sentinel: true,
+            devops: true,
+            gaming: true,
+        }
+    }
+}
+
 fn default_ui_scale() -> f32 {
     1.0
 }
@@ -136,6 +163,8 @@ pub struct AegisConfig {
     pub fallback_entries: Vec<FallbackEntry>,
     #[serde(default)]
     pub notifications: NotificationsConfig,
+    #[serde(default)]
+    pub enabled_modules: EnabledModulesConfig,
 }
 
 pub fn default_config() -> AegisConfig {
@@ -182,6 +211,7 @@ pub fn default_config() -> AegisConfig {
         token_budget: TokenBudgetConfig::default(),
         fallback_entries: Vec::new(),
         notifications: NotificationsConfig::default(),
+        enabled_modules: EnabledModulesConfig::default(),
     }
 }
 

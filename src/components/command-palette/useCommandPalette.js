@@ -10,7 +10,8 @@ export function useCommandPalette({
   onClose,
   onSelectTab,
   onOpenSettings,
-  onThemeChange
+  onThemeChange,
+  enabledModules = {}
 }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -34,7 +35,8 @@ export function useCommandPalette({
     onSelectTab,
     onOpenSettings,
     onThemeChange,
-    onClose
+    onClose,
+    enabledModules
   });
 
   const noteCommands = vaultNotes.map((n) => ({

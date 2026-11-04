@@ -8,6 +8,7 @@ import {
   DevOpsSection,
   NotificationsSection,
   GamingSection,
+  PluginsSection,
   useSettings
 } from './settings';
 
@@ -54,6 +55,8 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     switch (activeSection) {
       case 'profile':
         return <ProfileSection config={config} updateProfile={updateProfile} />;
+      case 'plugins':
+        return <PluginsSection config={config} setConfig={setConfig} />;
       case 'appearance':
         return (
           <AppearanceSection

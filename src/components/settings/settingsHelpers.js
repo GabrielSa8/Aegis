@@ -5,7 +5,8 @@ import {
   Bot, 
   GitBranch, 
   Bell, 
-  Gamepad2 
+  Gamepad2,
+  Puzzle 
 } from 'lucide-react';
 
 export const THEMES = [
@@ -72,6 +73,7 @@ export const MASTER_SHORTCUTS = [
 
 export const SECTIONS = [
   { id: 'profile', label: 'Identidad & Perfil', icon: User },
+  { id: 'plugins', label: 'Plugins & Módulos', icon: Puzzle },
   { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
   { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },
   { id: 'ai', label: 'Motores IA & Presupuesto', icon: Bot },
