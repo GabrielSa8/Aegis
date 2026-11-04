@@ -9,6 +9,7 @@ mod config;
 mod cortex;
 mod tray;
 mod notifications;
+pub mod notifications_cron;
 mod backup;
 mod sync;
 mod plugins;
@@ -213,6 +214,9 @@ pub fn run() {
 
             // Inicializar Sincronización Soberana P2P en background
             sync::init_p2p_background_services();
+
+            // Inicializar Daemon Cron de Notificaciones de Escritorio
+            notifications_cron::spawn_notification_cron(app.handle().clone());
 
             // Auto-arrancar Gateway de Telegram si está habilitado
             if let Ok(cfg) = config::get_aegis_config() {
