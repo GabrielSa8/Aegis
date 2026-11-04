@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "2.9.0"
+version = "2.9.1"
 description = "Aegis - Personal Executive Cockpit & Master Command Center"
 authors = ["Gabriel"]
 license = "MIT"
@@ -29,3 +29,7 @@ tar = "0.4"
 rusqlite = { version = "0.32", features = ["bundled"] }
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", features = ["json"] }
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+hex = "0.4"

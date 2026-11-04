@@ -13,6 +13,7 @@ mod backup;
 mod sync;
 mod plugins;
 pub mod gateway;
+pub mod security;
 
 #[tauri::command]
 fn ping() -> String {
@@ -176,10 +177,24 @@ pub fn run() {
             gateway::generate_new_gateway_pairing_pin,
             gateway::unpair_telegram_gateway_chat,
             gateway::start_telegram_gateway_daemon,
-            gateway::stop_telegram_gateway_daemon
+            gateway::stop_telegram_gateway_daemon,
+            security::get_security_status,
+            security::setup_master_password,
+            security::unlock_vault,
+            security::lock_vault,
+            security::change_master_password,
+            security::disable_master_password,
+            security::update_security_policies,
+            security::record_vault_activity
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            use tauri::Manager;
+            let master_pw_enabled = config::get_aegis_config()
+                .map(|c| c.security.master_password_enabled)
+                .unwrap_or(false);
+            app.manage(security::VaultState::new(master_pw_enabled));
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -219,11 +234,21 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            use tauri::Manager;
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if let Ok(cfg) = config::get_aegis_config() {
                     if cfg.close_to_tray {
                         api.prevent_close();
                         let _ = window.hide();
+                        if cfg.security.master_password_enabled && cfg.security.lock_on_tray_minimize {
+                            if let Some(state) = window.try_state::<security::VaultState>() {
+                                let _ = security::lock_vault(state);
+                            }
+                        }
+                    } else if cfg.security.master_password_enabled && cfg.security.encrypt_database {
+                        if let Some(state) = window.try_state::<security::VaultState>() {
+                            let _ = security::lock_vault(state);
+                        }
                     }
                 }
             }

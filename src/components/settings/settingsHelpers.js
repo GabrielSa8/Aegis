@@ -8,7 +8,8 @@ import {
   Gamepad2,
   Puzzle,
   Radio,
-  Send
+  Send,
+  Lock
 } from 'lucide-react';
 
 export const THEMES = [
@@ -70,11 +71,13 @@ export const MASTER_SHORTCUTS = [
   { key: 'Ctrl + O', desc: 'Alternar vista de pensamiento y herramientas del Agente' },
   { key: 'Ctrl + B', desc: 'Alternar panel lateral de carpetas en Bóveda' },
   { key: 'Ctrl + ,', desc: 'Acceso directo a este Centro de Configuración' },
+  { key: 'Alt + L', desc: 'Bloquear Vault / Cockpit con Contraseña Maestra' },
   { key: 'Esc', desc: 'Cerrar modales o búsqueda activa' }
 ];
 
 export const SECTIONS = [
   { id: 'profile', label: 'Identidad & Perfil', icon: User },
+  { id: 'security', label: 'Seguridad & Cifrado', icon: Lock },
   { id: 'plugins', label: 'Plugins & Módulos', icon: Puzzle },
   { id: 'appearance', label: 'Apariencia & Escala', icon: Palette },
   { id: 'storage', label: 'Rutas & Almacenamiento', icon: HardDrive },

@@ -228,6 +228,43 @@ impl Default for TelegramGatewayConfig {
     }
 }
 
+fn default_auto_lock_minutes() -> u32 {
+    15
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecurityConfig {
+    #[serde(default = "default_false")]
+    pub master_password_enabled: bool,
+    #[serde(default)]
+    pub password_hash: String,
+    #[serde(default)]
+    pub salt_hex: String,
+    #[serde(default = "default_true")]
+    pub encrypt_credentials: bool,
+    #[serde(default = "default_false")]
+    pub encrypt_database: bool,
+    #[serde(default = "default_auto_lock_minutes")]
+    pub auto_lock_minutes: u32,
+    #[serde(default = "default_false")]
+    pub lock_on_tray_minimize: bool,
+}
+
+impl Default for SecurityConfig {
+    fn default() -> Self {
+        Self {
+            master_password_enabled: false,
+            password_hash: String::new(),
+            salt_hex: String::new(),
+            encrypt_credentials: true,
+            encrypt_database: false,
+            auto_lock_minutes: 15,
+            lock_on_tray_minimize: false,
+        }
+    }
+}
+
 pub fn get_config_file_path_internal() -> PathBuf {
     get_config_file_path()
 }
@@ -272,6 +309,8 @@ pub struct AegisConfig {
     pub p2p_sync: P2pSyncConfig,
     #[serde(default)]
     pub telegram_gateway: TelegramGatewayConfig,
+    #[serde(default)]
+    pub security: SecurityConfig,
     #[serde(default)]
     pub community_plugins_enabled: std::collections::HashMap<String, bool>,
 }
@@ -323,6 +362,7 @@ pub fn default_config() -> AegisConfig {
         enabled_modules: EnabledModulesConfig::default(),
         p2p_sync: P2pSyncConfig::default(),
         telegram_gateway: TelegramGatewayConfig::default(),
+        security: SecurityConfig::default(),
         community_plugins_enabled: std::collections::HashMap::new(),
     }
 }

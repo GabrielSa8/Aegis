@@ -6,13 +6,16 @@ import {
   Settings,
   Pin,
   PinOff,
-  Minus
+  Minus,
+  Lock
 } from 'lucide-react';
 import { useAppUpdater, UpdateCockpitPill, UpdateModal } from './updater';
 
 export default function TopHeader({ 
   onOpenSettings,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  isMasterPasswordEnabled = false,
+  onLockVault
 }) {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const {
@@ -193,6 +196,32 @@ export default function TopHeader({
             <span>Opciones</span>
           </button>
 
+          {/* Bloquear Vault */}
+          {isMasterPasswordEnabled && (
+            <button
+              onClick={onLockVault}
+              title="Bloquear Vault con Contraseña Maestra (Alt + L)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm, 8px)',
+                padding: '4px 8px',
+                color: 'var(--text-muted)',
+                fontSize: '0.74rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+            >
+              <Lock size={13} />
+              <span>Bloquear</span>
+            </button>
+          )}
+
           {/* Minimizar a Bandeja (Tray) */}
           <button
             onClick={handleHideToTray}
@@ -210,14 +239,8 @@ export default function TopHeader({
               gap: '4px',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = 'var(--accent, #60a5fa)';
-              e.currentTarget.style.borderColor = 'var(--accent, #60a5fa)'; 
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = 'var(--text-muted)';
-              e.currentTarget.style.borderColor = 'var(--border-color)'; 
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent, #60a5fa)'; e.currentTarget.style.borderColor = 'var(--accent, #60a5fa)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
           >
             <Minus size={13} />
             <span>Bandeja</span>

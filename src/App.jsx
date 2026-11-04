@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
 import TopHeader from './components/TopHeader';
@@ -9,6 +9,8 @@ import SettingsView from './components/SettingsView';
 import CommandPaletteModal from './components/CommandPaletteModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { DEFAULT_ENABLED_MODULES, getVisibleTabs } from './plugins/pluginRegistry';
+import { useSecurity } from './components/security/useSecurity';
+import MasterLockScreen from './components/security/MasterLockScreen';
 
 // 🧩 Módulos Secundarios Desacoplables (Lazy Loaded para Cero Consumo de RAM si están apagados)
 const FinancesView = lazy(() => import('./components/FinancesView'));
@@ -44,6 +46,11 @@ function ModuleLoader() {
 }
 
 export default function App() {
+  const security = useSecurity();
+  const { status: securityStatus, unlockVault, lockVault } = security;
+  const securityRef = useRef(security);
+  securityRef.current = security;
+
   const [activeTab, setActiveTab] = useState('agent');
   const [coreStatus, setCoreStatus] = useState('Conectando a Rust Core...');
   const [currentTheme, setCurrentTheme] = useState('nordic-moss');
@@ -129,6 +136,13 @@ export default function App() {
         return;
       }
 
+      // Alt + L para bloquear Vault con Contraseña Maestra
+      if (e.altKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        securityRef.current.lockVault();
+        return;
+      }
+
       if (e.key === 'Escape') {
         if (showCommandPalette) {
           setShowCommandPalette(false);
@@ -186,6 +200,8 @@ export default function App() {
         coreStatus={coreStatus} 
         onOpenSettings={() => setActiveTab('settings')}
         onOpenCommandPalette={() => setShowCommandPalette(true)}
+        isMasterPasswordEnabled={securityStatus.masterPasswordEnabled}
+        onLockVault={lockVault}
       />
 
       {/* 🚀 Contenedor de Trabajo: Dock Izquierdo de Vistas + Lienzo Central */}
@@ -258,6 +274,15 @@ export default function App() {
         onThemeChange={handleThemeChange}
         enabledModules={enabledModules}
       />
+
+      {/* 🛡️ Pantalla de Bloqueo de Seguridad (Master Lock Screen) */}
+      {securityStatus.masterPasswordEnabled && securityStatus.isLocked && (
+        <MasterLockScreen
+          onUnlock={unlockVault}
+          hasEncryptedDb={securityStatus.hasEncryptedDb}
+          autoLockMinutes={securityStatus.autoLockMinutes}
+        />
+      )}
     </div>
   );
 }

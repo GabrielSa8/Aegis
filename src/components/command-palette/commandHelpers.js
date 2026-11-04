@@ -8,7 +8,8 @@ import {
   Gamepad2, 
   Palette, 
   Settings, 
-  Zap
+  Zap,
+  Lock
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -50,6 +51,17 @@ export function getBaseCommands({
 
   const actions = [
     { id: 'act-settings', title: 'Abrir Ajustes Globales & Flota', category: 'Acciones', icon: Settings, shortcut: 'Ctrl + ,', action: () => { onOpenSettings(); onClose(); } },
+    { 
+      id: 'act-lock', 
+      title: 'Bloquear Vault / Cockpit con Contraseña Maestra', 
+      category: 'Acciones', 
+      icon: Lock, 
+      shortcut: 'Alt + L', 
+      action: () => { 
+        invoke('lock_vault').catch(() => {}); 
+        onClose(); 
+      } 
+    },
     { 
       id: 'act-purge', 
       title: 'Purgar Memoria RAM & Compactar ZRAM', 

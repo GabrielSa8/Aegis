@@ -11,10 +11,13 @@ import {
   PluginsSection,
   P2pSyncSection,
   TelegramGatewaySection,
+  SecuritySettingsSection,
   useSettings
 } from './settings';
+import { useSecurity } from './security/useSecurity';
 
 export default function SettingsView({ onClose, currentTheme, onThemeChange, isFullView = false }) {
+  const security = useSecurity();
   const {
     activeSection,
     setActiveSection,
@@ -57,6 +60,8 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     switch (activeSection) {
       case 'profile':
         return <ProfileSection config={config} updateProfile={updateProfile} />;
+      case 'security':
+        return <SecuritySettingsSection security={security} onLockVault={security.lockVault} />;
       case 'plugins':
         return <PluginsSection config={config} setConfig={setConfig} />;
       case 'appearance':
