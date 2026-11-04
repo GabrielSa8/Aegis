@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aegis",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "identifier": "com.aegis.cockpit",
   "build": {
     "frontendDist": "../dist",
@@ -27,8 +27,15 @@
       "assetProtocol": {
         "enable": true,
         "scope": {
-          "allow": ["$HOME/**", "/tmp/**"],
-          "deny": ["$HOME/.ssh/**", "$HOME/.gnupg/**", "$HOME/.aws/**"],
+          "allow": [
+            "$HOME/**",
+            "/tmp/**"
+          ],
+          "deny": [
+            "$HOME/.ssh/**",
+            "$HOME/.gnupg/**",
+            "$HOME/.aws/**"
+          ],
           "requireLiteralLeadingDot": false
         }
       }
