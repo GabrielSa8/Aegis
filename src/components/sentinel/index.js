@@ -13,3 +13,4 @@ export { default as DiskCleanerCard } from './DiskCleanerCard';
 export { default as SystemUpdatesCard } from './SystemUpdatesCard';
 export { useAutostart } from './useAutostart';
 export { default as AutostartCard } from './AutostartCard';
+export { default as KillProcessModal } from './KillProcessModal';

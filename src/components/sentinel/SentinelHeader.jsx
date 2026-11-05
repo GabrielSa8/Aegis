@@ -33,7 +33,7 @@ export default function SentinelHeader({
   };
 
   return (
-    <div style={{
+    <div className="sentinel-header-card" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -46,7 +46,7 @@ export default function SentinelHeader({
       flexWrap: 'wrap'
     }}>
       {/* Identidad del Host descubierta dinámicamente */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="sentinel-header-host-info" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Activity color="var(--primary)" size={15} />
           <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)' }}>
@@ -54,7 +54,7 @@ export default function SentinelHeader({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="sentinel-header-badges" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{
             fontSize: '0.65rem',
             color: 'var(--text-muted)',
@@ -78,7 +78,7 @@ export default function SentinelHeader({
             {telemetry?.cpuModel || 'CPU Host'}
           </span>
           {telemetry?.kernelVersion && (
-            <span style={{
+            <span className="sentinel-kernel-badge" style={{
               fontSize: '0.65rem',
               color: 'var(--text-muted)',
               background: 'color-mix(in srgb, var(--bg-surface) 40%, transparent)',
@@ -93,7 +93,7 @@ export default function SentinelHeader({
       </div>
 
       {/* Acciones y Badges de Control */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="sentinel-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {cleanMessage && (
           <span style={{ fontSize: '0.72rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
             {cleanMessage}
@@ -124,6 +124,7 @@ export default function SentinelHeader({
           </div>
         ) : (
           <button
+            className="sentinel-power-btn"
             onClick={toggleProfile}
             disabled={powerProfileSwitching}
             style={{
@@ -153,6 +154,7 @@ export default function SentinelHeader({
 
         {/* Botón Purgar RAM */}
         <TacticalButton
+          className="sentinel-clean-ram-btn"
           variant="secondary"
           size="sm"
           icon={Sparkles}
@@ -166,6 +168,7 @@ export default function SentinelHeader({
 
         {/* Toggle de Auto-Refresco */}
         <button
+          className="sentinel-autorefresh-btn"
           onClick={onToggleAutoRefresh}
           style={{
             padding: '2px 7px',
@@ -205,6 +208,7 @@ export default function SentinelHeader({
 
         {/* Refresco Manual */}
         <button
+          className="sentinel-refresh-btn"
           onClick={onRefresh}
           style={{
             background: 'transparent',

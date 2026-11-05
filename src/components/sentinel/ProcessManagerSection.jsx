@@ -22,7 +22,7 @@ export default function ProcessManagerSection({
   onKillProcess
 }) {
   return (
-    <div style={{
+    <div className="sentinel-card sentinel-process-manager" style={{
       background: 'var(--bg-card)',
       border: '1px solid var(--border-color)',
       borderRadius: 'var(--radius-lg)',
@@ -32,14 +32,14 @@ export default function ProcessManagerSection({
       gap: '10px'
     }}>
       {/* Barra de Herramientas Equilibrada */}
-      <div style={{
+      <div className="sentinel-proc-toolbar" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="sentinel-proc-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Server size={15} color="var(--primary)" />
             <h3 style={{
@@ -62,7 +62,7 @@ export default function ProcessManagerSection({
             </span>
           </div>
 
-          <div style={{
+          <div className="sentinel-proc-sort-tabs" style={{
             display: 'inline-flex',
             background: 'color-mix(in srgb, var(--bg-surface) 90%, transparent)',
             padding: '2px',
@@ -80,6 +80,7 @@ export default function ProcessManagerSection({
                 <button
                   key={tab.id}
                   type="button"
+                  className={`sentinel-sort-tab-btn ${isActive ? 'active' : ''}`}
                   onClick={() => onSortModeChange(tab.id)}
                   style={{
                     display: 'flex',
@@ -120,7 +121,7 @@ export default function ProcessManagerSection({
           </div>
         </div>
 
-        <div style={{ position: 'relative', width: '210px' }}>
+        <div className="sentinel-proc-search-box" style={{ position: 'relative', width: '210px' }}>
           <Search size={12} style={{
             position: 'absolute',
             left: '9px',
@@ -149,7 +150,7 @@ export default function ProcessManagerSection({
       </div>
 
       {/* Cabecera de Columnas */}
-      <div style={{
+      <div className="sentinel-proc-table-header" style={{
         display: 'flex',
         alignItems: 'center',
         padding: '3px 10px',
@@ -160,11 +161,11 @@ export default function ProcessManagerSection({
         letterSpacing: '0.04em',
         borderBottom: '1px solid var(--border-color)'
       }}>
-        <span style={{ width: '55px', flexShrink: 0 }}>PID</span>
-        <span style={{ flex: 1, minWidth: 0, paddingRight: '6px' }}>Proceso & Binario</span>
-        <span style={{ width: '75px', flexShrink: 0, textAlign: 'center' }}>Estado</span>
-        <span style={{ width: '95px', flexShrink: 0, textAlign: 'right', paddingRight: '6px' }}>Consumo</span>
-        <span style={{ width: '115px', flexShrink: 0, textAlign: 'right' }}>Acciones</span>
+        <span className="sentinel-col-pid" style={{ width: '55px', flexShrink: 0 }}>PID</span>
+        <span className="sentinel-col-name" style={{ flex: 1, minWidth: 0, paddingRight: '6px' }}>Proceso & Binario</span>
+        <span className="sentinel-col-state" style={{ width: '75px', flexShrink: 0, textAlign: 'center' }}>Estado</span>
+        <span className="sentinel-col-consumption" style={{ width: '95px', flexShrink: 0, textAlign: 'right', paddingRight: '6px' }}>Consumo</span>
+        <span className="sentinel-col-actions" style={{ width: '115px', flexShrink: 0, textAlign: 'right' }}>Acciones</span>
       </div>
 
       {/* Lista de Procesos */}

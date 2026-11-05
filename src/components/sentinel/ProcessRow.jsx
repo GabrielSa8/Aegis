@@ -42,6 +42,7 @@ export default function ProcessRow({
 
   return (
     <div
+      className="sentinel-process-row"
       style={{
         position: 'relative',
         display: 'flex',
@@ -68,7 +69,7 @@ export default function ProcessRow({
       }} />
 
       {/* PID */}
-      <div style={{ width: '55px', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+      <div className="sentinel-cell-pid" style={{ width: '55px', flexShrink: 0, position: 'relative', zIndex: 1 }}>
         <span style={{
           fontSize: '0.68rem',
           fontWeight: 700,
@@ -85,7 +86,7 @@ export default function ProcessRow({
       </div>
 
       {/* Proceso y Cmdline */}
-      <div style={{
+      <div className="sentinel-cell-name" style={{
         flex: 1,
         minWidth: 0,
         display: 'flex',
@@ -122,7 +123,7 @@ export default function ProcessRow({
       </div>
 
       {/* Estado */}
-      <div style={{ width: '75px', flexShrink: 0, textAlign: 'center', position: 'relative', zIndex: 1 }}>
+      <div className="sentinel-cell-state" style={{ width: '75px', flexShrink: 0, textAlign: 'center', position: 'relative', zIndex: 1 }}>
         <span style={{
           fontSize: '0.62rem',
           fontWeight: 700,
@@ -138,7 +139,7 @@ export default function ProcessRow({
       </div>
 
       {/* Consumo */}
-      <div style={{
+      <div className="sentinel-cell-consumption" style={{
         width: '95px',
         flexShrink: 0,
         textAlign: 'right',
@@ -168,7 +169,7 @@ export default function ProcessRow({
       </div>
 
       {/* Acciones */}
-      <div style={{
+      <div className="sentinel-cell-actions" style={{
         width: '115px',
         flexShrink: 0,
         display: 'flex',
@@ -178,19 +179,21 @@ export default function ProcessRow({
         zIndex: 1
       }}>
         <TacticalButton
+          className="sentinel-proc-btn sentinel-proc-term-btn"
           variant="secondary"
           size="xs"
-          onClick={() => onKillProcess(proc.pid, 15)}
+          onClick={() => onKillProcess(proc, 15)}
           title={`SIGTERM PID ${proc.pid}`}
           style={{ padding: '2px 7px', fontSize: '0.66rem' }}
         >
           Terminar
         </TacticalButton>
         <TacticalButton
+          className="sentinel-proc-btn sentinel-proc-kill-btn"
           variant="danger"
           size="xs"
           icon={AlertOctagon}
-          onClick={() => onKillProcess(proc.pid, 9)}
+          onClick={() => onKillProcess(proc, 9)}
           title={`SIGKILL PID ${proc.pid}`}
           style={{ padding: '2px 6px', fontSize: '0.66rem' }}
         >

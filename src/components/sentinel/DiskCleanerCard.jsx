@@ -16,6 +16,7 @@ export default function DiskCleanerCard({
 
   return (
     <div
+      className="sentinel-card sentinel-disk-cleaner-card"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -27,7 +28,7 @@ export default function DiskCleanerCard({
       }}
     >
       {/* Header con métrica de espacio recuperable y acciones */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="sentinel-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <HardDrive size={15} style={{ color: 'var(--accent)' }} />
           <div>
@@ -40,7 +41,7 @@ export default function DiskCleanerCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="sentinel-card-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               padding: '3px 8px',
@@ -57,6 +58,7 @@ export default function DiskCleanerCard({
           </div>
 
           <button
+            className="sentinel-icon-action-btn"
             onClick={onScan}
             disabled={scanningDisk || purgingAll}
             title="Re-escanear cachés del sistema"
@@ -76,6 +78,7 @@ export default function DiskCleanerCard({
           </button>
 
           <button
+            className="sentinel-purge-all-btn"
             onClick={onPurgeAll}
             disabled={scanningDisk || purgingAll || !hasReclaimable}
             style={{
@@ -110,6 +113,7 @@ export default function DiskCleanerCard({
           return (
             <div
               key={target.id}
+              className="sentinel-cleaner-target-row"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -155,7 +159,7 @@ export default function DiskCleanerCard({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <div className="sentinel-cleaner-target-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <span
                   style={{
                     fontSize: '0.72rem',
@@ -168,6 +172,7 @@ export default function DiskCleanerCard({
                 </span>
 
                 <button
+                  className="sentinel-purge-single-btn"
                   onClick={() => onPurgeTarget(target.id)}
                   disabled={isThisPurging || purgingAll || !canPurge}
                   style={{

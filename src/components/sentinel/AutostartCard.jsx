@@ -26,6 +26,7 @@ export default function AutostartCard({
 
   return (
     <div
+      className="sentinel-card sentinel-autostart-card"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -37,7 +38,7 @@ export default function AutostartCard({
       }}
     >
       {/* Header con métrica y refresco */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="sentinel-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <PlayCircle size={15} style={{ color: 'var(--accent)' }} />
           <div>
@@ -50,7 +51,7 @@ export default function AutostartCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="sentinel-card-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               padding: '3px 8px',
@@ -67,6 +68,7 @@ export default function AutostartCard({
           </div>
 
           <button
+            className="sentinel-icon-action-btn"
             onClick={onRefresh}
             disabled={loading}
             title="Refrescar lista de inicio"
@@ -208,6 +210,7 @@ export default function AutostartCard({
 
               {/* Botón Switch táctico */}
               <button
+                className="sentinel-autostart-toggle-btn"
                 onClick={() => onToggle(item.id, item.itemType, item.enabled)}
                 disabled={isToggling}
                 style={{

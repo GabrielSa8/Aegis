@@ -5720,6 +5720,161 @@ input[type="number"] {
   }
 }
 
+/* ==========================================================================
+   SUITE RESPONSIVE TÁCTICA & CONTROLES CENTINELA (SENTINEL VIEW)
+   ========================================================================== */
+
+.sentinel-view-container {
+  container-type: inline-size;
+  container-name: sentinel-view;
+}
+
+/* Microinteracciones táctiles en botones de Centinela */
+.sentinel-power-btn,
+.sentinel-autorefresh-btn,
+.sentinel-refresh-btn,
+.sentinel-icon-action-btn,
+.sentinel-purge-all-btn,
+.sentinel-purge-single-btn,
+.sentinel-copy-btn,
+.sentinel-launch-btn,
+.sentinel-autostart-toggle-btn,
+.sentinel-sort-tab-btn,
+.sentinel-proc-btn {
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sentinel-power-btn:hover:not(:disabled),
+.sentinel-autorefresh-btn:hover:not(:disabled),
+.sentinel-purge-all-btn:hover:not(:disabled),
+.sentinel-purge-single-btn:hover:not(:disabled),
+.sentinel-copy-btn:hover:not(:disabled),
+.sentinel-launch-btn:hover:not(:disabled),
+.sentinel-autostart-toggle-btn:hover:not(:disabled),
+.sentinel-sort-tab-btn:hover:not(:disabled),
+.sentinel-proc-btn:hover:not(:disabled) {
+  filter: brightness(1.18) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 20%, transparent) !important;
+}
+
+.sentinel-power-btn:active:not(:disabled),
+.sentinel-autorefresh-btn:active:not(:disabled),
+.sentinel-purge-all-btn:active:not(:disabled),
+.sentinel-purge-single-btn:active:not(:disabled),
+.sentinel-copy-btn:active:not(:disabled),
+.sentinel-launch-btn:active:not(:disabled),
+.sentinel-autostart-toggle-btn:active:not(:disabled),
+.sentinel-sort-tab-btn:active:not(:disabled),
+.sentinel-proc-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97) !important;
+}
+
+.sentinel-refresh-btn:hover:not(:disabled),
+.sentinel-icon-action-btn:hover:not(:disabled) {
+  transform: scale(1.14) !important;
+  color: var(--text-high) !important;
+}
+
+.sentinel-refresh-btn:active:not(:disabled),
+.sentinel-icon-action-btn:active:not(:disabled) {
+  transform: scale(0.92) !important;
+}
+
+.sentinel-process-row:hover {
+  background: color-mix(in srgb, var(--bg-surface) 75%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+}
+
+/* Breakpoint 1: Viewport Mediano / Tablet (~840px) */
+@container sentinel-view (max-width: 840px) {
+  .sentinel-header-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .sentinel-header-host-info {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .sentinel-header-actions {
+    justify-content: flex-end !important;
+    width: 100% !important;
+  }
+
+  .sentinel-kernel-badge {
+    display: none !important;
+  }
+
+  .sentinel-proc-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .sentinel-proc-toolbar-left {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .sentinel-proc-search-box {
+    width: 100% !important;
+  }
+}
+
+/* Breakpoint 2: Viewport Estrecho / Compacto (~600px) */
+@container sentinel-view (max-width: 600px) {
+  .sentinel-header-actions {
+    justify-content: space-between !important;
+  }
+
+  .sentinel-card-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .sentinel-card-header-actions {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .sentinel-command-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .sentinel-command-actions {
+    justify-content: flex-end !important;
+    width: 100% !important;
+  }
+
+  /* Ocultar columnas secundarias de la tabla de procesos para legibilidad */
+  .sentinel-col-state,
+  .sentinel-cell-state {
+    display: none !important;
+  }
+
+  .sentinel-col-pid,
+  .sentinel-cell-pid {
+    width: 48px !important;
+  }
+
+  .sentinel-col-consumption,
+  .sentinel-cell-consumption {
+    width: 75px !important;
+  }
+
+  .sentinel-col-actions,
+  .sentinel-cell-actions {
+    width: 95px !important;
+  }
+}
+
+
 
 
 

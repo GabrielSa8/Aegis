@@ -834,8 +834,24 @@ pub fn get_top_processes() -> Result<Vec<ProcessInfo>, String> {
 
 #[tauri::command]
 pub fn kill_process(pid: u32, signal: Option<i32>) -> Result<String, String> {
-    if pid <= 1 || pid == std::process::id() {
+    let my_pid = std::process::id();
+    if pid <= 1 || pid == my_pid {
         return Err("Operación denegada: Proceso crítico o Aegis.".to_string());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Proteger el árbol de procesos de Aegis (ej. WebKitWebProcess, WebKitNetworkProcess hijos de Aegis)
+        if let Ok(status) = fs::read_to_string(format!("/proc/{}/status", pid)) {
+            for line in status.lines() {
+                if line.starts_with("PPid:") {
+                    let ppid_val = line[5..].trim().parse::<u32>().unwrap_or(0);
+                    if ppid_val == my_pid {
+                        return Err("Operación denegada: Proceso interno del WebView de Aegis.".to_string());
+                    }
+                }
+            }
+        }
     }
 
     #[cfg(target_os = "windows")]

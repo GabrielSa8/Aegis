@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useSentinel,
   useMaintenance,
@@ -8,7 +9,8 @@ import {
   AegisProcessFootprint,
   ProcessManagerSection,
   MaintenanceSection,
-  AutostartCard
+  AutostartCard,
+  KillProcessModal
 } from './sentinel';
 
 export default function SentinelView() {
@@ -68,8 +70,21 @@ export default function SentinelView() {
     feedback: autostartFeedback
   } = useAutostart();
 
+  const [killTarget, setKillTarget] = useState(null);
+
+  const handleRequestKill = (proc, signal) => {
+    setKillTarget({ proc, signal });
+  };
+
+  const handleConfirmKill = async (pid, signal) => {
+    setKillTarget(null);
+    if (pid) {
+      await handleKillProcess(pid, signal);
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
+    <div className="sentinel-view-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.75rem', overflowY: 'auto' }}>
       {/* 🧭 Barra de Telemetría Host Compacta */}
       <SentinelHeader
         telemetry={telemetry}
@@ -142,7 +157,15 @@ export default function SentinelView() {
         processSortMode={processSortMode}
         onSortModeChange={setProcessSortMode}
         zombieCount={zombieCount}
-        onKillProcess={handleKillProcess}
+        onKillProcess={handleRequestKill}
+      />
+
+      {/* 🛑 Modal Táctico de Confirmación de Terminación de Proceso */}
+      <KillProcessModal
+        isOpen={Boolean(killTarget)}
+        target={killTarget}
+        onClose={() => setKillTarget(null)}
+        onConfirm={handleConfirmKill}
       />
     </div>
   );

@@ -10,8 +10,6 @@ export default function SystemUpdatesCard({
   onCopyCommand,
   onLaunchUpdate
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   const manager = updatesReport?.manager || 'Detectando...';
   const count = updatesReport?.updatesAvailable || 0;
   const packages = updatesReport?.packages || [];
@@ -19,11 +17,9 @@ export default function SystemUpdatesCard({
   const cmd = updatesReport?.updateCommand || 'sudo dnf upgrade -y';
   const hasUpdates = count > 0;
 
-  const displayPackages = expanded ? packages : packages.slice(0, 12);
-  const remainingCount = packages.length - 12;
-
   return (
     <div
+      className="sentinel-card sentinel-updates-card"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -31,11 +27,12 @@ export default function SystemUpdatesCard({
         padding: '12px 14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px'
+        gap: '10px',
+        minHeight: '260px'
       }}
     >
       {/* Header con status y gestor de paquetes */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+      <div className="sentinel-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Package size={15} style={{ color: 'var(--primary)' }} />
           <div>
@@ -48,7 +45,7 @@ export default function SystemUpdatesCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="sentinel-card-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               padding: '3px 8px',
@@ -67,6 +64,7 @@ export default function SystemUpdatesCard({
           </div>
 
           <button
+            className="sentinel-icon-action-btn"
             onClick={onCheckUpdates}
             disabled={checkingUpdates}
             title="Comprobar actualizaciones"
@@ -89,6 +87,7 @@ export default function SystemUpdatesCard({
 
       {/* Comando guiado de actualización con botón de copiado */}
       <div
+        className="sentinel-command-bar"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -119,8 +118,9 @@ export default function SystemUpdatesCard({
           </code>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        <div className="sentinel-command-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <button
+            className="sentinel-copy-btn"
             onClick={onCopyCommand}
             style={{
               background: copiedCommand
@@ -143,6 +143,7 @@ export default function SystemUpdatesCard({
           </button>
 
           <button
+            className="sentinel-launch-btn"
             onClick={onLaunchUpdate}
             disabled={launchingUpdate}
             title="Abrir terminal interactiva del sistema y aplicar actualizaciones"
@@ -168,48 +169,41 @@ export default function SystemUpdatesCard({
 
       {/* Lista de paquetes actualizables si existen */}
       {hasUpdates && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minHeight: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Paquetes a actualizar:
+              Paquetes a actualizar ({packages.length}):
             </span>
-            {remainingCount > 0 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--accent)',
-                  fontSize: '0.62rem',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                {expanded ? 'Mostrar menos' : `+${remainingCount} más`}
-              </button>
-            )}
           </div>
 
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
+              alignContent: 'flex-start',
               gap: '4px',
-              maxHeight: expanded ? '160px' : '65px',
-              overflowY: 'auto'
+              flex: 1,
+              minHeight: '120px',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              background: 'color-mix(in srgb, var(--bg-surface) 50%, transparent)',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              border: '1px solid color-mix(in srgb, var(--border-color) 40%, transparent)'
             }}
           >
-            {displayPackages.map((pkg, idx) => (
+            {packages.map((pkg, idx) => (
               <span
                 key={idx}
                 style={{
-                  fontSize: '0.62rem',
+                  fontSize: '0.64rem',
                   fontFamily: 'monospace',
                   background: 'color-mix(in srgb, var(--text-muted) 14%, transparent)',
                   border: '1px solid color-mix(in srgb, var(--border-color) 50%, transparent)',
                   color: 'var(--text-high)',
-                  padding: '2px 6px',
-                  borderRadius: '3px'
+                  padding: '2px 7px',
+                  borderRadius: '3px',
+                  lineHeight: '1.2'
                 }}
               >
                 {pkg}
@@ -226,7 +220,11 @@ export default function SystemUpdatesCard({
             color: 'var(--text-muted)',
             fontStyle: 'italic',
             textAlign: 'center',
-            padding: '8px 0'
+            padding: '16px 0',
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           {statusMsg}
