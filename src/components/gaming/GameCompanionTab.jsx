@@ -37,14 +37,14 @@ export default function GameCompanionTab({ gameId, gameTitle, isSteam }) {
   };
 
   return (
-    <div style={{
+    <div className="gaming-companion-tab" style={{
       display: 'flex',
       flexDirection: 'column',
       height: '420px',
       gap: '8px'
     }}>
       {/* 🧭 Micro-Barra Táctica de Contexto Activo */}
-      <div style={{
+      <div className="gaming-companion-context-bar" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -66,7 +66,7 @@ export default function GameCompanionTab({ gameId, gameTitle, isSteam }) {
           </TacticalBadge>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+        <div className="gaming-companion-meta-badges" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           {context?.obsidian_note_exists ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--primary)' }}>
               <FileText size={11} /> Bóveda vinculada

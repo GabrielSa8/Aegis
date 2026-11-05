@@ -25,7 +25,7 @@ export default function ActiveGameSessionBar({
   };
 
   return (
-    <div style={{
+    <div className="gaming-active-session-bar" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -39,7 +39,7 @@ export default function ActiveGameSessionBar({
       animation: 'pulseGlow 2.5s infinite ease-in-out'
     }}>
       {/* Información del Juego en Ejecución */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="gaming-session-info" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{
           width: '26px',
           height: '26px',
@@ -69,7 +69,7 @@ export default function ActiveGameSessionBar({
       </div>
 
       {/* Cronómetro en Vivo */}
-      <div style={{
+      <div className="gaming-session-timer" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
@@ -97,12 +97,13 @@ export default function ActiveGameSessionBar({
       </div>
 
       {/* Acciones */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className="gaming-session-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
         <TacticalButton
           variant="secondary"
           size="xs"
           icon={Bot}
           onClick={onOpenCompanion}
+          className="gaming-action-btn"
           style={{ height: '26px' }}
         >
           Companion IA
@@ -113,6 +114,7 @@ export default function ActiveGameSessionBar({
           size="xs"
           icon={Trophy}
           onClick={onOpenDetails}
+          className="gaming-action-btn"
           style={{ height: '26px' }}
         >
           Logros & Reseña
@@ -123,6 +125,7 @@ export default function ActiveGameSessionBar({
           size="xs"
           icon={Square}
           onClick={onStopSession}
+          className="gaming-action-btn"
           style={{ height: '26px' }}
         >
           Finalizar & Guardar
@@ -130,12 +133,16 @@ export default function ActiveGameSessionBar({
 
         <button
           onClick={onCancelSession}
+          className="gaming-cancel-session-btn"
           style={{
             background: 'transparent',
             border: 'none',
             color: 'var(--text-muted)',
             cursor: 'pointer',
-            padding: '4px'
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           title="Descartar sesión sin guardar"
         >

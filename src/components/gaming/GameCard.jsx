@@ -24,6 +24,7 @@ const GameCard = memo(function GameCard({
 
   return (
     <div
+      className="gaming-game-card"
       style={{
         position: 'relative',
         aspectRatio: '2 / 3',
@@ -134,6 +135,7 @@ const GameCard = memo(function GameCard({
               game.name || game.title,
               isSteam
             )}
+            className="gaming-play-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -145,11 +147,8 @@ const GameCard = memo(function GameCard({
               fontSize: '0.66rem',
               fontWeight: 800,
               border: 'none',
-              cursor: 'pointer',
-              transition: 'filter 0.15s ease'
+              cursor: 'pointer'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
             title={`Lanzar ${game.name || game.title}`}
           >
             <Play size={10} fill="currentColor" />

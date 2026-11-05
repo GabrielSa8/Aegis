@@ -49,16 +49,18 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
   };
 
   return (
-    <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <form onSubmit={handleSave} className="gaming-review-tab" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* ⭐ Calificación Táctica */}
-      <div style={{
+      <div className="gaming-rating-card" style={{
         background: 'color-mix(in srgb, var(--bg-card) 85%, black)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-sm)',
         padding: '10px 12px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Star size={15} color="var(--accent)" />
@@ -67,20 +69,20 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="gaming-stars-row" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {[1, 2, 3, 4, 5].map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setRating(s)}
+              className="gaming-star-btn"
               style={{
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
                 padding: '2px',
                 fontSize: '1.1rem',
-                opacity: s <= rating ? 1 : 0.25,
-                transition: 'opacity 0.15s ease'
+                opacity: s <= rating ? 1 : 0.25
               }}
               title={`${s} estrella${s > 1 ? 's' : ''}`}
             >
@@ -95,7 +97,7 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
 
       {/* 📝 Textarea de Reseña e Impresiones */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="gaming-review-label-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
             Bitácora, Reseña & Notas de Juego
           </label>
@@ -103,6 +105,7 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
             <button
               type="button"
               onClick={handleOpenInVault}
+              className="gaming-vault-link-btn"
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -142,14 +145,16 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
       </div>
 
       {/* 📓 Sincronización con Obsidian */}
-      <div style={{
+      <div className="gaming-sync-row" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '6px 8px',
         background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
         border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-        borderRadius: 'var(--radius-sm)'
+        borderRadius: 'var(--radius-sm)',
+        flexWrap: 'wrap',
+        gap: '6px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <BookOpen size={13} color="var(--primary)" />
@@ -190,6 +195,7 @@ export default function GameReviewTab({ gameId, gameTitle, isSteam, gameStats, o
           type="submit"
           icon={saving ? Check : Save}
           disabled={saving}
+          className="gaming-action-btn"
           style={{ height: '28px' }}
         >
           {saving ? 'Guardando...' : 'Guardar Reseña & Bitácora'}

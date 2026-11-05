@@ -29,6 +29,7 @@ export default function GameCardHeaderBadges({
               e.stopPropagation();
               onDelete(game.id);
             }}
+            className="gaming-badge-btn gaming-badge-delete-btn"
             style={{
               background: 'color-mix(in srgb, var(--bg-card) 85%, black)',
               border: '1px solid var(--border-color)',
@@ -48,6 +49,7 @@ export default function GameCardHeaderBadges({
             e.stopPropagation();
             onOpenDetails(game, isSteam);
           }}
+          className="gaming-badge-btn gaming-badge-info-btn"
           style={{
             background: 'color-mix(in srgb, var(--bg-card) 85%, black)',
             border: '1px solid var(--border-color)',

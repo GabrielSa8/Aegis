@@ -51,7 +51,7 @@ export default function LeisureView() {
   } = useGaming();
 
   return (
-    <div style={{
+    <div className="gaming-view-container" style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
@@ -128,7 +128,7 @@ export default function LeisureView() {
       )}
 
       {/* 🎮 Cuadrícula: Cards Full Portada (2:3) Minimalistas */}
-      <div style={{
+      <div className="gaming-grid-container" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
         gap: '12px',

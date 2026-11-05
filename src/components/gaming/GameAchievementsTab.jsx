@@ -123,9 +123,9 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div className="gaming-achievements-tab" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* 📊 Barra de Progreso y Acciones */}
-      <div style={{
+      <div className="gaming-ach-progress-card" style={{
         background: 'color-mix(in srgb, var(--bg-card) 80%, black)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-sm)',
@@ -134,14 +134,14 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
         flexDirection: 'column',
         gap: '8px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="gaming-ach-progress-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Trophy size={16} color="var(--primary)" />
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
               Progreso de Logros
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="gaming-ach-progress-badges" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TacticalBadge variant={unlocked === total && total > 0 ? 'primary' : 'secondary'} size="sm">
               {unlocked} / {total} ({percentage.toFixed(0)}%)
             </TacticalBadge>
@@ -150,6 +150,7 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
               size="xs"
               icon={Plus}
               onClick={() => setShowAddForm(!showAddForm)}
+              className="gaming-action-btn"
               style={{ height: '22px' }}
             >
               + Personalizado
@@ -173,9 +174,10 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
         </div>
 
         {/* 🔍 Buscador y Tabs de Filtro */}
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
-          <div style={{
+        <div className="gaming-ach-filter-bar" style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+          <div className="gaming-ach-search-input-wrap" style={{
             flex: 1,
+            minWidth: '180px',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
@@ -201,9 +203,10 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '3px' }}>
+          <div className="gaming-ach-filter-pills" style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setFilterTab('all')}
+              className="gaming-filter-tab-btn"
               style={{
                 padding: '3px 7px',
                 fontSize: '0.64rem',
@@ -218,6 +221,7 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
             </button>
             <button
               onClick={() => setFilterTab('locked')}
+              className="gaming-filter-tab-btn"
               style={{
                 padding: '3px 7px',
                 fontSize: '0.64rem',
@@ -232,6 +236,7 @@ export default function GameAchievementsTab({ gameId, isSteam, onAchievementsCha
             </button>
             <button
               onClick={() => setFilterTab('unlocked')}
+              className="gaming-filter-tab-btn"
               style={{
                 padding: '3px 7px',
                 fontSize: '0.64rem',

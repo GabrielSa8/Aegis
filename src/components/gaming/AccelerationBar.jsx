@@ -11,7 +11,7 @@ export default function AccelerationBar({
   mangohudInstalled
 }) {
   return (
-    <div style={{
+    <div className="gaming-acceleration-bar" style={{
       background: 'rgba(255,255,255,0.02)',
       border: '1px solid var(--border-color)',
       borderRadius: 'var(--radius-md)',
@@ -23,26 +23,26 @@ export default function AccelerationBar({
       flexWrap: 'wrap',
       fontSize: '0.72rem'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+      <div className="gaming-accel-left" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
         <Zap size={13} color="var(--primary)" />
         <span>Aceleración:</span>
-        <span style={{ color: '#fff', fontWeight: 600 }}>gamemoderun automático</span>
+        <span style={{ color: 'var(--text-high)', fontWeight: 600 }}>gamemoderun automático</span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <label style={{
+      <div className="gaming-accel-right" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="gaming-accel-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <label className="gaming-accel-toggle-btn" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             cursor: 'pointer',
-            background: useGamescopeFsr ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+            background: useGamescopeFsr ? 'var(--primary-glow)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
             border: useGamescopeFsr ? '1px solid var(--primary)' : '1px solid var(--border-color)',
             padding: '3px 8px',
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.7rem',
             fontWeight: 600,
-            color: useGamescopeFsr ? '#fff' : 'var(--text-muted)',
+            color: useGamescopeFsr ? 'var(--primary)' : 'var(--text-muted)',
             transition: 'all 0.15s ease',
             boxShadow: useGamescopeFsr ? '0 0 10px var(--primary-glow)' : 'none'
           }}>
@@ -59,6 +59,7 @@ export default function AccelerationBar({
             <select
               value={gamescopeRes}
               onChange={(e) => onChangeRes(e.target.value)}
+              className="gaming-res-select"
               style={{
                 background: 'rgba(0,0,0,0.6)',
                 color: 'var(--text-high)',
@@ -76,18 +77,18 @@ export default function AccelerationBar({
         </div>
 
         {mangohudInstalled && (
-          <label style={{
+          <label className="gaming-accel-toggle-btn" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             cursor: 'pointer',
-            background: useMangohud ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+            background: useMangohud ? 'var(--primary-glow)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
             border: useMangohud ? '1px solid var(--primary)' : '1px solid var(--border-color)',
             padding: '3px 8px',
             borderRadius: 'var(--radius-sm)',
             fontSize: '0.7rem',
             fontWeight: 600,
-            color: useMangohud ? '#fff' : 'var(--text-muted)',
+            color: useMangohud ? 'var(--primary)' : 'var(--text-muted)',
             transition: 'all 0.15s ease',
             boxShadow: useMangohud ? '0 0 10px var(--primary-glow)' : 'none'
           }}>

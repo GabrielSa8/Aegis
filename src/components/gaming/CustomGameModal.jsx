@@ -37,7 +37,7 @@ export default function CustomGameModal({
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              color: '#fff'
+              color: 'var(--text-high)'
             }}
           />
         </div>
@@ -58,7 +58,7 @@ export default function CustomGameModal({
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-sm)',
-                color: '#fff'
+                color: 'var(--text-high)'
               }}
             >
               <option value="url">Navegador Web (URL)</option>
@@ -84,7 +84,7 @@ export default function CustomGameModal({
                 background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-sm)',
-                color: '#fff'
+                color: 'var(--text-high)'
               }}
             />
           </div>
@@ -108,7 +108,7 @@ export default function CustomGameModal({
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              color: '#fff',
+              color: 'var(--text-high)',
               fontFamily: 'var(--font-mono)'
             }}
           />
@@ -131,7 +131,7 @@ export default function CustomGameModal({
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              color: '#fff'
+              color: 'var(--text-high)'
             }}
           />
         </div>
@@ -153,7 +153,7 @@ export default function CustomGameModal({
               background: 'var(--bg-card)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              color: '#fff'
+              color: 'var(--text-high)'
             }}
           />
         </div>

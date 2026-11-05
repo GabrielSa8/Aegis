@@ -23,6 +23,7 @@ export default function AchievementItemRow({ item, onToggle, onDelete }) {
 
   return (
     <div
+      className="gaming-achievement-row"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -38,7 +39,7 @@ export default function AchievementItemRow({ item, onToggle, onDelete }) {
       }}
     >
       {/* 🏅 Logo / Medalla Táctica */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+      <div className="gaming-ach-item-left" style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
         {resolvedIconUrl && !imgError ? (
           <div style={{
             position: 'relative',
@@ -139,10 +140,11 @@ export default function AchievementItemRow({ item, onToggle, onDelete }) {
       </div>
 
       {/* ⚡ Selector / Toggle Táctico de 1-Clic */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+      <div className="gaming-ach-item-right" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
         <button
           onClick={() => onToggle(item)}
           title={item.unlocked ? 'Clic para marcar como bloqueado' : 'Clic para desbloquear'}
+          className="gaming-ach-toggle-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -156,19 +158,18 @@ export default function AchievementItemRow({ item, onToggle, onDelete }) {
               ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
               : 'transparent',
             color: item.unlocked ? 'var(--primary)' : 'var(--text-muted)',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
+            cursor: 'pointer'
           }}
         >
           {item.unlocked ? (
             <>
               <CheckCircle2 size={13} color="var(--primary)" />
-              <span>Desbloqueado</span>
+              <span className="gaming-ach-status-label">Desbloqueado</span>
             </>
           ) : (
             <>
               <Lock size={12} color="var(--text-muted)" />
-              <span>Desbloquear</span>
+              <span className="gaming-ach-status-label">Desbloquear</span>
             </>
           )}
         </button>
@@ -176,12 +177,15 @@ export default function AchievementItemRow({ item, onToggle, onDelete }) {
         {item.isCustom && (
           <button
             onClick={() => onDelete(item.id)}
+            className="gaming-ach-delete-btn"
             style={{
               background: 'transparent',
               border: 'none',
               color: 'var(--danger)',
               cursor: 'pointer',
-              padding: '3px'
+              padding: '3px',
+              display: 'flex',
+              alignItems: 'center'
             }}
             title="Eliminar logro personalizado"
           >

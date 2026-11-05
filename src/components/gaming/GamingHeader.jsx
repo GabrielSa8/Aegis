@@ -24,7 +24,7 @@ export default function GamingHeader({
   ];
 
   return (
-    <div style={{
+    <div className="gaming-header-card" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -37,8 +37,8 @@ export default function GamingHeader({
       flexWrap: 'wrap'
     }}>
       {/* Buscador & Pastillas */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '260px', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', width: '220px' }}>
+      <div className="gaming-header-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '260px', flexWrap: 'wrap' }}>
+        <div className="gaming-header-input-wrap" style={{ position: 'relative', width: '220px' }}>
           <Search size={13} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -59,13 +59,14 @@ export default function GamingHeader({
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="gaming-header-categories" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {categories.map((cat) => {
             const isActive = categoryFilter === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.id)}
+                className="gaming-category-tab-btn"
                 style={{
                   padding: '2px 8px',
                   fontSize: '0.68rem',
@@ -85,15 +86,15 @@ export default function GamingHeader({
       </div>
 
       {/* Telemetría & Acciones */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="gaming-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {launchMessage && (
-          <span style={{ fontSize: '0.72rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+          <span className="gaming-launch-message" style={{ fontSize: '0.72rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
             {launchMessage}
           </span>
         )}
 
         {gamingStatus?.gpuDriver && (
-          <span style={{
+          <span className="gaming-gpu-badge" style={{
             fontSize: '0.66rem',
             color: 'var(--text-muted)',
             background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
@@ -105,7 +106,7 @@ export default function GamingHeader({
           </span>
         )}
 
-        <div style={{
+        <div className="gaming-mando-badge" style={{
           background: gamepadConnected ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
           border: `1px solid ${gamepadConnected ? 'var(--accent)' : 'var(--border-color)'}`,
           padding: '2px 8px',
@@ -121,7 +122,7 @@ export default function GamingHeader({
           <span>{gamepadConnected ? 'MANDO' : 'SIN MANDO'}</span>
         </div>
 
-        <div style={{
+        <div className="gaming-gamemode-badge" style={{
           background: gamingStatus?.gamemodeActive ? 'var(--primary-glow)' : 'color-mix(in srgb, var(--bg-card) 95%, black)',
           border: `1px solid ${gamingStatus?.gamemodeActive ? 'var(--primary)' : 'var(--border-color)'}`,
           padding: '2px 8px',
@@ -142,6 +143,7 @@ export default function GamingHeader({
           size="xs"
           icon={Plus}
           onClick={onOpenNewGame}
+          className="gaming-action-btn"
           style={{ height: '26px' }}
         >
           + Juego
@@ -151,6 +153,7 @@ export default function GamingHeader({
           variant="secondary"
           size="xs"
           onClick={onLaunchSteam}
+          className="gaming-action-btn"
           style={{ height: '26px' }}
           title="Abrir el cliente de Steam"
         >
@@ -159,6 +162,7 @@ export default function GamingHeader({
 
         <button
           onClick={onRefresh}
+          className="gaming-refresh-btn"
           style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '3px' }}
           title="Refrescar catálogo"
         >

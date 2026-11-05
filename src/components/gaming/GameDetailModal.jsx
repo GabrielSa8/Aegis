@@ -50,9 +50,9 @@ export default function GameDetailModal({
       icon={Gamepad2}
       maxWidth="680px"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div className="gaming-modal-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* 🧭 Header Táctico con Métricas Resumen */}
-        <div style={{
+        <div className="gaming-modal-header-metrics" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -63,7 +63,7 @@ export default function GameDetailModal({
           gap: '10px',
           flexWrap: 'wrap'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="gaming-modal-header-tag" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{
               fontSize: '0.62rem',
               fontWeight: 800,
@@ -80,7 +80,7 @@ export default function GameDetailModal({
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div className="gaming-modal-header-stats" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Clock size={13} color="var(--primary)" />
               <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-high)' }}>

@@ -78,9 +78,9 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div className="gaming-sessions-tab" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {/* ⏱️ Registro Manual Rápido */}
-      <div style={{
+      <div className="gaming-manual-session-card" style={{
         background: 'color-mix(in srgb, var(--bg-card) 85%, black)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-sm)',
@@ -89,7 +89,7 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
         flexDirection: 'column',
         gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="gaming-manual-session-top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Clock size={15} color="var(--primary)" />
             <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-high)' }}>
@@ -101,28 +101,31 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {['15', '30', '60', '120'].map((m) => (
-            <button
-              key={m}
-              onClick={() => handleLogManual(m)}
-              disabled={actionLoading}
-              style={{
-                padding: '3px 10px',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-high)',
-                cursor: 'pointer'
-              }}
-            >
-              +{m} min
-            </button>
-          ))}
+        <div className="gaming-manual-session-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <div className="gaming-quick-mins-group" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+            {['15', '30', '60', '120'].map((m) => (
+              <button
+                key={m}
+                onClick={() => handleLogManual(m)}
+                disabled={actionLoading}
+                className="gaming-quick-min-btn"
+                style={{
+                  padding: '3px 10px',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  background: 'transparent',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text-high)',
+                  cursor: 'pointer'
+                }}
+              >
+                +{m} min
+              </button>
+            ))}
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+          <div className="gaming-manual-custom-input-group" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
             <input
               type="number"
               min="1"
@@ -147,6 +150,7 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
               icon={Plus}
               onClick={() => handleLogManual(manualMinutes)}
               disabled={actionLoading}
+              className="gaming-action-btn"
               style={{ height: '24px' }}
             >
               Añadir
@@ -156,20 +160,21 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
       </div>
 
       {/* 📜 Historial de Sesiones */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+      <div className="gaming-session-history-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
           Historial de Sesiones Recientes ({sessions.length})
         </span>
         <button
           onClick={fetchSessions}
-          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+          className="gaming-refresh-btn"
+          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '3px' }}
           title="Refrescar sesiones"
         >
           <RefreshCw size={12} />
         </button>
       </div>
 
-      <div style={{
+      <div className="gaming-session-history-list" style={{
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
@@ -196,6 +201,7 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
           sessions.map((sess) => (
             <div
               key={sess.id}
+              className="gaming-session-item-row"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -203,7 +209,8 @@ export default function GameSessionsTab({ gameId, gameTitle, isSteam, onSessionR
                 padding: '8px 10px',
                 background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
                 border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-sm)'
+                borderRadius: 'var(--radius-sm)',
+                gap: '8px'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
