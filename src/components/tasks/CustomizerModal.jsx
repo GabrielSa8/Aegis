@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Palette, Undo2, Save, X } from 'lucide-react';
+import { Palette, Undo2, Save } from 'lucide-react';
 import { ModalWrapper, TacticalButton } from '../ui';
 import { NORDIC_PALETTE, CURATED_EMOJIS, resolveProjectTheme } from './taskHelpers';
 
@@ -27,17 +27,18 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
   };
 
   const footer = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+    <div className="customizer-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px', flexWrap: 'wrap' }}>
       <TacticalButton
         variant="ghost"
         size="xs"
         icon={Undo2}
         onClick={handleResetAll}
+        className="customizer-reset-btn"
       >
         Restablecer Todo
       </TacticalButton>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="customizer-footer-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <TacticalButton
           variant="secondary"
           size="sm"
@@ -67,7 +68,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
       maxWidth="620px"
       footer={footer}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div className="customizer-projects-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {projects.map((proj) => {
           const currentTheme = resolveProjectTheme(proj, draft);
           const userCustom = draft[proj] || {};
@@ -78,6 +79,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
           return (
             <div
               key={proj}
+              className={`customizer-project-row ${isPickerOpen ? 'is-picker-open' : ''}`}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -90,17 +92,20 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
             >
               {/* Fila Principal */}
               <div
+                className="customizer-project-main"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0.6rem 0.85rem',
-                  gap: '10px'
+                  gap: '10px',
+                  flexWrap: 'wrap'
                 }}
               >
                 {/* Badge Preview en Vivo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '160px' }}>
+                <div className="customizer-badge-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '140px' }}>
                   <span
+                    className="customizer-preview-badge"
                     style={{
                       fontSize: '0.72rem',
                       fontWeight: 800,
@@ -116,17 +121,18 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                     }}
                   >
                     <span style={{ fontSize: '0.95rem' }}>{currentTheme.icon}</span>
-                    <span>{proj}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proj}</span>
                   </span>
                 </div>
 
                 {/* Controles: Botón Emoji Grande + Swatches de Color */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                <div className="customizer-controls-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                   {/* Botón de Emoji */}
                   <button
                     type="button"
                     onClick={() => setActivePickerProj(isPickerOpen ? null : proj)}
                     title="Haz clic para desplegar la cuadrícula de emojis"
+                    className="customizer-emoji-trigger"
                     style={{
                       minWidth: '44px',
                       height: '34px',
@@ -147,7 +153,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                   </button>
 
                   {/* Swatches de Color Nórdicos */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <div className="customizer-palette-swatches" style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                     {NORDIC_PALETTE.map((pal) => {
                       const isSelected = currentColorId === pal.id;
                       return (
@@ -155,6 +161,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                           key={pal.id}
                           onClick={() => handleUpdate(proj, 'colorId', pal.id)}
                           title={pal.name}
+                          className={`customizer-color-swatch ${isSelected ? 'is-selected' : ''}`}
                           style={{
                             width: '16px',
                             height: '16px',
@@ -176,6 +183,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
               {/* Cuadrícula Desplegable de Emojis */}
               {isPickerOpen && (
                 <div
+                  className="customizer-emoji-dropdown"
                   style={{
                     padding: '0.65rem 0.85rem',
                     background: 'color-mix(in srgb, var(--bg-card) 95%, transparent)',
@@ -190,6 +198,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                   </div>
 
                   <div
+                    className="customizer-emoji-grid"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
@@ -204,6 +213,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                           handleUpdate(proj, 'icon', emoji);
                           setActivePickerProj(null);
                         }}
+                        className={`customizer-emoji-btn ${currentTheme.icon === emoji ? 'is-active' : ''}`}
                         style={{
                           height: '32px',
                           background: currentTheme.icon === emoji ? 'color-mix(in srgb, var(--primary) 25%, transparent)' : 'color-mix(in srgb, var(--text-high) 4%, transparent)',
@@ -216,12 +226,6 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                           cursor: 'pointer',
                           transition: 'transform 0.1s ease'
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'scale(1.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'none';
-                        }}
                       >
                         {emoji}
                       </button>
@@ -229,7 +233,7 @@ export function CustomizerModal({ projects, customizations, onSave, onClose }) {
                   </div>
 
                   {/* Entrada directa opcional para pegar cualquier emoji */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <div className="customizer-emoji-custom-input" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                     <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>O escribe/pega otro:</span>
                     <input
                       type="text"

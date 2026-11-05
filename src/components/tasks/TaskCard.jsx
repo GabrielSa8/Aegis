@@ -35,6 +35,7 @@ export function TaskCard({
   return (
     <div
       onClick={handleCardClick}
+      className={`task-card-item ${task.completed ? 'is-completed' : ''} ${isBlocked ? 'is-blocked' : ''} ${highlight ? 'is-highlight' : ''}`}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -106,6 +107,7 @@ export function TaskCard({
         {/* Checkbox táctico interactivo con cerrojo si está bloqueada */}
         <div
           onClick={handleCheckboxClick}
+          className="task-checkbox-wrapper"
           style={{
             marginTop: '2px',
             color: task.completed ? 'var(--primary)' : 'var(--text-muted)',

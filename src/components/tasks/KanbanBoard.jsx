@@ -43,6 +43,7 @@ export function KanbanBoard({
                 {/* Banner del Hub */}
                 <div
                   onClick={() => toggleHubCollapse(hubName)}
+                  className="task-group-header task-hub-header"
                   style={{
                     display: 'flex',
                     alignItems: 'center',

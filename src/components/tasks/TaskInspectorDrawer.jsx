@@ -69,6 +69,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
 
         <button
           onClick={onClose}
+          className="devops-icon-action-btn"
           style={{
             background: 'transparent',
             border: 'none',

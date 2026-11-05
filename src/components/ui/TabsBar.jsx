@@ -94,6 +94,7 @@ export function TabsBar({
             disabled={isDisabled}
             title={tab.title}
             onClick={() => !isDisabled && handleTabSelect && handleTabSelect(tab.id)}
+            className={`tactical-tab-btn ${isActive ? 'is-active' : ''}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -108,13 +109,14 @@ export function TabsBar({
             }}
           >
             {tab.icon && (
-              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <span className="tactical-tab-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
                 {renderIcon(tab.icon, iconSize)}
               </span>
             )}
-            <span>{tab.label}</span>
+            <span className="tactical-tab-label">{tab.label}</span>
             {tab.badge !== undefined && tab.badge !== null && (
               <span
+                className="tactical-tab-badge"
                 style={{
                   fontSize: '10px',
                   padding: '1px 4px',

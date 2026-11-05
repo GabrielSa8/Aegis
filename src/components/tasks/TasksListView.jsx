@@ -16,7 +16,7 @@ export function TasksListView({
   onSelectTask
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+    <div className="tasks-list-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       {groupBy === 'hub_project' ? (
         /* Jerárquico: Hub > Proyecto > Tareas */
         Object.entries(tasksHierarchy).map(([hubName, projectsMap]) => {
@@ -41,6 +41,7 @@ export function TasksListView({
               {/* Cabecera del Hub */}
               <div
                 onClick={() => toggleHubCollapse(hubName)}
+                className="task-group-header task-hub-header"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -105,6 +106,7 @@ export function TasksListView({
                         {/* Cabecera del Proyecto */}
                         <div
                           onClick={() => toggleProjectCollapse(projKey)}
+                          className="task-group-header task-project-header"
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -174,6 +176,7 @@ export function TasksListView({
             >
               <div
                 onClick={() => toggleProjectCollapse(projectName)}
+                className="task-group-header task-project-header"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -236,6 +239,7 @@ export function TasksListView({
             >
               <div
                 onClick={() => toggleHubCollapse(hubName)}
+                className="task-group-header task-hub-header"
                 style={{
                   display: 'flex',
                   alignItems: 'center',

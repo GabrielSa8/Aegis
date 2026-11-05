@@ -9,4 +9,7 @@ export { KanbanBoard } from './KanbanBoard';
 export { CustomizerModal } from './CustomizerModal';
 export { TaskInspectorDrawer } from './TaskInspectorDrawer';
 export { useTasks } from './useTasks';
+export { default as TaskHubDropdown } from './TaskHubDropdown';
+export { default as TaskProjectDropdown } from './TaskProjectDropdown';
+export { default as TaskGroupByDropdown } from './TaskGroupByDropdown';
 export * from './taskHelpers';

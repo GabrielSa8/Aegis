@@ -4,13 +4,14 @@ import {
   Search,
   ListTodo,
   Kanban,
-  FolderGit2,
-  Boxes,
   Palette
 } from 'lucide-react';
 import { TacticalButton, TabsBar } from '../ui';
 import { PomodoroWidget } from './PomodoroWidget';
 import { TasksHudStats } from './TasksHudStats';
+import TaskHubDropdown from './TaskHubDropdown';
+import TaskProjectDropdown from './TaskProjectDropdown';
+import TaskGroupByDropdown from './TaskGroupByDropdown';
 
 const VIEW_TABS = [
   { id: 'list', label: 'Lista', icon: ListTodo },
@@ -30,6 +31,7 @@ export function TasksHeader({
   selectedProject,
   setSelectedProject,
   availableProjects,
+  customizations = {},
   groupBy,
   setGroupBy,
   viewMode,
@@ -39,20 +41,22 @@ export function TasksHeader({
 }) {
   return (
     <div
+      className="tasks-header-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: '0.55rem',
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)',
-        padding: '0.55rem 0.85rem',
+        padding: '0.6rem 0.85rem',
         boxShadow: 'var(--shadow-lg)',
         flexShrink: 0
       }}
     >
       {/* Fila 1: HUD Stats + Pomodoro Widget + Personalizador + Refrescar */}
       <div
+        className="tasks-header-row-top"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -65,7 +69,7 @@ export function TasksHeader({
         <TasksHudStats stats={stats} />
 
         {/* Pomodoro HUD Widget + Personalizador + Refrescar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="tasks-header-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <PomodoroWidget />
 
           <TacticalButton
@@ -73,6 +77,7 @@ export function TasksHeader({
             size="xs"
             icon={Palette}
             onClick={() => setShowCustomizer(true)}
+            className="tasks-action-btn"
             title="Personalizar iconos y colores para tus proyectos y hubs"
           >
             Personalizar
@@ -84,6 +89,7 @@ export function TasksHeader({
             icon={RefreshCw}
             loading={refreshing}
             onClick={fetchTasks}
+            className="tasks-action-btn"
             title="Volver a escanear notas de la Bóveda"
           >
             Escanear
@@ -93,6 +99,7 @@ export function TasksHeader({
 
       {/* Fila 2: Buscador + Filtros por Hub/Proyecto + Conmutador de Agrupación + Selector de Vistas */}
       <div
+        className="tasks-header-row-filters"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -102,8 +109,9 @@ export function TasksHeader({
         }}
       >
         {/* Izquierda: Buscador + Filtro Hub + Filtro Proyecto */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 380px', flexWrap: 'wrap' }}>
+        <div className="tasks-filter-group-left" style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 380px', flexWrap: 'wrap' }}>
           <div
+            className="tasks-search-box"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -115,7 +123,7 @@ export function TasksHeader({
               padding: '3px 8px'
             }}
           >
-            <Search size={12} color="var(--text-muted)" />
+            <Search size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Buscar tareas, proyectos o #tags..."
@@ -132,85 +140,31 @@ export function TasksHeader({
             />
           </div>
 
-          {/* Selector de Hub Dinámico */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <FolderGit2 size={12} color="var(--primary)" />
-            <select
-              value={selectedHub}
-              onChange={(e) => setSelectedHub(e.target.value)}
-              style={{
-                fontSize: '0.7rem',
-                padding: '3px 18px 3px 6px',
-                borderRadius: '4px',
-                background: 'var(--bg-card)',
-                color: 'var(--text-high)',
-                border: '1px solid var(--border-color)',
-                cursor: 'pointer'
-              }}
-              title="Filtrar por Hub Maestro"
-            >
-              {hubs.map((h) => (
-                <option key={h} value={h} style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>
-                  {h}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Selector de Hub Dinámico con Frosted Glass y Resiliencia */}
+          <TaskHubDropdown
+            value={selectedHub}
+            onChange={setSelectedHub}
+            hubs={hubs}
+          />
 
-          {/* Selector de Proyecto Granular Dinámico */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <Boxes size={12} color="var(--accent)" />
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              style={{
-                fontSize: '0.7rem',
-                padding: '3px 18px 3px 6px',
-                borderRadius: '4px',
-                background: 'var(--bg-card)',
-                color: 'var(--accent)',
-                border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-              title="Filtrar por Proyecto específico"
-            >
-              {availableProjects.map((p) => (
-                <option key={p} value={p} style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>
-                  {p === 'Todos' ? 'Todos los Proyectos' : p}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Selector de Proyecto Granular Dinámico con Frosted Glass */}
+          <TaskProjectDropdown
+            value={selectedProject}
+            onChange={setSelectedProject}
+            projects={availableProjects}
+            customizations={customizations}
+          />
         </div>
 
         {/* Derecha: Agrupador + Conmutador de Vistas */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Agrupar:
-            </span>
-            <select
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value)}
-              style={{
-                fontSize: '0.68rem',
-                padding: '3px 16px 3px 6px',
-                borderRadius: '4px',
-                background: 'var(--bg-card)',
-                color: 'var(--primary)',
-                border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              <option value="hub_project" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>Hub &gt; Proyecto</option>
-              <option value="project" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>Solo Proyectos</option>
-              <option value="hub" style={{ background: 'var(--bg-card)', color: 'var(--text-high)' }}>Solo Hubs</option>
-            </select>
-          </div>
+        <div className="tasks-filter-group-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Selector Táctico de Agrupación */}
+          <TaskGroupByDropdown
+            value={groupBy}
+            onChange={setGroupBy}
+          />
 
-          {/* Conmutador de Vistas (Lista / Kanban / Matriz) */}
+          {/* Conmutador de Vistas (Lista / Kanban) */}
           <TabsBar
             items={VIEW_TABS}
             activeTab={viewMode}
@@ -222,6 +176,7 @@ export function TasksHeader({
           {/* Sub-conmutador de diseño Kanban */}
           {viewMode === 'kanban' && (
             <div
+              className="tasks-kanban-layout-switch"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -234,6 +189,7 @@ export function TasksHeader({
               <button
                 type="button"
                 onClick={() => setKanbanLayout('swimlanes')}
+                className={`task-layout-btn ${kanbanLayout === 'swimlanes' ? 'is-active' : ''}`}
                 style={{
                   background: kanbanLayout === 'swimlanes' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent',
                   border: kanbanLayout === 'swimlanes' ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid transparent',
@@ -251,6 +207,7 @@ export function TasksHeader({
               <button
                 type="button"
                 onClick={() => setKanbanLayout('columns')}
+                className={`task-layout-btn ${kanbanLayout === 'columns' ? 'is-active' : ''}`}
                 style={{
                   background: kanbanLayout === 'columns' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent',
                   border: kanbanLayout === 'columns' ? '1px solid color-mix(in srgb, var(--accent) 40%, transparent)' : '1px solid transparent',

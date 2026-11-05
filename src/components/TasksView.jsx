@@ -48,7 +48,7 @@ export default function TasksView() {
   } = useTasks();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem', overflowY: 'auto' }}>
+    <div className="tasks-view-container" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0.65rem', overflowY: 'auto' }}>
       {/* 🧭 Cockpit Header Modular */}
       <TasksHeader
         stats={stats}
@@ -63,6 +63,7 @@ export default function TasksView() {
         selectedProject={selectedProject}
         setSelectedProject={setSelectedProject}
         availableProjects={availableProjects}
+        customizations={customizations}
         groupBy={groupBy}
         setGroupBy={setGroupBy}
         viewMode={viewMode}

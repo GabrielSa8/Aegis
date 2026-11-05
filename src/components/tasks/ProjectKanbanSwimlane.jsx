@@ -28,6 +28,7 @@ export function ProjectKanbanSwimlane({
       {/* Cabecera del Swimlane */}
       <div
         onClick={onToggleCollapse}
+        className="task-group-header task-swimlane-header"
         style={{
           display: 'flex',
           alignItems: 'center',

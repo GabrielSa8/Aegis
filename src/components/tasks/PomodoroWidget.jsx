@@ -71,6 +71,7 @@ export function PomodoroWidget() {
 
   return (
     <div
+      className="pomo-widget"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -84,18 +85,21 @@ export function PomodoroWidget() {
       }}
     >
       <div
+        className="pomo-status-dot"
         style={{
           width: '6px',
           height: '6px',
           borderRadius: '50%',
           background: pomoRunning ? activeColor : 'var(--text-muted)',
-          boxShadow: pomoRunning ? `0 0 6px ${activeColor}` : 'none'
+          boxShadow: pomoRunning ? `0 0 6px ${activeColor}` : 'none',
+          flexShrink: 0
         }}
       />
 
       <button
         type="button"
         onClick={() => switchPomoMode(isWork ? 'shortBreak' : 'work')}
+        className="pomo-mode-btn"
         style={{
           background: 'transparent',
           border: 'none',
@@ -104,7 +108,8 @@ export function PomodoroWidget() {
           fontWeight: 800,
           textTransform: 'uppercase',
           cursor: 'pointer',
-          padding: '2px 4px'
+          padding: '2px 4px',
+          borderRadius: '3px'
         }}
         title="Alternar entre Foco (25m) y Break (5m)"
       >
@@ -112,6 +117,7 @@ export function PomodoroWidget() {
       </button>
 
       <span
+        className="pomo-timer-display"
         style={{
           fontFamily: 'var(--font-mono, monospace)',
           fontWeight: 800,
@@ -129,15 +135,17 @@ export function PomodoroWidget() {
         type="button"
         onClick={togglePomodoro}
         title={pomoRunning ? 'Pausar' : 'Iniciar'}
+        className={`pomo-toggle-btn ${pomoRunning ? 'is-running' : 'is-idle'}`}
         style={{
           background: pomoRunning ? 'color-mix(in srgb, var(--danger) 18%, transparent)' : 'color-mix(in srgb, var(--primary) 18%, transparent)',
-          border: 'none',
-          borderRadius: '3px',
+          border: pomoRunning ? '1px solid color-mix(in srgb, var(--danger) 40%, transparent)' : '1px solid color-mix(in srgb, var(--primary) 40%, transparent)',
+          borderRadius: '4px',
           color: pomoRunning ? 'var(--danger)' : 'var(--primary)',
           padding: '3px 5px',
           cursor: 'pointer',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
         {pomoRunning ? <Pause size={10} /> : <Play size={10} />}
@@ -147,14 +155,17 @@ export function PomodoroWidget() {
         type="button"
         onClick={resetPomodoro}
         title="Reiniciar temporizador"
+        className="pomo-reset-btn"
         style={{
           background: 'transparent',
           border: 'none',
           color: 'var(--text-muted)',
           padding: '3px',
+          borderRadius: '3px',
           cursor: 'pointer',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
         <RotateCcw size={10} />
@@ -162,3 +173,4 @@ export function PomodoroWidget() {
     </div>
   );
 }
+export default PomodoroWidget;
