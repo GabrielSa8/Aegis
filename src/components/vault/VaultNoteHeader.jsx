@@ -32,32 +32,14 @@ export function VaultNoteHeader({
   if (!activeNote) return null;
 
   return (
-    <div
-      style={{
-        padding: '0.65rem 1.25rem',
-        borderBottom: '1px solid var(--border-color)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        background: 'rgba(0, 0, 0, 0.15)'
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+    <div className="vault-note-header">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
         {!showSidebar && (
           <button
             onClick={() => setShowSidebar(true)}
             title="Mostrar explorador de carpetas (Ctrl + B)"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            aria-label="Mostrar explorador de carpetas"
+            className="vault-btn vault-btn-icon"
           >
             <PanelLeftOpen size={15} />
           </button>
@@ -81,26 +63,8 @@ export function VaultNoteHeader({
               <button
                 onClick={handleRenameActiveNote}
                 title="Renombrar título de nota"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  borderRadius: 'var(--radius-sm)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: 0.6,
-                  transition: 'var(--transition)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                  e.currentTarget.style.color = 'var(--primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0.6';
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
+                aria-label="Renombrar nota"
+                className="vault-btn vault-btn-icon"
               >
                 <Edit3 size={13} />
               </button>
@@ -110,10 +74,13 @@ export function VaultNoteHeader({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               fontSize: '0.66rem',
               color: 'var(--text-muted)',
-              marginTop: '2px'
+              marginTop: '2px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
             }}
           >
             <span>{activeNote.hub}</span>
@@ -123,7 +90,7 @@ export function VaultNoteHeader({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div className="vault-note-header-actions">
         {saveSuccess && (
           <span
             style={{
@@ -135,7 +102,8 @@ export function VaultNoteHeader({
               gap: '4px'
             }}
           >
-            <CheckCircle2 size={13} /> Guardado
+            <CheckCircle2 size={13} />
+            <span className="vault-btn-label">Guardado</span>
           </span>
         )}
 
@@ -143,48 +111,22 @@ export function VaultNoteHeader({
         <button
           onClick={handleCopyWikiLink}
           title="Copiar enlace [[WikiLink]]"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid var(--border-color)',
-            color: copiedLink ? 'var(--primary)' : 'var(--text-muted)',
-            fontSize: '0.7rem',
-            padding: '4px 8px',
-            borderRadius: 'var(--radius-md)',
-            cursor: 'pointer',
-            transition: 'var(--transition)'
-          }}
+          aria-label="Copiar WikiLink"
+          className={`vault-btn ${copiedLink ? 'is-active' : ''}`}
         >
           {copiedLink ? <Check size={12} /> : <Link2 size={12} />}
-          <span>{copiedLink ? 'Copiado' : '[[Wiki]]'}</span>
+          <span className="vault-btn-label">{copiedLink ? 'Copiado' : '[[Wiki]]'}</span>
         </button>
 
         {/* Toggle Vista / Edición */}
         <button
           onClick={handleToggleEdit}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: isEditing
-              ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
-              : 'rgba(255, 255, 255, 0.04)',
-            border: isEditing
-              ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
-              : '1px solid var(--border-color)',
-            color: isEditing ? 'var(--primary)' : 'var(--text-muted)',
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            padding: '4px 10px',
-            borderRadius: 'var(--radius-md)',
-            cursor: 'pointer',
-            transition: 'var(--transition)'
-          }}
+          title={isEditing ? 'Cambiar a Vista Lectura' : 'Editar nota en Markdown'}
+          aria-label={isEditing ? 'Vista Lectura' : 'Editar'}
+          className={`vault-btn ${isEditing ? 'is-active' : ''}`}
         >
           {isEditing ? <Eye size={13} /> : <Edit3 size={13} />}
-          <span>{isEditing ? 'Vista Lectura' : 'Editar'}</span>
+          <span className="vault-btn-label">{isEditing ? 'Lectura' : 'Editar'}</span>
         </button>
 
         {/* Botón Guardar */}
@@ -194,34 +136,19 @@ export function VaultNoteHeader({
           icon={Save}
           loading={saving}
           onClick={handleSave}
-          style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+          title="Guardar cambios (Ctrl + S)"
+          aria-label="Guardar cambios"
+          style={{ fontSize: '0.72rem', padding: '4px 9px' }}
         >
-          {saving ? 'Guardando...' : 'Guardar'}
+          <span className="vault-btn-label">{saving ? 'Guardando...' : 'Guardar'}</span>
         </TacticalButton>
 
         {/* Botón Eliminar Nota */}
         <button
           onClick={handleDeleteActiveNote}
           title="Eliminar nota definitivamente"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: '4px',
-            opacity: 0.6,
-            transition: 'var(--transition)',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '1';
-            e.currentTarget.style.color = 'var(--danger)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '0.6';
-            e.currentTarget.style.color = 'var(--text-muted)';
-          }}
+          aria-label="Eliminar nota"
+          className="vault-btn vault-btn-icon vault-btn-danger"
         >
           <Trash2 size={14} />
         </button>

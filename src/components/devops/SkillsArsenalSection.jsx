@@ -52,31 +52,14 @@ export function SkillsArsenalSection({
   }, [skills, activeCategory, skillSearch]);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      ...(fillHeight ? { flex: 1, minHeight: 0 } : {})
-    }}>
+    <div className={`skills-arsenal-container ${fillHeight ? 'fill-height' : ''}`}>
       {/* Barra de Cabecera y Selector de Pestaña Principal */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px', flexWrap: 'wrap', gap: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             type="button"
             onClick={() => setSectionTab('skills')}
-            style={{
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-xs)',
-              border: 'none',
-              background: sectionTab === 'skills' ? 'var(--primary)' : 'transparent',
-              color: sectionTab === 'skills' ? 'var(--bg-main)' : 'var(--text-muted)',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
+            className={`devops-arsenal-tab-btn ${sectionTab === 'skills' ? 'is-active' : ''}`}
           >
             <span>🧩 Habilidades</span>
             <span style={{ fontSize: '0.58rem', opacity: 0.85 }}>({skills.length})</span>
@@ -85,19 +68,7 @@ export function SkillsArsenalSection({
           <button
             type="button"
             onClick={() => setSectionTab('modpacks')}
-            style={{
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-xs)',
-              border: 'none',
-              background: sectionTab === 'modpacks' ? 'var(--primary)' : 'transparent',
-              color: sectionTab === 'modpacks' ? 'var(--bg-main)' : 'var(--text-muted)',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
+            className={`devops-arsenal-tab-btn ${sectionTab === 'modpacks' ? 'is-active' : ''}`}
           >
             <span>📦 Modpacks</span>
             <span style={{ fontSize: '0.58rem', opacity: 0.85 }}>({modpacks.length})</span>
@@ -117,18 +88,7 @@ export function SkillsArsenalSection({
               <button
                 type="button"
                 onClick={() => setViewMode('cards')}
-                style={{
-                  background: viewMode === 'cards' ? 'var(--bg-card)' : 'transparent',
-                  color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-muted)',
-                  border: 'none',
-                  borderRadius: '3px',
-                  padding: '2px 5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  fontSize: '0.6rem'
-                }}
+                className={`devops-viewmode-btn ${viewMode === 'cards' ? 'is-active' : ''}`}
                 title="Vista de Tarjetas Densas"
               >
                 <LayoutGrid size={10} />
@@ -137,18 +97,7 @@ export function SkillsArsenalSection({
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                style={{
-                  background: viewMode === 'list' ? 'var(--bg-card)' : 'transparent',
-                  color: viewMode === 'list' ? 'var(--primary)' : 'var(--text-muted)',
-                  border: 'none',
-                  borderRadius: '3px',
-                  padding: '2px 5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  fontSize: '0.6rem'
-                }}
+                className={`devops-viewmode-btn ${viewMode === 'list' ? 'is-active' : ''}`}
                 title="Vista de Lista de Alta Densidad"
               >
                 <List size={10} />
@@ -213,24 +162,7 @@ export function SkillsArsenalSection({
                   key={cat.id}
                   type="button"
                   onClick={() => setActiveCategory(cat.id)}
-                  style={{
-                    padding: '2px 7px',
-                    borderRadius: 'var(--radius-xs)',
-                    border: isSelected
-                      ? '1px solid color-mix(in srgb, var(--primary) 45%, transparent)'
-                      : '1px solid var(--border-color)',
-                    background: isSelected
-                      ? 'color-mix(in srgb, var(--primary) 15%, transparent)'
-                      : 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-                    color: isSelected ? 'var(--primary)' : 'var(--text-muted)',
-                    fontSize: '0.62rem',
-                    fontWeight: isSelected ? 800 : 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
+                  className={`devops-skill-cat-chip ${isSelected ? 'is-active' : ''}`}
                 >
                   <span>{cat.label}</span>
                   <span style={{ fontSize: '0.56rem', opacity: 0.7 }}>({count})</span>

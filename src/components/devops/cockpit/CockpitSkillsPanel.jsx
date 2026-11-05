@@ -41,18 +41,7 @@ export function CockpitSkillsPanel({
         <button
           type="button"
           onClick={() => onNavigateTab('skills')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--primary)',
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '3px',
-            padding: '2px 4px'
-          }}
+          className="cockpit-view-all-btn"
         >
           <span>Ver arsenal</span>
           <ArrowRight size={11} />

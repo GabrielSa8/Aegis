@@ -39,6 +39,7 @@ export function VaultBacklinksPanel({ networkState, onNavigateNote }) {
 
   return (
     <div
+      className="vault-backlinks-container"
       style={
         isMaximized
           ? {
@@ -61,142 +62,66 @@ export function VaultBacklinksPanel({ networkState, onNavigateNote }) {
       }
     >
       {/* 🧭 Cabecera Táctica del Panel (34px) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '6px 12px',
-          background: 'rgba(0, 0, 0, 0.18)',
-          userSelect: 'none'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="vault-backlinks-header">
+        <div className="vault-backlinks-left">
           <button
             onClick={toggleExpanded}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '2px',
-              borderRadius: 'var(--radius-xs)'
-            }}
+            className="vault-backlinks-toggle-btn"
             title={isExpanded ? 'Colapsar panel' : 'Desplegar red'}
           >
             {isExpanded && !isMaximized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </button>
 
-          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-high)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Share2 size={13} color="var(--primary)" />
-            <span>Red de Conocimiento</span>
+          <span className="vault-backlinks-title">
+            <Share2 size={13} color="var(--primary)" style={{ flexShrink: 0 }} />
+            <span className="vault-backlinks-title-text">Red de Conocimiento</span>
           </span>
 
           {/* Badges de Conteo */}
-          <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-            <span
-              style={{
-                fontSize: '0.64rem',
-                padding: '1px 6px',
-                borderRadius: 'var(--radius-full)',
-                background: incomingCount > 0 ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'rgba(255, 255, 255, 0.05)',
-                color: incomingCount > 0 ? 'var(--primary)' : 'var(--text-muted)',
-                fontWeight: 600
-              }}
-            >
-              {incomingCount} {incomingCount === 1 ? 'Backlink' : 'Backlinks'}
+          <div className="vault-backlinks-badges">
+            <span className={`vault-backlinks-badge ${incomingCount > 0 ? 'is-active' : ''}`}>
+              {incomingCount} <span className="vault-backlinks-badge-text">{incomingCount === 1 ? 'Backlink' : 'Backlinks'}</span>
             </span>
-            <span
-              style={{
-                fontSize: '0.64rem',
-                padding: '1px 6px',
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: 'var(--text-muted)',
-                fontWeight: 600
-              }}
-            >
-              {outgoingCount} Salientes
+            <span className="vault-backlinks-badge">
+              {outgoingCount} <span className="vault-backlinks-badge-text">Salientes</span>
             </span>
           </div>
         </div>
 
         {/* Pestañas & Acciones */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.3)', padding: '2px', borderRadius: 'var(--radius-sm)', gap: '2px' }}>
+        <div className="vault-backlinks-right">
+          <div className="vault-backlinks-tab-group">
             <button
               onClick={() => { setActiveTab('backlinks'); if (!isExpanded) toggleExpanded(); }}
-              style={{
-                background: activeTab === 'backlinks' && isExpanded ? 'var(--primary)' : 'transparent',
-                color: activeTab === 'backlinks' && isExpanded ? 'var(--bg-primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: 'var(--radius-xs)',
-                padding: '3px 8px',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
+              className={`vault-backlinks-tab-btn ${activeTab === 'backlinks' && isExpanded ? 'is-active' : ''}`}
+              title="Enlaces entrantes (Backlinks)"
             >
               <LinkIcon size={11} />
-              <span>Backlinks</span>
+              <span className="vault-backlinks-tab-label">Backlinks</span>
             </button>
 
             <button
               onClick={() => { setActiveTab('outgoing'); if (!isExpanded) toggleExpanded(); }}
-              style={{
-                background: activeTab === 'outgoing' && isExpanded ? 'var(--primary)' : 'transparent',
-                color: activeTab === 'outgoing' && isExpanded ? 'var(--bg-primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: 'var(--radius-xs)',
-                padding: '3px 8px',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
+              className={`vault-backlinks-tab-btn ${activeTab === 'outgoing' && isExpanded ? 'is-active' : ''}`}
+              title="Enlaces salientes"
             >
               <ExternalLink size={11} />
-              <span>Salientes</span>
+              <span className="vault-backlinks-tab-label">Salientes</span>
             </button>
 
             <button
               onClick={() => { setActiveTab('graph'); if (!isExpanded) toggleExpanded(); }}
-              style={{
-                background: activeTab === 'graph' && isExpanded ? 'var(--primary)' : 'transparent',
-                color: activeTab === 'graph' && isExpanded ? 'var(--bg-primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: 'var(--radius-xs)',
-                padding: '3px 8px',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
+              className={`vault-backlinks-tab-btn ${activeTab === 'graph' && isExpanded ? 'is-active' : ''}`}
+              title="Micro-Grafo de relaciones"
             >
               <Share2 size={11} />
-              <span>Micro-Grafo</span>
+              <span className="vault-backlinks-tab-label">Micro-Grafo</span>
             </button>
           </div>
 
           <button
             onClick={refreshNetwork}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: 'var(--radius-xs)'
-            }}
+            className="vault-sidebar-icon-btn"
             title="Recargar red"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
@@ -204,14 +129,7 @@ export function VaultBacklinksPanel({ networkState, onNavigateNote }) {
 
           <button
             onClick={toggleMaximized}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: isMaximized ? 'var(--primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-              borderRadius: 'var(--radius-xs)'
-            }}
+            className="vault-sidebar-icon-btn"
             title={isMaximized ? 'Restaurar panel' : 'Maximizar lienzo de red'}
           >
             {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}

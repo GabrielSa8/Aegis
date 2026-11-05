@@ -14,51 +14,24 @@ export function VaultOutgoingList({ outgoing, onNavigateNote }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
+    <div className="vault-outgoing-grid">
       {outgoing.map((out, idx) => (
         <div
           key={`out-${idx}`}
           onClick={() => out.exists && onNavigateNote(out.target_title)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 10px',
-            background: 'var(--bg-card)',
-            border: '1px solid',
-            borderColor: out.exists ? 'var(--border-color)' : 'color-mix(in srgb, var(--danger) 30%, transparent)',
-            borderRadius: 'var(--radius-sm)',
-            cursor: out.exists ? 'pointer' : 'default'
-          }}
+          className={`vault-outgoing-card ${out.exists ? 'is-valid' : 'is-missing'}`}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <div className="vault-outgoing-content">
             {out.exists ? (
-              <ExternalLink size={12} color="var(--primary)" />
+              <ExternalLink size={12} color="var(--primary)" style={{ flexShrink: 0 }} />
             ) : (
-              <AlertCircle size={12} color="var(--danger)" />
+              <AlertCircle size={12} color="var(--danger)" style={{ flexShrink: 0 }} />
             )}
-            <span
-              style={{
-                fontSize: '0.72rem',
-                color: out.exists ? 'var(--text-high)' : 'var(--text-muted)',
-                fontWeight: 600,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
+            <span className="vault-outgoing-title">
               {out.target_title}
             </span>
           </div>
-          <span
-            style={{
-              fontSize: '0.62rem',
-              padding: '1px 5px',
-              borderRadius: 'var(--radius-xs)',
-              background: out.exists ? 'rgba(255, 255, 255, 0.05)' : 'color-mix(in srgb, var(--danger) 15%, transparent)',
-              color: out.exists ? 'var(--text-muted)' : 'var(--danger)'
-            }}
-          >
+          <span className={`vault-outgoing-tag ${out.exists ? 'is-valid' : 'is-missing'}`}>
             {out.exists ? (out.occurrences > 1 ? `×${out.occurrences}` : out.target_hub) : 'No creada'}
           </span>
         </div>

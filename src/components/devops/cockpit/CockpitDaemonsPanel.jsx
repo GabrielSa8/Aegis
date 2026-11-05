@@ -48,18 +48,7 @@ export function CockpitDaemonsPanel({
         <button
           type="button"
           onClick={() => onNavigateTab('daemons')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--primary)',
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '3px',
-            padding: '2px 4px'
-          }}
+          className="cockpit-view-all-btn"
         >
           <span>Ver radar</span>
           <ArrowRight size={11} />
@@ -137,7 +126,7 @@ export function CockpitDaemonsPanel({
                 <button
                   type="button"
                   onClick={() => onToggleContainer(c.id, c.state === 'running' ? 'stop' : 'start')}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.6rem', padding: 0 }}
+                  className="cockpit-action-btn"
                 >
                   {c.state === 'running' ? 'Detener' : 'Iniciar'}
                 </button>
@@ -177,7 +166,7 @@ export function CockpitDaemonsPanel({
                   <button
                     type="button"
                     onClick={() => onOpenUrl(`http://localhost:${p.port}`)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0 }}
+                    className="cockpit-action-btn primary"
                     title="Abrir en navegador"
                   >
                     <ExternalLink size={10} />

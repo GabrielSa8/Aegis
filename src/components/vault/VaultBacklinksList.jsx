@@ -14,57 +14,32 @@ export function VaultBacklinksList({ incoming, onNavigateNote }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div className="vault-backlinks-list">
       {incoming.map((item, idx) => (
         <div
           key={`backlink-${idx}`}
           onClick={() => onNavigateNote(item.source_title)}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            padding: '6px 10px',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer'
-          }}
+          className="vault-backlink-card"
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FileText size={12} color="var(--primary)" />
-              <strong style={{ fontSize: '0.74rem', color: 'var(--text-high)' }}>{item.source_title}</strong>
-              <span
-                style={{
-                  fontSize: '0.64rem',
-                  color: 'var(--text-muted)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  padding: '1px 5px',
-                  borderRadius: 'var(--radius-xs)'
-                }}
-              >
-                {item.source_hub}
-              </span>
+          <div className="vault-backlink-header-row">
+            <div className="vault-backlink-title-meta">
+              <FileText size={12} color="var(--primary)" style={{ flexShrink: 0 }} />
+              <strong className="vault-backlink-title">{item.source_title}</strong>
+              {item.source_hub && (
+                <span className="vault-backlink-hub">
+                  {item.source_hub}
+                </span>
+              )}
             </div>
-            <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <span className="vault-backlink-line">
               <Hash size={10} /> Línea {item.line_number}
             </span>
           </div>
-          <div
-            style={{
-              fontSize: '0.70rem',
-              color: 'var(--text-muted)',
-              fontFamily: 'monospace',
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '4px 6px',
-              borderRadius: 'var(--radius-xs)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {item.snippet}
-          </div>
+          {item.snippet && (
+            <div className="vault-backlink-snippet">
+              {item.snippet}
+            </div>
+          )}
         </div>
       ))}
     </div>

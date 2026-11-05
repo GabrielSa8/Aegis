@@ -171,51 +171,35 @@ export default function DayMovementsDeck({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+                  <div className="pulse-tx-meta-actions">
                     <span
                       style={{
                         fontSize: '0.76rem',
                         fontFamily: 'JetBrains Mono, monospace',
                         fontWeight: 700,
-                        color: isIncome ? 'var(--success, #10b981)' : 'var(--danger, #ef4444)'
+                        color: isIncome ? 'var(--accent, var(--primary))' : 'var(--danger)'
                       }}
                     >
                       {isIncome ? '+' : '-'}${amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </span>
 
                     {/* Botones de Acción */}
-                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                    <div className="pulse-tx-actions">
                       <button
                         type="button"
-                        onClick={() => setEditingTx(tx)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          padding: '3px',
-                          cursor: 'pointer',
-                          color: 'var(--text-muted)',
-                          borderRadius: '3px',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
+                        onClick={() => setEditingTx(isBeingEdited ? null : tx)}
+                        className={`pulse-tx-action-btn ${isBeingEdited ? 'is-active' : ''}`}
                         title="Editar transacción"
+                        aria-label="Editar transacción"
                       >
                         <Edit3 size={11} />
                       </button>
                       <button
                         type="button"
                         onClick={() => onDeleteTx?.(tx)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          padding: '3px',
-                          cursor: 'pointer',
-                          color: 'var(--danger, #ef4444)',
-                          borderRadius: '3px',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
+                        className="pulse-tx-action-btn delete"
                         title="Eliminar transacción"
+                        aria-label="Eliminar transacción"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -272,6 +256,7 @@ export default function DayMovementsDeck({
       {/* Menú/Editor Inline en la parte inferior si está editando */}
       {editingTx && (
         <InlineTxEditor
+          key={editingTx.id}
           tx={editingTx}
           onSave={handleSaveInline}
           onCancel={() => setEditingTx(null)}

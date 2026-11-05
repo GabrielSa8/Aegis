@@ -21,17 +21,9 @@ export default function VaultView() {
   const networkState = useVaultNetwork(vault.activeNote, vault.handleNavigateNote);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="vault-view-container">
       {/* 🧭 Lienzo Dividido: Explorador de Carpetas Desplegable (Izquierda) + Editor (Derecha) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: vault.showSidebar ? '300px 1fr' : '1fr',
-          gap: vault.showSidebar ? '0.75rem' : '0',
-          flex: 1,
-          minHeight: 0
-        }}
-      >
+      <div className={`vault-view-grid ${vault.showSidebar ? 'has-sidebar' : ''}`}>
         {/* PANEL IZQUIERDO: Árbol de Carpetas & Búsqueda Profunda */}
         {vault.showSidebar && (
           <VaultSidebar

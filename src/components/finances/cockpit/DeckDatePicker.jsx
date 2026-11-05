@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Calendar, Zap, Clock } from 'lucide-react';
 import MiniCalendarPopover from './MiniCalendarPopover';
 
-export default function DeckDatePicker({ value, onChange }) {
+export default function DeckDatePicker({
+  value,
+  onChange,
+  showHeader = true,
+  label = 'FECHA DE OPERACIÓN',
+  showShortcut = true,
+  dropUp = false
+}) {
   const [showMiniCal, setShowMiniCal] = useState(false);
 
   // Fechas relativas
@@ -32,14 +39,18 @@ export default function DeckDatePicker({ value, onChange }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.02em' }}>
-          FECHA DE OPERACIÓN
-        </label>
-        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-          Atajo: <span className="tactical-kbd">Enter</span>
-        </span>
-      </div>
+      {showHeader && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.02em' }}>
+            {label}
+          </label>
+          {showShortcut && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+              Atajo: <span className="tactical-kbd">Enter</span>
+            </span>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', position: 'relative' }}>
         {/* Pastilla: Hoy */}
@@ -133,6 +144,7 @@ export default function DeckDatePicker({ value, onChange }) {
                 setShowMiniCal(false);
               }}
               onClose={() => setShowMiniCal(false)}
+              dropUp={dropUp}
             />
           )}
         </div>

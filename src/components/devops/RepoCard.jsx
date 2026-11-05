@@ -41,16 +41,7 @@ export function RepoCard({
   };
 
   return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: repo.warning ? '1px solid color-mix(in srgb, var(--warning) 40%, transparent)' : '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)',
-      padding: '0.65rem 0.8rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-      transition: 'border-color 0.15s ease'
-    }}>
+    <div className={`repo-card ${repo.warning ? 'has-warning' : ''}`}>
       {/* 🧭 Cabecera: Nombre, Stack y Rama */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -90,18 +81,10 @@ export function RepoCard({
             <button
               type="button"
               onClick={handleCopyPath}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: copied ? 'var(--primary)' : 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '1px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
+              className="devops-icon-action-btn"
               title="Copiar ruta absoluta"
             >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
+              {copied ? <Check size={10} color="var(--primary)" /> : <Copy size={10} />}
             </button>
           </div>
         </div>
@@ -116,7 +99,7 @@ export function RepoCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onRequestDelete(repo); }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', opacity: 0.6 }}
+              className="devops-icon-action-btn danger"
               title="Desvincular repositorio de la flota"
             >
               <Trash2 size={11} />
@@ -212,14 +195,7 @@ export function RepoCard({
       )}
 
       {/* ⚡ Barra Táctica de Acciones */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '6px',
-        paddingTop: '4px',
-        borderTop: '1px solid var(--border-color)'
-      }}>
+      <div className="repo-card-actions">
         <TacticalButton
           variant="ghost"
           size="xs"
@@ -237,7 +213,7 @@ export function RepoCard({
           Inspeccionar
         </TacticalButton>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
           <TacticalButton
             variant="secondary"
             size="xs"

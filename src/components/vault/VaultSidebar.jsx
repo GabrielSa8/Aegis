@@ -38,7 +38,8 @@ export function VaultSidebar({
   onDeleteItem
 }) {
   return (
-    <div
+    <aside
+      className="vault-sidebar-aside"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -157,7 +158,7 @@ export function VaultSidebar({
           </>
         )}
       </div>
-    </div>
+    </aside>
   );
 }
 

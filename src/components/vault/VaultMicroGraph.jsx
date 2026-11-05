@@ -117,82 +117,41 @@ export function VaultMicroGraph({
     >
       {/* Controles Tácticos Superiores */}
       <div
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          display: 'flex',
-          gap: '4px',
-          zIndex: 10,
-          background: 'var(--bg-card)',
-          padding: '3px 6px',
-          borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-sm)'
-        }}
+        className="vault-graph-toolbar"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <button
           onClick={() => setDegreeFilter((prev) => (prev === 1 ? 2 : 1))}
-          style={{
-            background: degreeFilter === 2 ? 'color-mix(in srgb, var(--primary) 20%, transparent)' : 'transparent',
-            border: '1px solid',
-            borderColor: degreeFilter === 2 ? 'var(--primary)' : 'transparent',
-            color: degreeFilter === 2 ? 'var(--primary)' : 'var(--text-muted)',
-            borderRadius: 'var(--radius-xs)',
-            padding: '2px 6px',
-            cursor: 'pointer',
-            fontSize: '0.68rem',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
+          className={`vault-graph-btn ${degreeFilter === 2 ? 'is-active' : ''}`}
         >
           <Filter size={11} />
-          <span>{degreeFilter === 1 ? '1° Grado' : '1° y 2°'}</span>
+          <span className="vault-graph-btn-label">{degreeFilter === 1 ? '1° Grado' : '1° y 2°'}</span>
         </button>
 
-        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '0 4px', fontFamily: 'monospace' }}>
+        <span className="vault-graph-zoom-label">
           {Math.round(zoom * 100)}%
         </span>
 
-        <button onClick={() => setZoom((z) => Math.min(z + 0.2, 3.5))} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '3px', cursor: 'pointer' }} title="Acercar">
+        <button onClick={() => setZoom((z) => Math.min(z + 0.2, 3.5))} className="vault-graph-icon-btn" title="Acercar">
           <ZoomIn size={13} />
         </button>
-        <button onClick={() => setZoom((z) => Math.max(z - 0.2, 0.4))} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '3px', cursor: 'pointer' }} title="Alejar">
+        <button onClick={() => setZoom((z) => Math.max(z - 0.2, 0.4))} className="vault-graph-icon-btn" title="Alejar">
           <ZoomOut size={13} />
         </button>
-        <button onClick={handleReset} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '3px', cursor: 'pointer' }} title="Centrar">
+        <button onClick={handleReset} className="vault-graph-icon-btn" title="Centrar">
           <RotateCcw size={13} />
         </button>
 
         {onToggleMaximize && (
-          <button onClick={onToggleMaximize} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', padding: '3px', cursor: 'pointer' }} title={isMaximized ? 'Restaurar' : 'Maximizar'}>
+          <button onClick={onToggleMaximize} className="vault-graph-icon-btn is-accent" title={isMaximized ? 'Restaurar' : 'Maximizar'}>
             {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
         )}
       </div>
 
       {hoveredNode && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            zIndex: 10,
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '4px 8px',
-            fontSize: '0.72rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            pointerEvents: 'none'
-          }}
-        >
-          <Compass size={12} color="var(--primary)" />
+        <div className="vault-graph-tooltip">
+          <Compass size={12} color="var(--primary)" style={{ flexShrink: 0 }} />
           <strong style={{ color: 'var(--text-high)' }}>{hoveredNode.label}</strong>
           <span style={{ color: 'var(--text-muted)' }}>({hoveredNode.hub})</span>
           <span style={{ color: 'var(--primary)' }}>{hoveredNode.degree === 0 ? 'Activa' : `${hoveredNode.degree}° Grado`}</span>

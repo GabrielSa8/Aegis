@@ -32,12 +32,7 @@ export function DevDaemonsSection({
   const portsCount = daemons?.listening_ports?.length || 0;
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.65rem',
-      ...(fillHeight ? { flex: 1, minHeight: 0 } : {})
-    }}>
+    <div className={`dev-daemons-container ${fillHeight ? 'fill-height' : ''}`}>
       {/* 🧭 Encabezado de la Sección */}
       <div style={{
         display: 'flex',
@@ -47,7 +42,7 @@ export function DevDaemonsSection({
         gap: '8px',
         padding: '0 2px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Activity size={15} style={{ color: 'var(--primary)' }} />
           <span style={{
             fontSize: '0.68rem',
@@ -56,11 +51,11 @@ export function DevDaemonsSection({
             textTransform: 'uppercase',
             letterSpacing: '0.04em'
           }}>
-            Radar de Daemons y Servicios Dev
+            Radar Daemons & Servicios
           </span>
 
           {/* Quick Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
             <span style={{
               fontSize: '0.6rem',
               fontWeight: 700,
@@ -102,7 +97,7 @@ export function DevDaemonsSection({
             </span>
 
             {daemons?.sam_cli_installed && (
-              <span style={{
+              <span className="dev-daemons-badge-extra" style={{
                 fontSize: '0.6rem',
                 fontWeight: 700,
                 padding: '1px 6px',
@@ -135,17 +130,7 @@ export function DevDaemonsSection({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                style={{
-                  background: activeTab === tab.id ? 'var(--bg-card)' : 'transparent',
-                  color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '2px 8px',
-                  fontSize: '0.65rem',
-                  fontWeight: activeTab === tab.id ? 700 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className={`devops-subfilter-btn ${activeTab === tab.id ? 'is-active' : ''}`}
               >
                 {tab.label}
               </button>
@@ -178,14 +163,13 @@ export function DevDaemonsSection({
           Escaneando daemons y servicios activos...
         </div>
       ) : activeTab === 'all' ? (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: fillHeight ? 'minmax(330px, 380px) 1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '0.65rem',
-          flex: fillHeight ? 1 : 'none',
-          minHeight: 0,
-          alignItems: 'stretch'
-        }}>
+        <div
+          className="dev-daemons-grid"
+          style={{
+            flex: fillHeight ? 1 : 'none',
+            minHeight: 0
+          }}
+        >
           <div style={{
             display: 'flex',
             flexDirection: 'column',

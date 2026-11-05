@@ -8,3 +8,5 @@ export { default as DeckHeroAmount } from './DeckHeroAmount';
 export { default as DeckDatePicker } from './DeckDatePicker';
 export { default as MiniCalendarPopover } from './MiniCalendarPopover';
 export { default as QuickAccountsSummary } from './QuickAccountsSummary';
+export { default as PaymentMethodDropdown } from './PaymentMethodDropdown';
+export { default as CategoryDropdown } from './CategoryDropdown';

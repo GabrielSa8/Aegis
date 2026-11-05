@@ -45,22 +45,9 @@ export function DevOpsNav({
   }, [onSelectTab]);
 
   return (
-    <nav
-      aria-label="Sub-navegación de DevOps"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        paddingBottom: '0.45rem',
-        borderBottom: '1px solid var(--border-color)',
-        flexShrink: 0,
-        gap: '8px',
-        flexWrap: 'wrap'
-      }}
-    >
+    <nav aria-label="Sub-navegación de DevOps" className="devops-nav">
       {/* Pills de Sub-Pestañas */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div className="devops-nav-tabs">
         {DEVOPS_NAV_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -75,25 +62,7 @@ export function DevOpsNav({
               key={tab.id}
               type="button"
               onClick={() => onSelectTab(tab.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 9px',
-                borderRadius: 'var(--radius-sm)',
-                background: isActive
-                  ? 'color-mix(in srgb, var(--primary) 18%, transparent)'
-                  : 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-                border: isActive
-                  ? '1px solid var(--primary)'
-                  : '1px solid var(--border-color)',
-                color: isActive ? 'var(--text-high)' : 'var(--text-muted)',
-                fontSize: '0.73rem',
-                fontWeight: isActive ? 700 : 500,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease'
-              }}
+              className={`devops-nav-tab-btn ${isActive ? 'is-active' : ''}`}
             >
               <Icon
                 size={13}
@@ -102,36 +71,15 @@ export function DevOpsNav({
                   opacity: isActive ? 1 : 0.7
                 }}
               />
-              <span>{tab.label}</span>
+              <span className="devops-nav-tab-label">{tab.label}</span>
 
               {countLabel !== null && (
-                <span
-                  style={{
-                    fontSize: '0.62rem',
-                    padding: '0 4px',
-                    borderRadius: '8px',
-                    background: isActive
-                      ? 'color-mix(in srgb, var(--primary) 25%, transparent)'
-                      : 'color-mix(in srgb, var(--border-color) 40%, transparent)',
-                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: 700
-                  }}
-                >
+                <span className="devops-nav-tab-count">
                   {countLabel}
                 </span>
               )}
 
-              <span
-                style={{
-                  fontSize: '0.58rem',
-                  padding: '1px 3px',
-                  borderRadius: '3px',
-                  background: 'color-mix(in srgb, var(--text-muted) 15%, transparent)',
-                  color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-mono, monospace)',
-                  opacity: 0.75
-                }}
-              >
+              <span className="devops-nav-tab-hint">
                 {tab.keyHint}
               </span>
             </button>
@@ -141,29 +89,16 @@ export function DevOpsNav({
 
       {/* Derecha: Estado de Salud & Refresco Global */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          fontSize: '0.68rem',
-          padding: '2px 8px',
-          borderRadius: 'var(--radius-sm)',
-          background: dirtyRepoCount === 0
-            ? 'color-mix(in srgb, var(--primary) 12%, transparent)'
-            : 'color-mix(in srgb, var(--warning) 12%, transparent)',
-          border: `1px solid ${dirtyRepoCount === 0 ? 'color-mix(in srgb, var(--primary) 30%, transparent)' : 'color-mix(in srgb, var(--warning) 30%, transparent)'}`,
-          color: dirtyRepoCount === 0 ? 'var(--primary)' : 'var(--warning)',
-          fontWeight: 600
-        }}>
+        <div className={`devops-nav-status ${dirtyRepoCount === 0 ? 'is-clean' : 'is-dirty'}`}>
           {dirtyRepoCount === 0 ? (
             <>
               <CheckCircle2 size={11} />
-              <span>Flota al día</span>
+              <span className="devops-nav-status-text">Flota al día</span>
             </>
           ) : (
             <>
               <AlertCircle size={11} />
-              <span>{dirtyRepoCount} repo(s) con cambios</span>
+              <span className="devops-nav-status-text">{dirtyRepoCount} con cambios</span>
             </>
           )}
         </div>

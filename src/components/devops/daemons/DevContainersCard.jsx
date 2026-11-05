@@ -209,16 +209,7 @@ export function DevContainersCard({
                     type="button"
                     onClick={() => handleDelete(c)}
                     disabled={isActionLoading}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      opacity: 0.6
-                    }}
+                    className="devops-icon-action-btn danger"
                     title="Eliminar contenedor"
                   >
                     <Trash2 size={11} />

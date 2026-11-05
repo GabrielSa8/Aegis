@@ -54,24 +54,7 @@ export function ModpackCard({
           <button
             type="button"
             onClick={() => onToggleMaster(modpack.id)}
-            style={{
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-xs)',
-              border: isMasterOn
-                ? '1px solid color-mix(in srgb, var(--primary) 50%, transparent)'
-                : '1px solid var(--border-color)',
-              background: isMasterOn
-                ? 'color-mix(in srgb, var(--primary) 20%, transparent)'
-                : 'rgba(255, 255, 255, 0.04)',
-              color: isMasterOn ? 'var(--primary)' : 'var(--text-muted)',
-              fontSize: '0.64rem',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap'
-            }}
+            className={`modpack-master-btn ${isMasterOn ? 'is-active' : 'is-inactive'}`}
             title={isMasterOn ? 'Desactivar Modpack completo' : 'Activar Modpack'}
           >
             {isMasterOn ? <PackageCheck size={12} /> : <PackageX size={12} />}
@@ -89,24 +72,7 @@ export function ModpackCard({
                 type="button"
                 onClick={() => onToggleSubSkill(modpack.id, skillId)}
                 disabled={!isMasterOn}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  fontSize: '0.6rem',
-                  fontFamily: 'var(--font-mono)',
-                  cursor: isMasterOn ? 'pointer' : 'not-allowed',
-                  border: isSubActive
-                    ? '1px solid color-mix(in srgb, var(--primary) 35%, transparent)'
-                    : '1px solid var(--border-color)',
-                  background: isSubActive
-                    ? 'color-mix(in srgb, var(--primary) 12%, transparent)'
-                    : 'rgba(0, 0, 0, 0.2)',
-                  color: isSubActive ? 'var(--text-high)' : 'var(--text-muted)',
-                  opacity: isMasterOn ? 1 : 0.5
-                }}
+                className={`modpack-subskill-chip ${isSubActive ? 'is-active' : 'is-inactive'}`}
                 title={isSubActive ? `Desactivar ${skillId}` : `Activar ${skillId}`}
               >
                 {isSubActive && <Check size={9} color="var(--primary)" />}
@@ -135,7 +101,7 @@ export function ModpackCard({
             <button
               type="button"
               onClick={() => onEdit(modpack)}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
+              className="devops-icon-action-btn"
               title="Editar modpack"
             >
               <Edit3 size={11} />
@@ -146,7 +112,7 @@ export function ModpackCard({
             <button
               type="button"
               onClick={() => onDelete(modpack.id)}
-              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px' }}
+              className="devops-icon-action-btn danger"
               title="Eliminar modpack"
             >
               <Trash2 size={11} />

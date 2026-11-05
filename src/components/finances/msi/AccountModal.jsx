@@ -1,6 +1,7 @@
 import React from 'react';
 import { CreditCard, Palette, Check } from 'lucide-react';
 import ModalWrapper from '../../ui/ModalWrapper';
+import AccountTypeDropdown from './AccountTypeDropdown';
 
 export default function AccountModal({
   isOpen,
@@ -34,17 +35,11 @@ export default function AccountModal({
         </div>
 
         <div>
-          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tipo</label>
-          <select
-            value={accountForm.type}
-            onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
-            style={{ fontSize: '0.78rem', padding: '7px 26px 7px 10px', width: '100%', color: 'var(--text-high)', marginTop: '2px' }}
-          >
-            <option value="debit">Débito</option>
-            <option value="credit">Crédito</option>
-            <option value="cash">Efectivo</option>
-            <option value="crypto">Cripto</option>
-          </select>
+          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tipo de Cuenta / Instrumento</label>
+          <AccountTypeDropdown
+            value={accountForm.type || 'debit'}
+            onChange={(newType) => setAccountForm({ ...accountForm, type: newType })}
+          />
         </div>
 
         {/* 🎨 Selector de Color Identificador Responsivo y Táctil */}

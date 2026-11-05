@@ -53,7 +53,7 @@ export default function DevOpsView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', gap: '0.65rem', overflow: 'hidden' }}>
+    <div className="devops-view-container">
       {/* 🧭 Barra Táctica de Navegación DevOps */}
       <DevOpsNav
         activeTab={subTab}

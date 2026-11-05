@@ -48,6 +48,7 @@ function LiveLedgerTable({
             >
               {/* Icono Tipo */}
               <div
+                className="ledger-row-icon"
                 style={{
                   width: '18px',
                   height: '18px',
@@ -66,6 +67,7 @@ function LiveLedgerTable({
 
               {/* Fecha */}
               <span 
+                className="ledger-row-date"
                 style={{ 
                   color: 'var(--text-muted)', 
                   fontFamily: 'JetBrains Mono, monospace', 
@@ -76,7 +78,7 @@ function LiveLedgerTable({
               </span>
 
               {/* Concepto / Nota */}
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="ledger-row-desc" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 <span style={{ fontWeight: 600, color: 'var(--text-high)' }}>
                   {tx.description || tx.category}
                 </span>
@@ -84,6 +86,7 @@ function LiveLedgerTable({
 
               {/* Categoría Badge */}
               <span
+                className="ledger-row-category"
                 style={{
                   fontSize: '0.68rem',
                   padding: '0.12rem 0.45rem',
@@ -99,6 +102,7 @@ function LiveLedgerTable({
 
               {/* Método / Cuenta */}
               <span
+                className="ledger-row-method"
                 style={{
                   fontSize: '0.68rem',
                   padding: '0.12rem 0.45rem',
@@ -113,6 +117,7 @@ function LiveLedgerTable({
 
               {/* Monto Tabular */}
               <span
+                className="ledger-row-amount"
                 style={{
                   textAlign: 'right',
                   fontFamily: 'JetBrains Mono, monospace',
@@ -125,20 +130,13 @@ function LiveLedgerTable({
               </span>
 
               {/* Acciones */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.2rem' }}>
+              <div className="ledger-row-actions">
                 <button
                   type="button"
                   onClick={() => onEditTx(tx)}
-                  title="Editar"
+                  title="Editar transacción"
+                  aria-label="Editar transacción"
                   className="ledger-action-btn"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                    borderRadius: '4px'
-                  }}
                 >
                   <Edit3 size={12} />
                 </button>
@@ -148,16 +146,9 @@ function LiveLedgerTable({
                     e.stopPropagation();
                     onDeleteTx(tx);
                   }}
-                  title="Eliminar"
+                  title="Eliminar transacción"
+                  aria-label="Eliminar transacción"
                   className="ledger-action-btn delete"
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                    borderRadius: '4px'
-                  }}
                 >
                   <Trash2 size={12} />
                 </button>

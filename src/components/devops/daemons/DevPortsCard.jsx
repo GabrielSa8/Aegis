@@ -79,31 +79,13 @@ export function DevPortsCard({ ports = [], onStopProcess, onOpenUrl, actionLoadi
           }}>
             <button
               onClick={() => setFilterMode('all')}
-              style={{
-                background: filterMode === 'all' ? 'var(--bg-card)' : 'transparent',
-                color: filterMode === 'all' ? 'var(--primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: filterMode === 'all' ? 700 : 500,
-                cursor: 'pointer'
-              }}
+              className={`devops-subfilter-btn ${filterMode === 'all' ? 'is-active' : ''}`}
             >
               Todos ({ports.length})
             </button>
             <button
               onClick={() => setFilterMode('dev')}
-              style={{
-                background: filterMode === 'dev' ? 'var(--bg-card)' : 'transparent',
-                color: filterMode === 'dev' ? 'var(--primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: filterMode === 'dev' ? 700 : 500,
-                cursor: 'pointer'
-              }}
+              className={`devops-subfilter-btn ${filterMode === 'dev' ? 'is-active' : ''}`}
             >
               Solo Dev ({devPortsCount})
             </button>
@@ -124,65 +106,34 @@ export function DevPortsCard({ ports = [], onStopProcess, onOpenUrl, actionLoadi
         </div>
       ) : (
         /* 📋 Tabla de Puertos de Alta Densidad */
-        <div style={{
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-sm)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          flex: fillHeight ? 1 : 'none',
-          minHeight: 0,
-          background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)'
-        }}>
-          {/* Cabecera de columnas */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '70px 140px 80px 1fr 75px',
-            gap: '8px',
-            padding: '4px 8px',
-            background: 'color-mix(in srgb, var(--border-color) 15%, transparent)',
-            borderBottom: '1px solid var(--border-color)',
-            fontSize: '0.6rem',
-            fontWeight: 700,
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em'
-          }}>
-            <span>Puerto</span>
-            <span>Proceso / PID</span>
-            <span>Tipo</span>
-            <span>Línea de Comandos</span>
-            <span style={{ textAlign: 'right' }}>Acción</span>
-          </div>
+        <div className="dev-ports-table-wrapper" style={{ flex: fillHeight ? 1 : 'none', minHeight: 0 }}>
+          <div className="dev-ports-table-content">
+            {/* Cabecera de columnas */}
+            <div className="dev-ports-table-header">
+              <span>Puerto</span>
+              <span>Proceso / PID</span>
+              <span>Tipo</span>
+              <span>Línea de Comandos</span>
+              <span style={{ textAlign: 'right' }}>Acción</span>
+            </div>
 
-          {/* Filas scrolleables */}
-          <div style={{
-            flex: fillHeight ? 1 : 'none',
-            maxHeight: fillHeight ? 'none' : '280px',
-            overflowY: 'auto',
-            minHeight: 0
-          }}>
-            {filteredPorts.map((item) => {
-              const isWebPort = item.port >= 1024;
-              const isStopping = actionLoadingId === `proc-${item.pid}`;
+            {/* Filas scrolleables */}
+            <div style={{
+              flex: fillHeight ? 1 : 'none',
+              maxHeight: fillHeight ? 'none' : '280px',
+              overflowY: 'auto',
+              minHeight: 0
+            }}>
+              {filteredPorts.map((item) => {
+                const isWebPort = item.port >= 1024;
+                const isStopping = actionLoadingId === `proc-${item.pid}`;
 
-              return (
-                <div
-                  key={`${item.port}-${item.pid || 'sys'}`}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '70px 140px 80px 1fr 75px',
-                    gap: '8px',
-                    alignItems: 'center',
-                    padding: '4px 8px',
-                    borderBottom: '1px solid color-mix(in srgb, var(--border-color) 40%, transparent)',
-                    fontSize: '0.68rem',
-                    transition: 'background 0.1s ease'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {/* Puerto */}
+                return (
+                  <div
+                    key={`${item.port}-${item.pid || 'sys'}`}
+                    className="dev-ports-table-row"
+                  >
+                    {/* Puerto */}
                   <span style={{
                     fontWeight: 800,
                     fontFamily: 'var(--font-mono, monospace)',
@@ -244,19 +195,8 @@ export function DevPortsCard({ ports = [], onStopProcess, onOpenUrl, actionLoadi
                       <button
                         type="button"
                         onClick={() => onOpenUrl(`http://localhost:${item.port}`)}
-                        style={{
-                          background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
-                          border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-                          borderRadius: '3px',
-                          color: 'var(--primary)',
-                          padding: '1px 5px',
-                          fontSize: '0.58rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px'
-                        }}
+                        className="cockpit-action-btn primary"
+                        style={{ border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' }}
                         title={`Abrir http://localhost:${item.port} en navegador`}
                       >
                         <ExternalLink size={9} />
@@ -269,17 +209,7 @@ export function DevPortsCard({ ports = [], onStopProcess, onOpenUrl, actionLoadi
                         type="button"
                         onClick={() => onStopProcess(item.pid, item.process_name)}
                         disabled={isStopping}
-                        style={{
-                          background: 'color-mix(in srgb, var(--warning) 12%, transparent)',
-                          border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)',
-                          borderRadius: '3px',
-                          color: 'var(--warning)',
-                          padding: '1px 4px',
-                          fontSize: '0.58rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
+                        className="devops-icon-action-btn danger"
                         title={`Terminar proceso PID ${item.pid} (SIGTERM)`}
                       >
                         <XCircle size={10} />
@@ -289,6 +219,7 @@ export function DevPortsCard({ ports = [], onStopProcess, onOpenUrl, actionLoadi
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
       )}

@@ -101,22 +101,25 @@ export default function AgentHeaderPortal({
         data-historial-toggle="true"
         onClick={onToggleSessionsDrawer}
         className={`header-tactical-toggle ${showSessionsDrawer ? 'is-active' : ''}`}
-        title="Historial de conversaciones"
+        title={`Historial de conversaciones (${sessionsCount})`}
+        aria-label={`Historial de conversaciones (${sessionsCount})`}
+        style={{ padding: '4px 7px' }}
       >
         <History size={14} color="currentColor" />
-        <span>Historial</span>
-        <span style={{
-          fontSize: '0.62rem',
-          fontWeight: 700,
-          padding: '1px 5px',
-          borderRadius: '10px',
-          background: showSessionsDrawer ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)',
-          color: showSessionsDrawer ? '#000' : 'var(--text-muted)',
-          fontFamily: 'var(--font-mono, monospace)',
-          lineHeight: 1
-        }}>
-          {sessionsCount}
-        </span>
+        {sessionsCount > 0 && (
+          <span style={{
+            fontSize: '0.62rem',
+            fontWeight: 700,
+            padding: '1px 5px',
+            borderRadius: '10px',
+            background: showSessionsDrawer ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)',
+            color: showSessionsDrawer ? 'var(--bg-app, #000)' : 'var(--text-muted)',
+            fontFamily: 'var(--font-mono, monospace)',
+            lineHeight: 1
+          }}>
+            {sessionsCount}
+          </span>
+        )}
       </button>
 
       {/* 🗑️ Vaciar Chat Activo */}
@@ -124,9 +127,10 @@ export default function AgentHeaderPortal({
         onClick={onClearHistory}
         className="header-tactical-toggle header-tactical-danger"
         title="Vaciar conversación activa / Limpiar chat"
+        aria-label="Vaciar conversación activa"
+        style={{ padding: '4px 7px' }}
       >
         <Trash2 size={13} />
-        <span>Vaciar</span>
       </button>
 
       {/* 🪙 Métrica Táctica de Tokens de la Sesión */}

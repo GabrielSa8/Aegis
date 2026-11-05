@@ -16,61 +16,30 @@ export function RepoTableView({
   actionLoading
 }) {
   return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 'var(--radius-md)',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      flex: 1,
-      minHeight: 0
-    }}>
-      {/* Cabecera de Tabla */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '180px 1fr 140px 120px 1fr 160px',
-        gap: '8px',
-        padding: '6px 10px',
-        background: 'color-mix(in srgb, var(--border-color) 15%, transparent)',
-        borderBottom: '1px solid var(--border-color)',
-        fontSize: '0.62rem',
-        fontWeight: 700,
-        color: 'var(--text-muted)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.04em'
-      }}>
-        <span>Repositorio</span>
-        <span>Ruta en disco</span>
-        <span>Rama / Sync</span>
-        <span>Árbol Git</span>
-        <span>Último Commit</span>
-        <span style={{ textAlign: 'right' }}>Acciones</span>
-      </div>
+    <div className="repo-table-wrapper">
+      <div className="repo-table-content">
+        {/* Cabecera de Tabla */}
+        <div className="repo-table-header">
+          <span>Repositorio</span>
+          <span>Ruta en disco</span>
+          <span>Rama / Sync</span>
+          <span>Árbol Git</span>
+          <span>Último Commit</span>
+          <span style={{ textAlign: 'right' }}>Acciones</span>
+        </div>
 
-      {/* Filas de Repositorios */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {repos.map((repo) => {
-          const isFetching = actionLoading === `fetch-${repo.id}`;
-          const isPulling = actionLoading === `pull-${repo.id}`;
+        {/* Filas de Repositorios */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {repos.map((repo) => {
+            const isFetching = actionLoading === `fetch-${repo.id}`;
+            const isPulling = actionLoading === `pull-${repo.id}`;
 
-          return (
-            <div
-              key={repo.id}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '180px 1fr 140px 120px 1fr 160px',
-                gap: '8px',
-                alignItems: 'center',
-                padding: '6px 10px',
-                borderBottom: '1px solid color-mix(in srgb, var(--border-color) 40%, transparent)',
-                fontSize: '0.68rem',
-                transition: 'background 0.1s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              {/* Repositorio */}
+            return (
+              <div
+                key={repo.id}
+                className="repo-table-row"
+              >
+                {/* Repositorio */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
                 <FolderGit2 size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                 <span style={{ fontWeight: 800, color: 'var(--text-high)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -176,7 +145,7 @@ export function RepoTableView({
                   <button
                     type="button"
                     onClick={() => onRequestDelete(repo)}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', opacity: 0.6 }}
+                    className="devops-icon-action-btn danger"
                     title="Desvincular repositorio"
                   >
                     <Trash2 size={11} />
@@ -186,6 +155,7 @@ export function RepoTableView({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

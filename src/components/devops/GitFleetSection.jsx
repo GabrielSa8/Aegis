@@ -56,21 +56,9 @@ export function GitFleetSection({
   }, [repos, searchTerm, statusFilter]);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.65rem',
-      ...(fillHeight ? { flex: 1, minHeight: 0 } : {})
-    }}>
+    <div className={`git-fleet-container ${fillHeight ? 'fill-height' : ''}`}>
       {/* 🧭 Barra Superior de Filtros y Control de Flota */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '8px',
-        padding: '0 2px'
-      }}>
+      <div className="git-fleet-toolbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Flota Git ({repos.length})
@@ -87,64 +75,34 @@ export function GitFleetSection({
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              style={{
-                background: statusFilter === 'all' ? 'var(--bg-card)' : 'transparent',
-                color: statusFilter === 'all' ? 'var(--primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: statusFilter === 'all' ? 700 : 500,
-                cursor: 'pointer'
-              }}
+              className={`git-fleet-filter-btn ${statusFilter === 'all' ? 'is-active-all' : ''}`}
             >
-              Todos ({repos.length})
+              <span>Todos</span>
+              <span>({repos.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('dirty')}
-              style={{
-                background: statusFilter === 'dirty' ? 'var(--bg-card)' : 'transparent',
-                color: statusFilter === 'dirty' ? 'var(--warning)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: statusFilter === 'dirty' ? 700 : 500,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
+              className={`git-fleet-filter-btn ${statusFilter === 'dirty' ? 'is-active-dirty' : ''}`}
             >
               {dirtyCount > 0 && <AlertCircle size={10} />}
-              <span>Con cambios ({dirtyCount})</span>
+              <span className="git-fleet-filter-label">Con cambios</span>
+              <span>({dirtyCount})</span>
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('sync')}
-              style={{
-                background: statusFilter === 'sync' ? 'var(--bg-card)' : 'transparent',
-                color: statusFilter === 'sync' ? 'var(--accent)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 7px',
-                fontSize: '0.62rem',
-                fontWeight: statusFilter === 'sync' ? 700 : 500,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
+              className={`git-fleet-filter-btn ${statusFilter === 'sync' ? 'is-active-sync' : ''}`}
             >
               {syncCount > 0 && <ArrowUp size={10} />}
-              <span>Desincronizados ({syncCount})</span>
+              <span className="git-fleet-filter-label">Desincronizados</span>
+              <span>({syncCount})</span>
             </button>
           </div>
         </div>
 
         {/* Buscador de Repos, Selector de Vista y Botón Añadir */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Selector de Modo de Vista (Cards vs Tabla) */}
           <div style={{
             display: 'flex',
@@ -156,18 +114,7 @@ export function GitFleetSection({
             <button
               type="button"
               onClick={() => handleToggleViewMode('cards')}
-              style={{
-                background: viewMode === 'cards' ? 'var(--bg-card)' : 'transparent',
-                color: viewMode === 'cards' ? 'var(--primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.62rem'
-              }}
+              className={`devops-viewmode-btn ${viewMode === 'cards' ? 'is-active' : ''}`}
               title="Vista de Tarjetas Densas"
             >
               <LayoutGrid size={11} />
@@ -176,18 +123,7 @@ export function GitFleetSection({
             <button
               type="button"
               onClick={() => handleToggleViewMode('table')}
-              style={{
-                background: viewMode === 'table' ? 'var(--bg-card)' : 'transparent',
-                color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '2px 6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.62rem'
-              }}
+              className={`devops-viewmode-btn ${viewMode === 'table' ? 'is-active' : ''}`}
               title="Vista de Tabla Táctica"
             >
               <List size={11} />
@@ -195,29 +131,14 @@ export function GitFleetSection({
             </button>
           </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            background: 'rgba(0, 0, 0, 0.25)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '2px 6px'
-          }}>
+          <div className="git-fleet-search-box">
             <Search size={11} color="var(--text-muted)" />
             <input
               type="text"
               placeholder="Filtrar repositorios..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: 'var(--text-high)',
-                fontSize: '0.68rem',
-                width: '130px'
-              }}
+              className="git-fleet-search-input"
             />
           </div>
 
@@ -233,7 +154,7 @@ export function GitFleetSection({
               fontWeight: 700
             }}
           >
-            + Añadir / Crear
+            + Añadir
           </TacticalButton>
         </div>
       </div>
@@ -265,12 +186,10 @@ export function GitFleetSection({
           actionLoading={actionLoading}
         />
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 390px))',
-          gap: '0.65rem',
-          ...(fillHeight ? { flex: 1, overflowY: 'auto', minHeight: 0 } : {})
-        }}>
+        <div
+          className="git-fleet-grid"
+          style={fillHeight ? { flex: 1, overflowY: 'auto', minHeight: 0 } : {}}
+        >
           {filteredRepos.map((repo) => (
             <RepoCard
               key={repo.id}

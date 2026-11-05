@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Edit3, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { getCategories, getPaymentMethods } from '../../../utils/storage';
+import DeckDatePicker from '../cockpit/DeckDatePicker';
+import PaymentMethodDropdown from '../cockpit/PaymentMethodDropdown';
+import CategoryDropdown from '../cockpit/CategoryDropdown';
 
 export default function InlineTxEditor({ tx, onSave, onCancel }) {
   const [amount, setAmount] = useState(tx?.amount ?? '');
@@ -11,6 +14,18 @@ export default function InlineTxEditor({ tx, onSave, onCancel }) {
   const [date, setDate] = useState(tx?.date ?? '');
   const [categories, setCategories] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+
+  // Sincronizar reactivamente cuando tx cambie de transacción
+  useEffect(() => {
+    if (tx) {
+      setAmount(tx.amount ?? '');
+      setType(tx.type ?? 'expense');
+      setDescription(tx.description ?? '');
+      setCategory(tx.category ?? '');
+      setPaymentMethod(tx.paymentMethod ?? '');
+      setDate(tx.date ?? '');
+    }
+  }, [tx?.id, tx?.amount, tx?.type, tx?.description, tx?.category, tx?.paymentMethod, tx?.date]);
 
   useEffect(() => {
     let mounted = true;
@@ -72,9 +87,9 @@ export default function InlineTxEditor({ tx, onSave, onCancel }) {
         </button>
       </div>
 
-      {/* Fila 1: Monto y Tipo Gasto / Ingreso */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm, 5px)', padding: '2px 6px' }}>
+      {/* Fila 1: Monto y Tipo Gasto / Ingreso (Responsive Flex) */}
+      <div className="inline-tx-row-amount-type">
+        <div className="inline-tx-amount-field">
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginRight: '4px', fontFamily: 'JetBrains Mono, monospace' }}>$</span>
           <input
             type="number"
@@ -86,11 +101,12 @@ export default function InlineTxEditor({ tx, onSave, onCancel }) {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="inline-tx-type-toggle-group">
           <button
             type="button"
             onClick={() => setType('expense')}
             className={`inline-tx-type-btn ${type === 'expense' ? 'active-expense' : ''}`}
+            aria-label="Tipo Gasto"
           >
             <ArrowDownLeft size={11} />
             <span>Gasto</span>
@@ -99,6 +115,7 @@ export default function InlineTxEditor({ tx, onSave, onCancel }) {
             type="button"
             onClick={() => setType('income')}
             className={`inline-tx-type-btn ${type === 'income' ? 'active-income' : ''}`}
+            aria-label="Tipo Ingreso"
           >
             <ArrowUpRight size={11} />
             <span>Ingreso</span>
@@ -106,76 +123,41 @@ export default function InlineTxEditor({ tx, onSave, onCancel }) {
         </div>
       </div>
 
-      {/* Fila 2: Descripción y Categoría */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '6px' }}>
+      {/* Fila 2: Descripción y Categoría (Presupuesto) */}
+      <div className="inline-tx-row-inputs">
         <input
           type="text"
           placeholder="Descripción..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{
-            padding: '4px 6px',
-            fontSize: '0.72rem',
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 5px)',
-            color: 'var(--text-high)',
-            outline: 'none'
-          }}
+          className="inline-tx-input"
         />
 
-        <select
+        <CategoryDropdown
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          style={{
-            padding: '4px 6px',
-            fontSize: '0.72rem',
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 5px)',
-            color: 'var(--text-high)',
-            outline: 'none'
-          }}
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          onChange={setCategory}
+          categories={categories}
+          dropUp={true}
+        />
       </div>
 
-      {/* Fila 3: Método de Pago y Fecha */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '6px' }}>
-        <select
+      {/* Fila 3: Método de Pago Táctico (Nordic Custom Dropdown) */}
+      <div className="inline-tx-row-inputs">
+        <PaymentMethodDropdown
           value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-          style={{
-            padding: '4px 6px',
-            fontSize: '0.72rem',
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 5px)',
-            color: 'var(--text-high)',
-            outline: 'none'
-          }}
-        >
-          {paymentMethods.map((pm) => (
-            <option key={pm.id || pm.name} value={pm.name}>{pm.name}</option>
-          ))}
-        </select>
+          onChange={setPaymentMethod}
+          paymentMethods={paymentMethods}
+          dropUp={true}
+        />
+      </div>
 
-        <input
-          type="date"
+      {/* Fila 4: Selector Táctico de Día (Mismo diseño de Cockpit: Hoy, Ayer, Otra fecha con Popover) */}
+      <div style={{ marginTop: '2px' }}>
+        <DeckDatePicker
           value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={{
-            padding: '3px 5px',
-            fontSize: '0.7rem',
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-sm, 5px)',
-            color: 'var(--text-high)',
-            outline: 'none'
-          }}
+          onChange={setDate}
+          showHeader={false}
+          dropUp={true}
         />
       </div>
 

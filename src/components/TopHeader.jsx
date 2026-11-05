@@ -170,17 +170,18 @@ export default function TopHeader({
           <button
             onClick={onOpenSettings}
             title="Opciones y Ajustes (Ctrl + ,)"
+            aria-label="Opciones y Ajustes (Ctrl + ,)"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm, 8px)',
-              padding: '4px 9px',
+              padding: '4px 7px',
               color: 'var(--text-muted)',
               fontSize: '0.74rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              justifyContent: 'center',
               transition: 'all 0.15s ease'
             }}
             onMouseEnter={(e) => { 
@@ -193,7 +194,6 @@ export default function TopHeader({
             }}
           >
             <Settings size={13} />
-            <span>Opciones</span>
           </button>
 
           {/* Bloquear Vault */}
@@ -201,24 +201,24 @@ export default function TopHeader({
             <button
               onClick={onLockVault}
               title="Bloquear Vault con Contraseña Maestra (Alt + L)"
+              aria-label="Bloquear Vault con Contraseña Maestra (Alt + L)"
               style={{
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-sm, 8px)',
-                padding: '4px 8px',
+                padding: '4px 7px',
                 color: 'var(--text-muted)',
                 fontSize: '0.74rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                justifyContent: 'center',
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
             >
               <Lock size={13} />
-              <span>Bloquear</span>
             </button>
           )}
 
@@ -226,24 +226,24 @@ export default function TopHeader({
           <button
             onClick={handleHideToTray}
             title="Ocultar en la Bandeja del Sistema (Tray)"
+            aria-label="Ocultar en la Bandeja del Sistema (Tray)"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm, 8px)',
-              padding: '4px 8px',
+              padding: '4px 7px',
               color: 'var(--text-muted)',
               fontSize: '0.74rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              justifyContent: 'center',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent, #60a5fa)'; e.currentTarget.style.borderColor = 'var(--accent, #60a5fa)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent, var(--primary))'; e.currentTarget.style.borderColor = 'var(--accent, var(--primary))'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
           >
             <Minus size={13} />
-            <span>Bandeja</span>
           </button>
 
           {/* Fijar / Auto-ocultar (Pin) */}

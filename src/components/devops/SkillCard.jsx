@@ -80,7 +80,7 @@ export function SkillCard({ skill, onOpen, onDelete }) {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '1px', cursor: 'pointer', opacity: 0.6 }}
+                  className="devops-icon-action-btn danger"
                   title="Desinstalar skill"
                 >
                   <Trash2 size={11} />

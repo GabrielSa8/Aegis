@@ -30,15 +30,7 @@ export function DevOpsCockpitView({
   daemonActionLoadingId
 }) {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-      gap: '0.75rem',
-      flex: 1,
-      minHeight: 0,
-      height: '100%',
-      overflow: 'hidden'
-    }}>
+    <div className="devops-cockpit-grid">
       {/* 🚢 PANEL 1: FLOTA GIT RESUMIDA */}
       <CockpitGitPanel
         repos={repos}

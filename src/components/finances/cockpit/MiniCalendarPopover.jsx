@@ -7,8 +7,9 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-export default function MiniCalendarPopover({ selectedDate, onSelectDate, onClose }) {
+export default function MiniCalendarPopover({ selectedDate, onSelectDate, onClose, dropUp = false }) {
   const popoverRef = useRef(null);
+  const [effectiveDropUp, setEffectiveDropUp] = useState(dropUp);
 
   // Parsear fecha inicial
   const initialDate = (() => {
@@ -21,6 +22,20 @@ export default function MiniCalendarPopover({ selectedDate, onSelectDate, onClos
 
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
+
+  // Auto-detección de espacio en viewport si no se forzó dropUp
+  useEffect(() => {
+    if (dropUp) {
+      setEffectiveDropUp(true);
+      return;
+    }
+    if (popoverRef.current) {
+      const rect = popoverRef.current.getBoundingClientRect();
+      if (window.innerHeight - rect.bottom < 20) {
+        setEffectiveDropUp(true);
+      }
+    }
+  }, [dropUp]);
 
   // Click outside para cerrar
   useEffect(() => {
@@ -80,15 +95,16 @@ export default function MiniCalendarPopover({ selectedDate, onSelectDate, onClos
       className="mini-calendar-popover"
       style={{
         position: 'absolute',
-        top: 'calc(100% + 6px)',
+        top: effectiveDropUp ? 'auto' : 'calc(100% + 6px)',
+        bottom: effectiveDropUp ? 'calc(100% + 6px)' : 'auto',
         left: 0,
-        zIndex: 60,
+        zIndex: 100,
         width: '238px',
         padding: '0.65rem',
         borderRadius: 'var(--radius-md, 10px)',
-        background: 'color-mix(in srgb, var(--surface-panel, var(--bg-card)) 95%, transparent)',
+        background: 'color-mix(in srgb, var(--surface-panel, var(--bg-card)) 98%, transparent)',
         border: '1px solid var(--border-color, rgba(255,255,255,0.12))',
-        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.65), 0 0 16px color-mix(in srgb, var(--primary) 12%, transparent)',
+        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.75), 0 0 16px color-mix(in srgb, var(--primary) 12%, transparent)',
         display: 'flex',
         flexDirection: 'column',
         gap: '0.5rem'

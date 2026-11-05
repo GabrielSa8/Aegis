@@ -215,32 +215,24 @@ export default function CycleAgendaDeck({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+                <div className="pulse-tx-meta-actions">
                   <span
                     style={{
                       fontSize: '0.76rem',
                       fontFamily: 'JetBrains Mono, monospace',
                       fontWeight: 700,
-                      color: isIncome ? 'var(--accent, var(--primary))' : 'var(--text-high)'
+                      color: isIncome ? 'var(--accent, var(--primary))' : 'var(--danger)'
                     }}
                   >
                     {isIncome ? '+' : '-'}${amt.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                   </span>
-                  <div style={{ display: 'flex', gap: '2px' }}>
+                  <div className="pulse-tx-actions">
                     <button
                       type="button"
                       onClick={() => setEditingTx(isBeingEdited ? null : tx)}
-                      className="cockpit-filter-pill"
+                      className={`pulse-tx-action-btn ${isBeingEdited ? 'is-active' : ''}`}
                       title="Editar transacción"
-                      style={{
-                        background: isBeingEdited ? 'var(--accent, var(--primary))' : 'transparent',
-                        border: 'none',
-                        color: isBeingEdited ? 'var(--bg-main)' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        padding: '2px',
-                        borderRadius: '3px',
-                        touchAction: 'manipulation'
-                      }}
+                      aria-label="Editar transacción"
                     >
                       <Edit3 size={11} />
                     </button>
@@ -250,9 +242,9 @@ export default function CycleAgendaDeck({
                         if (editingTx?.id === tx.id) setEditingTx(null);
                         onDeleteTx?.(tx);
                       }}
-                      className="cockpit-filter-pill"
-                      title="Eliminar"
-                      style={{ background: 'transparent', border: 'none', color: 'var(--danger, #ef4444)', cursor: 'pointer', padding: '2px' }}
+                      className="pulse-tx-action-btn delete"
+                      title="Eliminar transacción"
+                      aria-label="Eliminar transacción"
                     >
                       <Trash2 size={11} />
                     </button>
@@ -267,6 +259,7 @@ export default function CycleAgendaDeck({
       {/* Editor Inline en la parte inferior si se pulsa Editar */}
       {editingTx && (
         <InlineTxEditor
+          key={editingTx.id}
           tx={editingTx}
           onSave={handleSaveInline}
           onCancel={() => setEditingTx(null)}

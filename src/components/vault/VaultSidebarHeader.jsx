@@ -4,7 +4,6 @@ import {
   Sparkles,
   Search,
   X,
-  Filter,
   FilePlus,
   FolderPlus,
   ChevronsDown,
@@ -12,6 +11,7 @@ import {
   RefreshCw,
   PanelLeftClose
 } from 'lucide-react';
+import VaultHubDropdown from './VaultHubDropdown';
 
 export function VaultSidebarHeader({
   searchMode,
@@ -53,46 +53,18 @@ export function VaultSidebarHeader({
         <button
           type="button"
           onClick={() => setSearchMode('title')}
-          style={{
-            padding: '3px 6px',
-            fontSize: '0.66rem',
-            fontWeight: 600,
-            borderRadius: '4px',
-            border: 'none',
-            cursor: 'pointer',
-            background: searchMode === 'title' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-            color: searchMode === 'title' ? '#34d399' : 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            transition: 'var(--transition)'
-          }}
+          className={`vault-search-mode-btn ${searchMode === 'title' ? 'is-active-primary' : ''}`}
         >
           <FileText size={11} />
-          <span>Títulos</span>
+          <span className="vault-sidebar-btn-label">Títulos</span>
         </button>
         <button
           type="button"
           onClick={() => setSearchMode('fulltext')}
-          style={{
-            padding: '3px 6px',
-            fontSize: '0.66rem',
-            fontWeight: 600,
-            borderRadius: '4px',
-            border: 'none',
-            cursor: 'pointer',
-            background: searchMode === 'fulltext' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
-            color: searchMode === 'fulltext' ? '#c084fc' : 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            transition: 'var(--transition)'
-          }}
+          className={`vault-search-mode-btn ${searchMode === 'fulltext' ? 'is-active-secondary' : ''}`}
         >
           <Sparkles size={11} />
-          <span>Búsqueda Profunda</span>
+          <span className="vault-sidebar-btn-label">Búsqueda Profunda</span>
         </button>
       </div>
 
@@ -134,21 +106,11 @@ export function VaultSidebarHeader({
       </div>
 
       {/* Selector de Hub */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <Filter size={11} color="var(--text-muted)" />
-        <select
-          value={selectedHub}
-          onChange={(e) => setSelectedHub(e.target.value)}
-          style={{ fontSize: '0.68rem', padding: '3px 20px 3px 6px', width: '100%' }}
-        >
-          <option value="Todos">Todos los Hubs</option>
-          {vaultHubs.map((h) => (
-            <option key={h} value={h}>
-              {h}
-            </option>
-          ))}
-        </select>
-      </div>
+      <VaultHubDropdown
+        value={selectedHub}
+        onChange={setSelectedHub}
+        hubs={vaultHubs}
+      />
 
       {/* Acciones Rápidas (+ Nota, + Carpeta, Expandir/Colapsar) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0 0 0' }}>
@@ -156,43 +118,19 @@ export function VaultSidebarHeader({
           <button
             onClick={() => setShowNewNoteModal(true)}
             title="Crear nueva nota con plantilla"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
-              color: '#34d399',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '0.64rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="vault-sidebar-quick-btn primary"
           >
             <FilePlus size={11} />
-            <span>Nota</span>
+            <span className="vault-sidebar-btn-label">Nota</span>
           </button>
 
           <button
             onClick={() => setShowNewFolderModal(true)}
             title="Crear nueva carpeta"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-muted)',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '0.64rem',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
+            className="vault-sidebar-quick-btn secondary"
           >
             <FolderPlus size={11} />
-            <span>Carpeta</span>
+            <span className="vault-sidebar-btn-label">Carpeta</span>
           </button>
         </div>
 
@@ -200,32 +138,14 @@ export function VaultSidebarHeader({
           <button
             onClick={expandAll}
             title="Expandir todas las carpetas"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '2px 4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            className="vault-sidebar-icon-btn"
           >
             <ChevronsDown size={12} />
           </button>
           <button
             onClick={collapseAll}
             title="Colapsar todas las carpetas"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '2px 4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            className="vault-sidebar-icon-btn"
           >
             <ChevronsUp size={12} />
           </button>
@@ -233,16 +153,7 @@ export function VaultSidebarHeader({
             onClick={loadVaultData}
             disabled={refreshing}
             title="Recargar notas de la Bóveda"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-              padding: '2px 4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            className="vault-sidebar-icon-btn"
           >
             <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
           </button>
@@ -250,16 +161,7 @@ export function VaultSidebarHeader({
           <button
             onClick={() => setShowSidebar(false)}
             title="Ocultar explorador de carpetas (Ctrl + B)"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '2px 4px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
+            className="vault-sidebar-icon-btn"
           >
             <PanelLeftClose size={12} />
           </button>

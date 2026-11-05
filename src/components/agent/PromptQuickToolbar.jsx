@@ -61,45 +61,18 @@ function PromptQuickToolbar({
         type="button"
         onClick={onToggleOverride}
         disabled={loading}
-        className="prompt-tool-btn"
+        className={`prompt-tool-btn prompt-effort-toggle ${isHigh ? 'is-high' : 'is-low'} ${isOverride ? 'is-override' : ''}`}
         title={
           isOverride
             ? `Esfuerzo temporal para este envío: ${isHigh ? 'Profundo' : 'Flash'} (Clic para restaurar al global de la sesión)`
             : `Heredando de la sesión (${isHigh ? 'Profundo' : 'Flash'}). Clic para alternar solo para este prompt.`
         }
-        aria-label="Alternar esfuerzo para este prompt"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '2px 6px',
-          borderRadius: 'var(--radius-sm, 4px)',
-          fontSize: '0.62rem',
-          fontWeight: 500,
-          background: isHigh
-            ? 'color-mix(in srgb, var(--secondary) 14%, transparent)'
-            : 'color-mix(in srgb, var(--primary) 14%, transparent)',
-          border: isOverride
-            ? '1px dashed var(--primary)'
-            : isHigh
-            ? '1px solid color-mix(in srgb, var(--secondary) 30%, transparent)'
-            : '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-          color: isHigh ? 'var(--secondary)' : 'var(--primary)',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          transition: 'all 0.12s ease'
-        }}
+        aria-label={`Esfuerzo: ${isHigh ? 'Profundo' : 'Flash'}${isOverride ? ' (temporal 1x)' : ''}`}
       >
-        {isHigh ? <Brain size={11} /> : <Zap size={11} />}
-        <span>{isHigh ? 'Profundo' : 'Flash'}</span>
+        {isHigh ? <Brain size={12} /> : <Zap size={12} />}
+        <span className="prompt-effort-label">{isHigh ? 'Profundo' : 'Flash'}</span>
         {isOverride && (
-          <span
-            style={{
-              fontSize: '0.52rem',
-              opacity: 0.8,
-              marginLeft: '2px',
-              textTransform: 'uppercase'
-            }}
-          >
+          <span className="prompt-effort-override-tag">
             (1x)
           </span>
         )}
