@@ -16,22 +16,24 @@ export default function GamingSection({ config, setConfig }) {
       </div>
 
       {/* Grid de 2 Columnas Tácticas */}
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '16px',
         alignItems: 'start'
       }}>
         {/* Card 1: Feral GameMode */}
-        <div style={{
-          background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-          padding: '14px 16px',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px'
-        }}>
+        <div
+          onClick={() => setConfig((prev) => ({ ...prev, enableGamemode: !prev.enableGamemode }))}
+          className={`tactical-option-row ${config.enableGamemode ? 'active' : ''}`}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            alignItems: 'stretch',
+            padding: '14px 16px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Zap size={16} color="var(--primary)" />
@@ -39,7 +41,7 @@ export default function GamingSection({ config, setConfig }) {
                 Feral GameMode (`gamemoderun`)
               </span>
             </div>
-            <div className="tactical-switch">
+            <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={Boolean(config.enableGamemode)}
@@ -68,15 +70,17 @@ export default function GamingSection({ config, setConfig }) {
         </div>
 
         {/* Card 2: Gamescope FSR */}
-        <div style={{
-          background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-          padding: '14px 16px',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px'
-        }}>
+        <div
+          onClick={() => setConfig((prev) => ({ ...prev, enableGamescopeFsr: !prev.enableGamescopeFsr }))}
+          className={`tactical-option-row ${config.enableGamescopeFsr ? 'active' : ''}`}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            alignItems: 'stretch',
+            padding: '14px 16px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sliders size={16} color="var(--accent)" />
@@ -84,7 +88,7 @@ export default function GamingSection({ config, setConfig }) {
                 Forzar Escalado Gamescope FSR
               </span>
             </div>
-            <div className="tactical-switch">
+            <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={Boolean(config.enableGamescopeFsr)}

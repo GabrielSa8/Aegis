@@ -2,6 +2,17 @@ import { Gauge, ExternalLink, Bot, ShieldAlert } from 'lucide-react';
 import { BILLING_LINKS } from './settingsHelpers';
 import FallbackChainSection from './FallbackChainSection';
 import ApiCredentialsCard from './ApiCredentialsCard';
+import TacticalSelect from '../ui/TacticalSelect';
+
+const AGENT_OPTIONS = [
+  { value: 'agy', label: 'Google Antigravity CLI (agy)', desc: 'Integrado nativo con herramientas del sistema' },
+  { value: 'deepseek', label: 'DeepSeek (V3 / R1)', desc: 'API Soberana de bajo coste y razonamiento' },
+  { value: 'anthropic', label: 'Anthropic Claude', desc: 'Haiku, Sonnet y Opus para ingeniería de precisión' },
+  { value: 'openai', label: 'OpenAI API', desc: 'GPT-4o, 4o-mini y modelos de razonamiento formal' },
+  { value: 'openrouter', label: 'OpenRouter Multi-Cloud', desc: 'Enrutador agregado con failover dinámico' },
+  { value: 'ollama', label: 'Ollama Local Offline', desc: 'Modelos locales 100% privados sin conexión' },
+  { value: 'custom', label: 'Comando Shell Personalizado', desc: 'Ejecución por binario o script de usuario' }
+];
 
 export default function AiBudgetSection({ config, setConfig, updateTokenBudget, onOpenExternal }) {
   if (!config) return null;
@@ -20,9 +31,9 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
       </div>
 
       {/* Grid de 2 Columnas Tácticas */}
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '16px',
         alignItems: 'start'
       }}>
@@ -44,19 +55,12 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
                 Motor de Agente Activo Primario
               </label>
             </div>
-            <select
+            <TacticalSelect
               value={config.agentType || 'agy'}
-              onChange={(e) => setConfig({ ...config, agentType: e.target.value })}
-              style={{ fontSize: '0.78rem' }}
-            >
-              <option value="agy">Google Antigravity CLI (agy) — Integrado nativo</option>
-              <option value="deepseek">DeepSeek (V3 / R1) — API Soberana</option>
-              <option value="anthropic">Anthropic Claude (Haiku / Sonnet / Opus)</option>
-              <option value="openai">OpenAI (4o / 4o-mini / o3-mini)</option>
-              <option value="openrouter">OpenRouter (Multi-Proveedor Agregado)</option>
-              <option value="ollama">Ollama Local (Offline / Privado)</option>
-              <option value="custom">Comando Shell Personalizado</option>
-            </select>
+              onChange={(val) => setConfig({ ...config, agentType: val })}
+              options={AGENT_OPTIONS}
+              style={{ width: '100%' }}
+            />
             <p style={{ fontSize: '0.67rem', color: 'var(--text-muted)', margin: 0 }}>
               Antigravity, DeepSeek, Claude, OpenAI u Ollama con selección dinámica de tiers.
             </p>
@@ -174,6 +178,7 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
                 <div
                   key={link.name}
                   onClick={() => onOpenExternal(link.url)}
+                  className="settings-billing-link-card"
                   style={{
                     padding: '8px 10px',
                     background: 'color-mix(in srgb, var(--bg-main) 50%, transparent)',
@@ -184,12 +189,6 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-color)';
                   }}
                 >
                   <div style={{ minWidth: 0 }}>

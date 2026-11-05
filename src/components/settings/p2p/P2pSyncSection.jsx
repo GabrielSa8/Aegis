@@ -29,15 +29,20 @@ export default function P2pSyncSection() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* 1. Header con switch principal táctico */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '1rem 1.25rem',
-        borderRadius: 'var(--radius-sm)',
-        background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
-        border: '1px solid var(--border-color)'
-      }}>
+      <div
+        className="settings-card-header-row"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1rem 1.25rem',
+          borderRadius: 'var(--radius-sm)',
+          background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
+          border: '1px solid var(--border-color)',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{
             width: '38px',

@@ -56,10 +56,11 @@ export default function CommunityPluginsDeck() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       {/* 🧭 Header con Navegación Dual: Catálogo vs Instalados */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="settings-plugins-deck-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="settings-plugins-tabs-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('catalog')}
+            className={`settings-plugin-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -71,7 +72,8 @@ export default function CommunityPluginsDeck() {
               color: activeTab === 'catalog' ? 'var(--text-high)' : 'var(--text-muted)',
               fontSize: '0.74rem',
               fontWeight: activeTab === 'catalog' ? 700 : 500,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <Compass size={13} color={activeTab === 'catalog' ? 'var(--primary)' : 'currentColor'} />
@@ -80,6 +82,7 @@ export default function CommunityPluginsDeck() {
 
           <button
             onClick={() => setActiveTab('installed')}
+            className={`settings-plugin-tab-btn ${activeTab === 'installed' ? 'active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -91,7 +94,8 @@ export default function CommunityPluginsDeck() {
               color: activeTab === 'installed' ? 'var(--text-high)' : 'var(--text-muted)',
               fontSize: '0.74rem',
               fontWeight: activeTab === 'installed' ? 700 : 500,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <PackageCheck size={13} color={activeTab === 'installed' ? 'var(--primary)' : 'currentColor'} />
@@ -99,7 +103,7 @@ export default function CommunityPluginsDeck() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div className="settings-plugins-deck-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <TacticalButton variant="secondary" size="sm" onClick={() => setShowInstallModal(true)} title="Instalar archivo .aegispkg local o URL">
             <Download size={11} style={{ marginRight: '4px' }} />
             Instalar .aegispkg
@@ -161,15 +165,17 @@ export default function CommunityPluginsDeck() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCat(cat)}
+                  className={`settings-cat-filter-btn ${selectedCat === cat ? 'active' : ''}`}
                   style={{
                     padding: '3px 8px',
                     borderRadius: 'var(--radius-sm)',
                     background: selectedCat === cat ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
                     border: '1px solid ' + (selectedCat === cat ? 'var(--primary)' : 'var(--border-color)'),
-                    color: selectedCat === cat ? '#000' : 'var(--text-muted)',
+                    color: selectedCat === cat ? 'var(--bg-main)' : 'var(--text-muted)',
                     fontSize: '0.66rem',
                     fontWeight: selectedCat === cat ? 700 : 500,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   {cat}

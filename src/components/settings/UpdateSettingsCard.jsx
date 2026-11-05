@@ -119,8 +119,8 @@ export default function UpdateSettingsCard() {
 
           {status === 'error' && (
             <>
-              <AlertCircle size={13} color="var(--danger, #ef4444)" />
-              <span style={{ fontSize: '0.72rem', color: 'var(--danger, #ef4444)' }}>
+              <AlertCircle size={13} color="var(--danger)" />
+              <span style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>
                 {errorMessage || 'No se pudo contactar el repositorio de releases.'}
               </span>
             </>
@@ -133,7 +133,7 @@ export default function UpdateSettingsCard() {
               onClick={() => setIsModalOpen(true)}
               style={{
                 background: 'var(--primary)',
-                color: 'var(--bg-main, #000)',
+                color: 'var(--bg-main)',
                 border: 'none',
                 borderRadius: '4px',
                 padding: '4px 10px',

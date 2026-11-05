@@ -76,11 +76,11 @@ export default function SystemBackupCard() {
       flexDirection: 'column',
       gap: '12px'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="settings-card-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Archive size={16} color="var(--primary)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)' }}>
               Respaldo Integral 3-2-1 Soberano (.aegisbackup)
             </span>
           </div>
@@ -161,6 +161,7 @@ export default function SystemBackupCard() {
             {backups.map(b => (
               <div
                 key={b.filePath}
+                className="settings-backup-item-row"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -169,7 +170,9 @@ export default function SystemBackupCard() {
                   background: 'rgba(0,0,0,0.2)',
                   borderRadius: 'var(--radius-sm)',
                   border: '1px solid rgba(255,255,255,0.05)',
-                  fontSize: '0.72rem'
+                  fontSize: '0.72rem',
+                  gap: '8px',
+                  flexWrap: 'wrap'
                 }}
               >
                 <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>
@@ -217,7 +220,7 @@ export default function SystemBackupCard() {
               <AlertTriangle size={18} style={{ flexShrink: 0 }} />
               <div>
                 <strong>Atención:</strong> Esta acción sobrescribirá la base de datos de finanzas y la configuración con los datos contenidos en el archivo:
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', marginTop: '4px', color: '#fff' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', marginTop: '4px', color: 'var(--text-high)' }}>
                   {selectedBackupForRestore.fileName}
                 </div>
                 <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: '4px' }}>

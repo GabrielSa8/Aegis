@@ -30,9 +30,10 @@ export default function PluginsHeader({
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="settings-plugins-header-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             onClick={onMinimalMode}
+            className="settings-action-pill-btn"
             title="Apagar todos los módulos opcionales y dejar solo Agente + Bóveda"
             style={{
               display: 'flex',
@@ -45,7 +46,8 @@ export default function PluginsHeader({
               color: 'var(--text-high)',
               fontSize: '0.7rem',
               cursor: 'pointer',
-              fontWeight: 600
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
             }}
           >
             <Zap size={13} color="var(--primary)" />
@@ -54,6 +56,7 @@ export default function PluginsHeader({
 
           <button
             onClick={onEnableAll}
+            className="settings-action-pill-btn active"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -65,7 +68,8 @@ export default function PluginsHeader({
               color: 'var(--text-high)',
               fontSize: '0.7rem',
               cursor: 'pointer',
-              fontWeight: 600
+              fontWeight: 600,
+              transition: 'all 0.15s ease'
             }}
           >
             <RotateCcw size={13} color="var(--primary)" />

@@ -32,6 +32,7 @@ export default function FleetReposCard({
         {repos.map(repo => (
           <div
             key={repo.id}
+            className="settings-repo-item-card"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -39,15 +40,16 @@ export default function FleetReposCard({
               padding: '8px 12px',
               background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
               border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-sm)'
+              borderRadius: 'var(--radius-sm)',
+              gap: '8px'
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-high)' }}>{repo.name}</span>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>({repo.role})</span>
               </div>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                 {repo.path}
               </span>
               {repo.warning && (
@@ -59,7 +61,8 @@ export default function FleetReposCard({
 
             <button
               onClick={() => onRemoveRepo(repo.id)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              className="settings-icon-action-btn"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px', borderRadius: 'var(--radius-sm)', transition: 'all 0.15s ease' }}
               title="Eliminar de la vigilancia"
             >
               <Trash2 size={13} />
@@ -73,7 +76,7 @@ export default function FleetReposCard({
         <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-high)', display: 'block', marginBottom: '8px' }}>
           + Añadir Repositorio a la Flota
         </span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+        <div className="settings-repo-inputs-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
           <input
             type="text"
             value={newRepoName}
@@ -98,7 +101,7 @@ export default function FleetReposCard({
             style={{ flex: 1, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}
           />
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="settings-input-action-row" style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
             value={newRepoWarning}

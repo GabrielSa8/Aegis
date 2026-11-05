@@ -33,15 +33,20 @@ export default function AuthorizedDeviceCard({
       </div>
 
       {isPaired ? (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0.85rem',
-          borderRadius: 'var(--radius-sm)',
-          background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)'
-        }}>
+        <div
+          className="settings-card-header-row"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <ShieldCheck size={20} color="var(--primary)" />
             <div>

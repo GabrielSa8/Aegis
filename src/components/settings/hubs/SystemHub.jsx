@@ -28,7 +28,7 @@ export function SystemHub({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%' }}>
       {/* Sub-navegación Táctica de Sistema */}
-      <div style={{
+      <div className="settings-subtabs-bar" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
@@ -44,6 +44,7 @@ export function SystemHub({
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
+              className={`settings-subtab-btn ${isActive ? 'active' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

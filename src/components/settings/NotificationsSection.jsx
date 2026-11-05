@@ -73,9 +73,9 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
       )}
 
       {/* Grid de 2 Columnas Tácticas */}
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '16px',
         alignItems: 'start'
       }}>
@@ -96,8 +96,11 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
             </span>
           </div>
 
-          <label className={`tactical-option-row ${closeToTray ? 'active' : ''}`}>
-            <div style={{ paddingRight: '1rem' }}>
+          <div
+            onClick={() => setConfig && setConfig({ ...config, closeToTray: !closeToTray })}
+            className={`tactical-option-row ${closeToTray ? 'active' : ''}`}
+          >
+            <div style={{ paddingRight: '1rem', flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: closeToTray ? 'var(--text-high)' : 'var(--text-muted)', display: 'block' }}>
                 Minimizar a la Bandeja al cerrar ventana
               </span>
@@ -105,17 +108,20 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
                 Al pulsar cerrar o Alt+F4, la app se oculta en el System Tray manteniendo activos los monitores sin consumir CPU.
               </span>
             </div>
-            <div className="tactical-switch">
+            <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={closeToTray}
                 onChange={(e) => setConfig && setConfig({ ...config, closeToTray: e.target.checked })}
               />
             </div>
-          </label>
+          </div>
 
-          <label className={`tactical-option-row ${startMinimized ? 'active' : ''}`}>
-            <div style={{ paddingRight: '1rem' }}>
+          <div
+            onClick={() => setConfig && setConfig({ ...config, startMinimized: !startMinimized })}
+            className={`tactical-option-row ${startMinimized ? 'active' : ''}`}
+          >
+            <div style={{ paddingRight: '1rem', flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 700, color: startMinimized ? 'var(--text-high)' : 'var(--text-muted)', display: 'block' }}>
                 Iniciar Aegis minimizado en segundo plano
               </span>
@@ -123,14 +129,14 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
                 Al arrancar con el SO, Aegis permanece silente en la bandeja hasta que abras el cockpit.
               </span>
             </div>
-            <div className="tactical-switch">
+            <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
               <input
                 type="checkbox"
                 checked={startMinimized}
                 onChange={(e) => setConfig && setConfig({ ...config, startMinimized: e.target.checked })}
               />
             </div>
-          </label>
+          </div>
         </div>
 
         {/* Columna Derecha: Alertas Preventivas de Escritorio */}
@@ -154,11 +160,12 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
             {NOTIFICATION_DEFINITIONS.map((notif) => {
               const isChecked = notifications[notif.id] ?? true;
               return (
-                <label
+                <div
                   key={notif.id}
+                  onClick={() => updateNotifications({ [notif.id]: !isChecked })}
                   className={`tactical-option-row ${isChecked ? 'active' : ''}`}
                 >
-                  <div style={{ paddingRight: '1rem' }}>
+                  <div style={{ paddingRight: '1rem', flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isChecked ? 'var(--text-high)' : 'var(--text-muted)', display: 'block' }}>
                       {notif.title}
                     </span>
@@ -166,14 +173,14 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
                       {notif.desc}
                     </span>
                   </div>
-                  <div className="tactical-switch">
+                  <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={(e) => updateNotifications({ [notif.id]: e.target.checked })}
                     />
                   </div>
-                </label>
+                </div>
               );
             })}
           </div>

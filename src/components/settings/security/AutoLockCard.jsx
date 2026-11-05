@@ -42,6 +42,7 @@ export default function AutoLockCard({ autoLockMinutes, onChange, disabled }) {
               key={opt.value}
               type="button"
               onClick={() => onChange(opt.value)}
+              className={`settings-autolock-btn ${isSelected ? 'active' : ''}`}
               style={{
                 padding: '10px 12px',
                 borderRadius: '8px',

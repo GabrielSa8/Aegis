@@ -24,6 +24,7 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
 
       {/* Switch 1: Cifrado de Credenciales */}
       <div
+        className="settings-policy-row"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -31,7 +32,8 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
           padding: '12px 14px',
           borderRadius: '8px',
           background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          gap: '12px'
         }}
       >
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -57,6 +59,7 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
 
       {/* Switch 2: Cifrado de Base de Datos SQLite */}
       <div
+        className="settings-policy-row"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -64,11 +67,12 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
           padding: '12px 14px',
           borderRadius: '8px',
           background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          gap: '12px'
         }}
       >
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <Database size={16} style={{ color: 'var(--accent, #60a5fa)' }} />
+          <Database size={16} style={{ color: 'var(--primary)' }} />
           <div>
             <div style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-high)' }}>
               Cifrar Base de Datos SQLite en Reposo (`aegis_lifeos.db`)
@@ -90,6 +94,7 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
 
       {/* Switch 3: Bloqueo al Minimizar a Bandeja */}
       <div
+        className="settings-policy-row"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -97,7 +102,8 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
           padding: '12px 14px',
           borderRadius: '8px',
           background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          gap: '12px'
         }}
       >
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowUp, ArrowDown, X, Plus, ShieldAlert } from 'lucide-react';
+import TacticalSelect from '../ui/TacticalSelect';
 import {
   PROVIDER_MODELS,
   INTENSITIES,
@@ -17,8 +18,6 @@ const iconBtn = {
   display: 'flex'
 };
 
-const fieldStyle = { fontSize: '0.8rem', padding: '7px 10px', minHeight: 34 };
-
 const modelName = (engine, id) => {
   const base = splitIntensity(id)?.base;
   const found = (PROVIDER_MODELS[engine] || []).find((m) => m.id === id || (base && splitIntensity(m.id)?.base === base));
@@ -27,19 +26,20 @@ const modelName = (engine, id) => {
 
 function LevelSelect({ id, onChange }) {
   const hasLevels = Boolean(splitIntensity(id));
+  const options = hasLevels
+    ? INTENSITIES.map((it) => ({ value: it.level, label: it.label }))
+    : [{ value: '', label: 'Sin niveles' }];
+
   return (
-    <select
+    <TacticalSelect
       value={getIntensityLevel(id) || ''}
       disabled={!hasLevels}
-      onChange={(e) => onChange(e.target.value)}
-      title={hasLevels ? 'Nivel de razonamiento' : 'Este modelo no admite niveles'}
-      style={{ ...fieldStyle, width: 110, fontWeight: 600 }}
-    >
-      {!hasLevels && <option value="">Sin niveles</option>}
-      {INTENSITIES.map((it) => (
-        <option key={it.level} value={it.level}>{it.label}</option>
-      ))}
-    </select>
+      onChange={(val) => onChange(val)}
+      options={options}
+      placeholder="Nivel..."
+      size="sm"
+      style={{ width: '120px' }}
+    />
   );
 }
 
@@ -75,6 +75,17 @@ export default function FallbackChainSection({ config, setConfig }) {
     update(next);
   };
 
+  const modelOptions = [
+    { value: '', label: 'Elegir modelo…' },
+    ...Object.entries(PROVIDER_MODELS).flatMap(([engine, list]) =>
+      list.map((m) => ({
+        value: `${engine}::${m.id}`,
+        label: `${engine} · ${modelName(engine, m.id)}`,
+        desc: `Motor: ${engine}`
+      }))
+    )
+  ];
+
   return (
     <div
       style={{
@@ -104,6 +115,7 @@ export default function FallbackChainSection({ config, setConfig }) {
           <div
             key={`${e.engine}::${e.model}`}
             title={active ? '' : `Se omite: el motor activo es ${activeEngine}`}
+            className="settings-fallback-item-row"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -112,7 +124,8 @@ export default function FallbackChainSection({ config, setConfig }) {
               marginBottom: '6px',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
-              opacity: active ? 1 : 0.45
+              opacity: active ? 1 : 0.45,
+              flexWrap: 'wrap'
             }}
           >
             <span style={{ color: 'var(--primary)', width: 18, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{i + 1}</span>
@@ -130,29 +143,27 @@ export default function FallbackChainSection({ config, setConfig }) {
               {e.engine}{active ? '' : ' · omitido'}
             </span>
             <LevelSelect id={e.model} onChange={(lv) => setLevel(i, lv)} />
-            <button style={iconBtn} onClick={() => move(i, -1)} title="Subir"><ArrowUp size={14} /></button>
-            <button style={iconBtn} onClick={() => move(i, 1)} title="Bajar"><ArrowDown size={14} /></button>
-            <button style={iconBtn} onClick={() => update(entries.filter((_, k) => k !== i))} title="Quitar"><X size={14} /></button>
+            <button className="settings-chain-icon-btn" style={iconBtn} onClick={() => move(i, -1)} title="Subir"><ArrowUp size={14} /></button>
+            <button className="settings-chain-icon-btn" style={iconBtn} onClick={() => move(i, 1)} title="Bajar"><ArrowDown size={14} /></button>
+            <button className="settings-chain-icon-btn danger" style={iconBtn} onClick={() => update(entries.filter((_, k) => k !== i))} title="Quitar"><X size={14} /></button>
           </div>
         );
       })}
 
-      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center' }}>
-        <select value={draft} onChange={(e) => setDraft(e.target.value)} style={{ ...fieldStyle, flex: 1 }}>
-          <option value="">Elegir modelo…</option>
-          {Object.entries(PROVIDER_MODELS).map(([engine, list]) => (
-            <optgroup key={engine} label={engine}>
-              {list.map((m) => (
-                <option key={m.id} value={`${engine}::${m.id}`}>{modelName(engine, m.id)}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+      <div className="settings-fallback-add-row" style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <TacticalSelect
+          value={draft}
+          onChange={(val) => setDraft(val)}
+          options={modelOptions}
+          placeholder="Elegir modelo…"
+          style={{ flex: 1, minWidth: '180px' }}
+        />
         <LevelSelect id={draft ? withIntensity(draftModel, draftLevel) : ''} onChange={setDraftLevel} />
         <button
           onClick={add}
           disabled={!draft}
-          style={{ ...iconBtn, gap: 4, color: 'var(--primary)', fontSize: '0.8rem', alignItems: 'center', fontWeight: 600 }}
+          className="settings-add-fallback-btn"
+          style={{ ...iconBtn, gap: 4, color: 'var(--primary)', fontSize: '0.8rem', alignItems: 'center', fontWeight: 600, padding: '6px 12px', borderRadius: 'var(--radius-sm)', transition: 'all 0.15s ease' }}
         >
           <Plus size={14} /> Añadir
         </button>

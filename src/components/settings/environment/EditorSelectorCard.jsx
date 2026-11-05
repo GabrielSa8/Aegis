@@ -109,6 +109,7 @@ export default function EditorSelectorCard({
             <div
               key={ed.id}
               onClick={() => onUpdateEnvironment({ preferredEditor: ed.id })}
+              className={`settings-tool-select-card ${isSelected ? 'active' : ''}`}
               style={{
                 padding: '10px 12px',
                 borderRadius: 'var(--radius-sm)',

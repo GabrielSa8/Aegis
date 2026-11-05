@@ -33,7 +33,7 @@ export default function TelegramCredentialsCard({
         Crea tu bot privado en Telegram hablando con <strong style={{ color: 'var(--primary)' }}>@BotFather</strong>, copia el HTTP API Token y pégalo abajo. La conexión es 100% directa entre tu equipo y Telegram vía HTTPS saliente.
       </p>
 
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div className="settings-input-action-row" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <input
             type={showToken ? 'text' : 'password'}

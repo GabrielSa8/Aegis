@@ -35,9 +35,9 @@ export function GeneralHub({
       </div>
 
       {/* Grid 2 Columnas: Identidad + Estilo IA */}
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '16px',
         alignItems: 'start'
       }}>
@@ -109,6 +109,7 @@ export function GeneralHub({
                 <div
                   key={style.id}
                   onClick={() => updateProfile({ responseStyle: style.id })}
+                  className={`settings-response-style-card ${isSelected ? 'active' : ''}`}
                   style={{
                     padding: '8px 12px',
                     borderRadius: 'var(--radius-sm)',

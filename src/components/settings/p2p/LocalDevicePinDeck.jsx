@@ -19,11 +19,14 @@ export default function LocalDevicePinDeck({ status, onUpdateName, onGeneratePin
   };
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '1.2fr 0.8fr',
-      gap: '1rem'
-    }}>
+    <div
+      className="settings-2col-grid"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1.2fr 0.8fr',
+        gap: '1rem'
+      }}
+    >
       {/* Panel Izquierdo: Datos de este equipo */}
       <div style={{
         padding: '1rem',

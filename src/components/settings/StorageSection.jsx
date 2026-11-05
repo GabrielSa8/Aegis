@@ -93,11 +93,12 @@ export default function StorageSection({ config, setConfig, storageStats, purgeS
               <button
                 type="button"
                 onClick={onPurgeCaches}
+                className="settings-purge-btn"
                 style={{
                   background: 'color-mix(in srgb, var(--warning) 12%, transparent)',
                   border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)',
                   color: 'var(--warning)',
-                  padding: '3px 8px',
+                  padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '0.66rem',
                   fontWeight: 600,

@@ -450,6 +450,8 @@ input[type="checkbox"]:checked::after {
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
+  pointer-events: auto !important;
+  z-index: 2;
 }
 
 .tactical-switch input[type="checkbox"] {
@@ -466,6 +468,8 @@ input[type="checkbox"]:checked::after {
   outline: none;
   flex-shrink: 0;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: auto !important;
+  z-index: 3;
 }
 
 .tactical-switch input[type="checkbox"]::before {
@@ -476,13 +480,15 @@ input[type="checkbox"]:checked::after {
   width: 1rem;
   height: 1rem;
   border-radius: 50%;
-  background: #6b7280;
+  background: var(--text-muted);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 .tactical-switch input[type="checkbox"]::after {
   display: none !important;
+  content: none !important;
 }
 
 .tactical-switch input[type="checkbox"]:hover {
@@ -491,15 +497,61 @@ input[type="checkbox"]:checked::after {
 }
 
 .tactical-switch input[type="checkbox"]:checked {
-  background: var(--primary-glow);
-  border-color: var(--primary);
-  box-shadow: 0 0 14px var(--primary-glow);
+  background: var(--primary-glow) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 14px var(--primary-glow) !important;
+  transform: none !important;
 }
 
 .tactical-switch input[type="checkbox"]:checked::before {
-  transform: translateX(1.15rem);
-  background: var(--primary);
-  box-shadow: 0 0 10px var(--primary);
+  transform: translateX(1.15rem) !important;
+  background: var(--primary) !important;
+  box-shadow: 0 0 10px var(--primary) !important;
+}
+
+.tactical-switch input[type="checkbox"]:checked::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Soporte para estructura .slider.round clásica */
+.tactical-switch .slider {
+  position: relative;
+  display: inline-block;
+  width: 2.6rem;
+  height: 1.4rem;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.tactical-switch .slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.tactical-switch input[type="checkbox"]:checked + .slider {
+  background: var(--primary-glow) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 14px var(--primary-glow) !important;
+}
+
+.tactical-switch input[type="checkbox"]:checked + .slider::before {
+  transform: translateX(1.15rem) !important;
+  background: var(--primary) !important;
+  box-shadow: 0 0 10px var(--primary) !important;
 }
 
 /* 🎴 TARJETA DE OPCIÓN TÁCTICA CON FEEDBACK */
@@ -517,15 +569,51 @@ input[type="checkbox"]:checked::after {
 }
 
 .tactical-option-row:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.035);
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--bg-card) 95%, transparent) !important;
+  transform: translateY(-2px) !important;
 }
 
 .tactical-option-row.active {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.05);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.06);
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.tactical-option-row.active:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 16%, transparent) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 25%, transparent) !important;
+  transform: translateY(-2px) !important;
+}
+
+.tactical-option-row:active {
+  transform: scale(0.98) !important;
+}
+
+/* Micro-interacciones Hover y Active sobre el switch táctico individual */
+.tactical-switch:hover input[type="checkbox"] {
+  border-color: color-mix(in srgb, var(--primary) 60%, white) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 40%, transparent) !important;
+}
+
+.tactical-switch input[type="checkbox"]:checked:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 50%, transparent) !important;
+}
+
+.tactical-switch input[type="checkbox"]:active {
+  transform: scale(0.95) !important;
+}
+
+.tactical-switch:hover .slider {
+  border-color: color-mix(in srgb, var(--primary) 60%, white) !important;
+}
+
+.tactical-switch input[type="checkbox"]:checked + .slider:hover {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 50%, transparent) !important;
 }
 
 select {
@@ -6180,6 +6268,469 @@ input[type="number"] {
     width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   AJUSTES & CONFIGURACIÓN RESPONSIVE CONTAINER QUERIES & MICRO-INTERACCIONES
+   ========================================================================== */
+
+.settings-view-container {
+  container-type: inline-size;
+  container-name: settings-view;
+}
+
+/* Micro-interacciones táctiles en barra lateral y controles */
+.settings-nav-item {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-nav-item:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  transform: translateX(3px);
+}
+
+.settings-nav-item:active {
+  transform: scale(0.98);
+}
+
+.settings-nav-item.active {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.settings-theme-card {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-theme-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent) !important;
+}
+
+.settings-theme-card:active {
+  transform: scale(0.98);
+}
+
+.settings-scale-btn {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-scale-btn:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.settings-scale-btn:active {
+  transform: scale(0.96);
+}
+
+/* Responsive Container Queries: Desktop intermedio / tablet (< 860px) */
+@container settings-view (max-width: 860px) {
+  .settings-sidebar {
+    width: 12.5rem !important;
+    padding: 0.6rem 0.4rem !important;
+  }
+
+  .settings-nav-desc {
+    display: none !important;
+  }
+
+  .settings-hub-content {
+    padding: 14px 16px !important;
+  }
+
+  .settings-2col-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Responsive Container Queries: Mobile / Compact Cockpit (< 640px) */
+@container settings-view (max-width: 640px) {
+  .settings-header-card {
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .settings-header-subtitle {
+    display: none !important;
+  }
+
+  .settings-header-actions {
+    width: 100% !important;
+    justify-content: space-between !important;
+    margin-left: 0 !important;
+  }
+
+  .settings-search-bar {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .settings-body-layout {
+    flex-direction: column !important;
+  }
+
+  .settings-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 85px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 0.4rem 0.6rem !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .settings-sidebar-header,
+  .settings-sidebar-footer {
+    display: none !important;
+  }
+
+  .settings-sidebar-nav {
+    flex-direction: row !important;
+    width: 100% !important;
+    gap: 0.35rem !important;
+  }
+
+  .settings-nav-item {
+    flex-shrink: 0 !important;
+    padding: 6px 10px !important;
+    align-items: center !important;
+  }
+
+  .settings-nav-item:hover {
+    transform: none !important;
+  }
+
+  .settings-nav-badge {
+    display: none !important;
+  }
+
+  .settings-hub-content {
+    padding: 10px 12px !important;
+    gap: 12px !important;
+  }
+
+  .settings-themes-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .settings-scale-presets {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .settings-subtabs-bar {
+    padding-bottom: 6px !important;
+    gap: 4px !important;
+  }
+
+  .settings-subtab-btn {
+    padding: 5px 10px !important;
+    font-size: 0.7rem !important;
+  }
+
+  .settings-card-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .settings-card-actions-row {
+    width: 100% !important;
+    flex-direction: column !important;
+  }
+
+  .settings-card-actions-row > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .settings-policy-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .settings-policy-row .tactical-switch {
+    align-self: flex-end !important;
+  }
+
+  .settings-input-action-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .settings-input-action-row > * {
+    width: 100% !important;
+  }
+
+  .settings-repo-inputs-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .settings-backup-item-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+
+  .settings-backup-item-row > div {
+    max-width: 100% !important;
+  }
+
+  .settings-fallback-item-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+
+  .settings-fallback-add-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .settings-fallback-add-row > * {
+    width: 100% !important;
+  }
+}
+
+/* Estilos y micro-interacciones táctiles avanzadas para botones y listas de Ajustes */
+.settings-action-pill-btn {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-action-pill-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+}
+
+.settings-action-pill-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-plugin-tab-btn {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-plugin-tab-btn:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+}
+
+.settings-plugin-tab-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-cat-filter-btn {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-cat-filter-btn:hover {
+  border-color: var(--primary) !important;
+  color: var(--text-high) !important;
+}
+
+.settings-cat-filter-btn:active {
+  transform: scale(0.95);
+}
+
+.settings-autolock-btn {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-autolock-btn:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.settings-autolock-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-tool-select-card {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-tool-select-card:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-card)) !important;
+  transform: translateY(-1px);
+}
+
+.settings-tool-select-card:active {
+  transform: scale(0.98);
+}
+
+.settings-repo-item-card {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-repo-item-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  background: color-mix(in srgb, var(--bg-card) 85%, transparent) !important;
+}
+
+.settings-icon-action-btn:hover {
+  color: var(--danger) !important;
+  background: color-mix(in srgb, var(--danger) 15%, transparent) !important;
+}
+
+.settings-purge-btn:hover {
+  background: color-mix(in srgb, var(--warning) 20%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.settings-purge-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-save-key-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.settings-save-key-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-chain-icon-btn {
+  border-radius: var(--radius-sm) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-chain-icon-btn:hover {
+  background: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+  color: var(--primary) !important;
+}
+
+.settings-chain-icon-btn.danger:hover {
+  background: color-mix(in srgb, var(--danger) 15%, transparent) !important;
+  color: var(--danger) !important;
+}
+
+.settings-add-fallback-btn:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+}
+
+.settings-add-fallback-btn:active {
+  transform: scale(0.96);
+}
+
+.settings-backup-item-row {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-backup-item-row:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  background: rgba(0,0,0,0.35) !important;
+}
+
+.settings-response-style-card {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-response-style-card:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.settings-response-style-card:active {
+  transform: scale(0.98);
+}
+
+.settings-response-style-card.active {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.settings-billing-link-card {
+  transition: all var(--transition-fast) !important;
+}
+
+.settings-billing-link-card:hover {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-main)) !important;
+  transform: translateY(-1px);
+}
+
+.settings-billing-link-card:active {
+  transform: scale(0.97);
+}
+
+.settings-select-tactical {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.65rem center !important;
+  background-size: 0.85rem !important;
+  transition: all var(--transition-fast) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.settings-select-tactical:hover:not(:disabled) {
+  border-color: var(--primary) !important;
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--bg-card)) !important;
+}
+
+.settings-select-tactical:focus {
+  outline: none !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent) !important;
+}
+
+.settings-select-tactical optgroup {
+  font-weight: 800 !important;
+  color: var(--primary) !important;
+  background: var(--bg-main) !important;
+}
+
+.settings-select-tactical option {
+  font-weight: 500 !important;
+  color: var(--text-high) !important;
+  background: var(--bg-card) !important;
+  padding: 6px 10px !important;
+}
+
+/* Media Query de respaldo para viewport global */
+@media (max-width: 640px) {
+  .settings-view-container .settings-body-layout {
+    flex-direction: column !important;
+  }
+
+  .settings-view-container .settings-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+
+  .settings-plugins-header-actions {
+    width: 100% !important;
+  }
+
+  .settings-plugins-header-actions > button {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+
+  .settings-plugins-tabs-group {
+    width: 100% !important;
+  }
+
+  .settings-plugins-tabs-group > button {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+
+  .settings-plugins-deck-actions {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+}
+
 
 
 

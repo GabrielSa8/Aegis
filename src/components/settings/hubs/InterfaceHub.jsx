@@ -24,9 +24,9 @@ export function InterfaceHub({
       />
 
       {/* 2. Grid de Gráficos / Gaming y Alertas Nativas */}
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '20px',
         alignItems: 'start'
       }}>

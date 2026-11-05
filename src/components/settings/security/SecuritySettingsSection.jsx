@@ -56,9 +56,9 @@ export default function SecuritySettingsSection({
         onLockVault={onLockVault}
       />
 
-      <div style={{
+      <div className="settings-2col-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '16px',
         alignItems: 'start'
       }}>

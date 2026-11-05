@@ -119,7 +119,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
   };
 
   const content = (
-    <div style={{
+    <div className="settings-view-container" style={{
       display: 'flex',
       flexDirection: 'column',
       width: '100%',
@@ -140,14 +140,14 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         onOpenShortcuts={() => setShowShortcuts(true)}
       />
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
+      <div className="settings-body-layout" style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
         <SettingsSidebar
           activeSection={activeSection}
           onSelectSection={setActiveSection}
           searchQuery={searchQuery}
         />
 
-        <div style={{
+        <div className="settings-hub-content" style={{
           flex: 1,
           minWidth: 0,
           overflowY: 'auto',

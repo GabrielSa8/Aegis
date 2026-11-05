@@ -13,6 +13,7 @@ export default function MasterPasswordCard({
 
   return (
     <div
+      className="settings-security-card"
       style={{
         background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
         border: '1px solid var(--border-color)',
@@ -23,7 +24,7 @@ export default function MasterPasswordCard({
         gap: '16px'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="settings-card-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div
             style={{
@@ -63,7 +64,7 @@ export default function MasterPasswordCard({
         </TacticalBadge>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+      <div className="settings-card-actions-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
         {!isEnabled ? (
           <TacticalButton
             variant="primary"

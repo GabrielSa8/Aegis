@@ -114,6 +114,7 @@ export default function TerminalSelectorCard({
             <div
               key={term.id}
               onClick={() => onUpdateEnvironment({ preferredTerminal: term.id })}
+              className={`settings-tool-select-card ${isSelected ? 'active' : ''}`}
               style={{
                 padding: '10px 12px',
                 borderRadius: 'var(--radius-sm)',

@@ -21,9 +21,9 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
         <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
           Paleta Visual de Alta Densidad (5 Esquemas de Contraste Soberano)
         </label>
-        <div style={{
+        <div className="settings-themes-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '12px'
         }}>
           {THEMES.map((theme) => {
@@ -32,6 +32,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
               <div
                 key={theme.id}
                 onClick={() => onSelectTheme(theme.id)}
+                className="settings-theme-card"
                 style={{
                   background: theme.bg,
                   border: isSelected ? `2px solid ${theme.accent}` : '1px solid var(--border-color)',
@@ -49,12 +50,12 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff' }}>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-high)' }}>
                       {theme.name}
                     </span>
                     {isSelected && <Check size={14} color={theme.accent} />}
                   </div>
-                  <p style={{ fontSize: '0.7rem', color: '#9ca3af', margin: '6px 0 0 0', lineHeight: '1.25' }}>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '6px 0 0 0', lineHeight: '1.25' }}>
                     {theme.desc}
                   </p>
                 </div>
@@ -118,7 +119,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+        <div className="settings-scale-presets" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
           {UI_SCALE_PRESETS.map((scale) => {
             const isSelected = Math.abs((config.uiScale || 1.0) - scale.val) < 0.02;
             return (
@@ -126,6 +127,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
                 key={scale.val}
                 type="button"
                 onClick={() => onScaleChange(scale.val)}
+                className="settings-scale-btn"
                 style={{
                   padding: '7px 14px',
                   borderRadius: 'var(--radius-sm)',

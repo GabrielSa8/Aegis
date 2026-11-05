@@ -11,7 +11,7 @@ export default function SettingsHeader({
   onOpenShortcuts
 }) {
   return (
-    <div style={{
+    <div className="settings-header-card" style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -24,7 +24,7 @@ export default function SettingsHeader({
       gap: '0.75rem',
       flexWrap: 'wrap'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+      <div className="settings-header-info" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
         <div style={{
           padding: '6px',
           borderRadius: 'var(--radius-sm)',
@@ -38,7 +38,7 @@ export default function SettingsHeader({
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: 'var(--text-high)', whiteSpace: 'nowrap' }}>
+            <h2 className="settings-header-title" style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: 'var(--text-high)', whiteSpace: 'nowrap' }}>
               Centro de Configuración & Soberanía
             </h2>
             <span style={{
@@ -54,16 +54,16 @@ export default function SettingsHeader({
               {AEGIS_VERSION}
             </span>
           </div>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', whiteSpace: 'nowrap' }}>
+          <span className="settings-header-subtitle" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', whiteSpace: 'nowrap' }}>
             4 Macro-Hubs de control: Entorno, Pantalla, Motores IA y Datos del Sistema.
           </span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, marginLeft: 'auto' }}>
+      <div className="settings-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, marginLeft: 'auto' }}>
         {/* Buscador táctico rápido de secciones/ajustes */}
         {setSearchQuery && (
-          <div style={{
+          <div className="settings-search-bar" style={{
             position: 'relative',
             display: 'flex',
             alignItems: 'center',

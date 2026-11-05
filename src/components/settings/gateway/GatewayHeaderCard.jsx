@@ -11,17 +11,21 @@ export default function GatewayHeaderCard({
   const isRunning = status.running;
 
   return (
-    <div style={{
-      padding: '1.25rem',
-      borderRadius: 'var(--radius-md)',
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border-color)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '1rem'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+    <div
+      className="settings-card-header-row"
+      style={{
+        padding: '1.25rem',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '1rem',
+        flexWrap: 'wrap'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
         <div style={{
           width: '2.75rem',
           height: '2.75rem',
@@ -32,7 +36,8 @@ export default function GatewayHeaderCard({
           border: `1px solid ${isRunning ? 'var(--primary)' : 'var(--border-color)'}`,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          flexShrink: 0
         }}>
           <Send 
             size={20} 
@@ -40,8 +45,8 @@ export default function GatewayHeaderCard({
           />
         </div>
 
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-high)' }}>
               Aegis Remote Gateway (Telegram Daemon)
             </span>

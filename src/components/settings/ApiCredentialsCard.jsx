@@ -167,7 +167,7 @@ export default function ApiCredentialsCard({ onOpenExternal }) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div className="settings-input-action-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
                   type="password"
                   placeholder={cred.isSet ? `Key activa (${cred.maskedKey})` : `Pegar ${prov.envKey}...`}
@@ -183,18 +183,20 @@ export default function ApiCredentialsCard({ onOpenExternal }) {
                 <button
                   onClick={() => handleSave(prov.id)}
                   disabled={loading}
+                  className="settings-save-key-btn"
                   style={{
                     background: 'var(--primary)',
                     color: 'var(--bg-main)',
                     border: 'none',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '6px 10px',
+                    padding: '6px 12px',
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <Check size={12} />

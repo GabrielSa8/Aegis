@@ -12,17 +12,21 @@ export default function PeerDeviceCard({
   onUnpair
 }) {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0.75rem 1rem',
-      borderRadius: 'var(--radius-sm)',
-      background: 'color-mix(in srgb, var(--bg-card) 90%, black)',
-      border: isPaired ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border-color)',
-      gap: '1rem',
-      transition: 'all 0.15s ease'
-    }}>
+    <div
+      className="settings-card-header-row"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.75rem 1rem',
+        borderRadius: 'var(--radius-sm)',
+        background: 'color-mix(in srgb, var(--bg-card) 90%, black)',
+        border: isPaired ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' : '1px solid var(--border-color)',
+        gap: '1rem',
+        flexWrap: 'wrap',
+        transition: 'all 0.15s ease'
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <div style={{
           width: '36px',
