@@ -1,13 +1,6 @@
 import React from 'react';
 import { User, Palette, Zap, Sparkles } from 'lucide-react';
-
-const THEMES = [
-  { id: 'nordic-moss', name: 'Nordic Moss', desc: 'Gris pizarra y verde musgo nórdico' },
-  { id: 'tokyo-night', name: 'Tokyo Night', desc: 'Neón azul noche y magenta cyberpunk' },
-  { id: 'oled-black', name: 'OLED Pure Black', desc: 'Negro puro 0 nits y alto contraste' },
-  { id: 'amber-terminal', name: 'Amber Terminal', desc: 'Fósforo ámbar cálido estilo CRT retro' },
-  { id: 'dracula', name: 'Dracula Dark', desc: 'Púrpura y cian gótico elegante' }
-];
+import { THEMES } from '../settings/settingsHelpers';
 
 const STYLES = [
   { id: 'caveman', label: 'Caveman Full', desc: 'Ultra-comprimido, directo al comando o diff. Cero relleno.' },

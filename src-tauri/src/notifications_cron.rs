@@ -20,16 +20,18 @@ fn is_already_notified(key: &str) -> bool {
 }
 
 pub fn spawn_notification_cron(app: AppHandle) {
-    tauri::async_runtime::spawn(async move {
-        // Pausa inicial para que la app cargue completamente
-        tokio::time::sleep(Duration::from_secs(10)).await;
+    let _ = std::thread::Builder::new()
+        .name("aegis-cron".into())
+        .spawn(move || {
+            // Pausa inicial para que la app cargue completamente de inmediato
+            std::thread::sleep(Duration::from_secs(10));
 
-        loop {
-            run_cron_checks(&app);
-            // Ejecutar cada 5 minutos
-            tokio::time::sleep(Duration::from_secs(300)).await;
-        }
-    });
+            loop {
+                run_cron_checks(&app);
+                // Ejecutar cada 5 minutos
+                std::thread::sleep(Duration::from_secs(300));
+            }
+        });
 }
 
 fn run_cron_checks(app: &AppHandle) {

@@ -76,133 +76,150 @@ pub fn init_p2p_background_services() {
     let notify = get_notify();
     let peers_map = get_peers_map();
 
-    // 1. Iniciar loop de fondo para broadcast y descubrimiento UDP
-    tauri::async_runtime::spawn(async move {
-        loop {
-            let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-            if !config.p2p_sync.enabled {
-                P2P_ACTIVE.store(false, Ordering::Relaxed);
-                tokio::select! {
-                    _ = tokio::time::sleep(Duration::from_secs(3)) => {},
-                    _ = notify.notified() => {},
-                }
-                continue;
-            }
-
-            P2P_ACTIVE.store(true, Ordering::Relaxed);
-            let disc_port = config.p2p_sync.discovery_port;
-            let sync_port = config.p2p_sync.sync_port;
-            let my_id = get_unique_device_id();
-            let my_name = config.p2p_sync.device_name.clone();
-
-            // Bind UDP socket para broadcast y escucha
-            let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", disc_port)).await {
-                Ok(s) => {
-                    let _ = s.set_broadcast(true);
-                    Arc::new(s)
-                }
+    let _ = std::thread::Builder::new()
+        .name("aegis-p2p".into())
+        .spawn(move || {
+            let rt = match tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(r) => r,
                 Err(e) => {
-                    log::warn!("[Aegis P2P] No se pudo enlazar UDP {}: {}", disc_port, e);
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    continue;
+                    log::warn!("[Aegis P2P] Error creando Tokio runtime: {}", e);
+                    return;
                 }
             };
 
-            let socket_sender = socket.clone();
-            let my_id_send = my_id.clone();
-            let my_name_send = my_name.clone();
+            rt.block_on(async move {
+                // 1. Iniciar loop de fondo para broadcast y descubrimiento UDP
+                let notify_clone = notify.clone();
+                let peers_map_clone = peers_map.clone();
+                tokio::spawn(async move {
+                    loop {
+                        let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                        if !config.p2p_sync.enabled {
+                            P2P_ACTIVE.store(false, Ordering::Relaxed);
+                            tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_secs(3)) => {},
+                                _ = notify_clone.notified() => {},
+                            }
+                            continue;
+                        }
 
-            // Tarea emisora de beacon cada 3 segundos
-            let beacon_handle = tauri::async_runtime::spawn(async move {
-                let target: SocketAddr = format!("255.255.255.255:{}", disc_port).parse().unwrap();
-                while P2P_ACTIVE.load(Ordering::Relaxed) {
-                    let beacon = BeaconPayload {
-                        protocol: "aegis-p2p-v1".to_string(),
-                        device_id: my_id_send.clone(),
-                        device_name: my_name_send.clone(),
-                        sync_port,
-                        version: env!("CARGO_PKG_VERSION").to_string(),
-                    };
-                    if let Ok(bytes) = serde_json::to_vec(&beacon) {
-                        let _ = socket_sender.send_to(&bytes, target).await;
-                    }
-                    tokio::time::sleep(Duration::from_secs(3)).await;
-                }
-            });
+                        P2P_ACTIVE.store(true, Ordering::Relaxed);
+                        let disc_port = config.p2p_sync.discovery_port;
+                        let sync_port = config.p2p_sync.sync_port;
+                        let my_id = get_unique_device_id();
+                        let my_name = config.p2p_sync.device_name.clone();
 
-            // Tarea receptora de beacons
-            let mut buf = [0u8; 1024];
-            while P2P_ACTIVE.load(Ordering::Relaxed) {
-                tokio::select! {
-                    recv_res = socket.recv_from(&mut buf) => {
-                        if let Ok((len, src)) = recv_res {
-                            if let Ok(payload) = serde_json::from_slice::<BeaconPayload>(&buf[..len]) {
-                                if payload.protocol == "aegis-p2p-v1" && payload.device_id != my_id {
-                                    let is_trusted = {
-                                        let cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-                                        cfg.p2p_sync.trusted_devices.iter().any(|d| d.id == payload.device_id && d.approved)
-                                    };
+                        // Bind UDP socket para broadcast y escucha
+                        let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", disc_port)).await {
+                            Ok(s) => {
+                                let _ = s.set_broadcast(true);
+                                Arc::new(s)
+                            }
+                            Err(e) => {
+                                log::warn!("[Aegis P2P] No se pudo enlazar UDP {}: {}", disc_port, e);
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                continue;
+                            }
+                        };
 
-                                    let mut map = peers_map.lock().unwrap();
-                                    map.insert(
-                                        payload.device_id.clone(),
-                                        DiscoveredPeerInternal {
-                                            info: PeerInfo {
-                                                id: payload.device_id,
-                                                name: payload.device_name,
-                                                ip: src.ip().to_string(),
-                                                sync_port: payload.sync_port,
-                                                version: payload.version,
-                                                last_seen_secs_ago: 0,
-                                                is_paired: is_trusted,
-                                            },
-                                            last_seen_instant: Instant::now(),
-                                        },
-                                    );
+                        let socket_sender = socket.clone();
+                        let my_id_send = my_id.clone();
+                        let my_name_send = my_name.clone();
+
+                        // Tarea emisora de beacon cada 3 segundos
+                        let beacon_handle = tokio::spawn(async move {
+                            let target: SocketAddr = format!("255.255.255.255:{}", disc_port).parse().unwrap();
+                            while P2P_ACTIVE.load(Ordering::Relaxed) {
+                                let beacon = BeaconPayload {
+                                    protocol: "aegis-p2p-v1".to_string(),
+                                    device_id: my_id_send.clone(),
+                                    device_name: my_name_send.clone(),
+                                    sync_port,
+                                    version: env!("CARGO_PKG_VERSION").to_string(),
+                                };
+                                if let Ok(bytes) = serde_json::to_vec(&beacon) {
+                                    let _ = socket_sender.send_to(&bytes, target).await;
+                                }
+                                tokio::time::sleep(Duration::from_secs(3)).await;
+                            }
+                        });
+
+                        // Tarea receptora de beacons
+                        let mut buf = [0u8; 1024];
+                        while P2P_ACTIVE.load(Ordering::Relaxed) {
+                            tokio::select! {
+                                recv_res = socket.recv_from(&mut buf) => {
+                                    if let Ok((len, src)) = recv_res {
+                                        if let Ok(payload) = serde_json::from_slice::<BeaconPayload>(&buf[..len]) {
+                                            if payload.protocol == "aegis-p2p-v1" && payload.device_id != my_id {
+                                                let is_trusted = {
+                                                    let cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                                                    cfg.p2p_sync.trusted_devices.iter().any(|d| d.id == payload.device_id && d.approved)
+                                                };
+
+                                                let mut map = peers_map_clone.lock().unwrap();
+                                                map.insert(
+                                                    payload.device_id.clone(),
+                                                    DiscoveredPeerInternal {
+                                                        info: PeerInfo {
+                                                            id: payload.device_id,
+                                                            name: payload.device_name,
+                                                            ip: src.ip().to_string(),
+                                                            sync_port: payload.sync_port,
+                                                            version: payload.version,
+                                                            last_seen_secs_ago: 0,
+                                                            is_paired: is_trusted,
+                                                        },
+                                                        last_seen_instant: Instant::now(),
+                                                    },
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                                _ = notify_clone.notified() => {
+                                    break;
                                 }
                             }
                         }
+
+                        beacon_handle.abort();
                     }
-                    _ = notify.notified() => {
-                        break;
+                });
+
+                // 2. Iniciar servidor TCP/HTTP ligero para transferencias P2P
+                loop {
+                    let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                    if !config.p2p_sync.enabled {
+                        tokio::time::sleep(Duration::from_secs(3)).await;
+                        continue;
+                    }
+
+                    let sync_port = config.p2p_sync.sync_port;
+                    let listener = match TcpListener::bind(format!("0.0.0.0:{}", sync_port)).await {
+                        Ok(l) => l,
+                        Err(e) => {
+                            log::warn!("[Aegis P2P Server] Error bind TCP {}: {}", sync_port, e);
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                            continue;
+                        }
+                    };
+
+                    log::info!("[Aegis P2P Server] Escuchando en 0.0.0.0:{}", sync_port);
+
+                    while P2P_ACTIVE.load(Ordering::Relaxed) {
+                        if let Ok((mut stream, addr)) = listener.accept().await {
+                            tokio::spawn(async move {
+                                let _ = handle_peer_connection(&mut stream, addr).await;
+                            });
+                        }
                     }
                 }
-            }
-
-            beacon_handle.abort();
-        }
-    });
-
-    // 2. Iniciar servidor TCP/HTTP ligero para transferencias P2P
-    tauri::async_runtime::spawn(async move {
-        loop {
-            let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-            if !config.p2p_sync.enabled {
-                tokio::time::sleep(Duration::from_secs(3)).await;
-                continue;
-            }
-
-            let sync_port = config.p2p_sync.sync_port;
-            let listener = match TcpListener::bind(format!("0.0.0.0:{}", sync_port)).await {
-                Ok(l) => l,
-                Err(e) => {
-                    log::warn!("[Aegis P2P Server] Error bind TCP {}: {}", sync_port, e);
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    continue;
-                }
-            };
-
-            log::info!("[Aegis P2P Server] Escuchando en 0.0.0.0:{}", sync_port);
-
-            while P2P_ACTIVE.load(Ordering::Relaxed) {
-                if let Ok((mut stream, addr)) = listener.accept().await {
-                    tauri::async_runtime::spawn(async move {
-                        let _ = handle_peer_connection(&mut stream, addr).await;
-                    });
-                }
-            }
-        }
-    });
+            });
+        });
 }
 
 async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Result<(), String> {

@@ -259,16 +259,31 @@ fn inspect_git_repo(id: &str, name: &str, path_str: &str, role: &str, warning: O
 #[tauri::command]
 pub fn get_git_fleet_status() -> Result<Vec<GitRepoStatus>, String> {
     let cfg = crate::config::get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-    let mut repos = Vec::new();
-    for r in cfg.git_repos {
-        repos.push(inspect_git_repo(
-            &r.id,
-            &r.name,
-            &r.path,
-            &r.role,
-            r.warning.as_deref(),
-        ));
+    
+    // Inspección concurrente paralela de flota Git para respuesta ultra-rápida
+    let handles: Vec<_> = cfg
+        .git_repos
+        .into_iter()
+        .map(|r| {
+            std::thread::spawn(move || {
+                inspect_git_repo(
+                    &r.id,
+                    &r.name,
+                    &r.path,
+                    &r.role,
+                    r.warning.as_deref(),
+                )
+            })
+        })
+        .collect();
+
+    let mut repos = Vec::with_capacity(handles.len());
+    for h in handles {
+        if let Ok(repo_status) = h.join() {
+            repos.push(repo_status);
+        }
     }
+
     Ok(repos)
 }
 
@@ -1537,26 +1552,43 @@ fn get_dev_listening_ports() -> Vec<DevListeningPort> {
     ports
 }
 
+static SAM_CLI_CACHE: std::sync::OnceLock<(bool, Option<String>)> = std::sync::OnceLock::new();
+
 fn check_sam_cli() -> (bool, Option<String>) {
-    let sam_paths = ["sam", "/usr/local/bin/sam"];
-    for p in sam_paths {
-        if let Ok(out) = Command::new(p).arg("--version").output() {
-            if out.status.success() {
-                let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                return (true, Some(v));
+    SAM_CLI_CACHE
+        .get_or_init(|| {
+            let sam_paths = ["sam", "/usr/local/bin/sam"];
+            for p in sam_paths {
+                if let Ok(out) = Command::new(p).arg("--version").output() {
+                    if out.status.success() {
+                        let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                        return (true, Some(v));
+                    }
+                }
             }
-        }
-    }
-    (false, None)
+            (false, None)
+        })
+        .clone()
 }
 
 #[tauri::command]
 pub fn get_dev_daemons_status() -> Result<DevDaemonsRadar, String> {
-    let adb_bin = resolve_adb_binary();
-    let adb = get_adb_telemetry(&adb_bin);
-    let (container_runtime, containers) = get_containers_telemetry();
-    let listening_ports = get_dev_listening_ports();
+    // Ejecución paralela de telemetría de daemons para respuesta inmediata (<50ms)
+    let h_adb = std::thread::spawn(|| {
+        let adb_bin = resolve_adb_binary();
+        get_adb_telemetry(&adb_bin)
+    });
+    let h_containers = std::thread::spawn(get_containers_telemetry);
+    let h_ports = std::thread::spawn(get_dev_listening_ports);
     let (sam_cli_installed, sam_version) = check_sam_cli();
+
+    let adb = h_adb.join().unwrap_or_else(|_| DevAdbStatus {
+        server_running: false,
+        binary_path: None,
+        devices: Vec::new(),
+    });
+    let (container_runtime, containers) = h_containers.join().unwrap_or((None, Vec::new()));
+    let listening_ports = h_ports.join().unwrap_or_default();
 
     Ok(DevDaemonsRadar {
         adb,

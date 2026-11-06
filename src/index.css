@@ -1,5 +1,5 @@
 /* 🎨 SISTEMA DE DISEÑO AEGIS — NORDIC SLATE & MOSS (ANTI-SLOP) */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* Cero bloqueos de red en arranque inicial: tipografías nativas y de sistema con fallback inmediato */
 
 :root {
   /* Paleta Nordic Slate & Moss */
@@ -9,7 +9,7 @@
   --border-color: #242b29;
   --border-focus: #10b981;
   
-  --primary: #10b981; /* Verde esmeralda salvia táctico */
+  --primary: #10b981; /* Verde esmeralda salvia soberano */
   --primary-glow: rgba(16, 185, 129, 0.1);
   --primary-grad: linear-gradient(135deg, #10b981 0%, #059669 100%);
   
@@ -26,8 +26,8 @@
   --bg-gradient: #0f1211;
 
   /* Tipografías y geometría disciplinada */
-  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.45);
   --shadow-sm: none;
   --shadow-glow: none;
@@ -109,6 +109,104 @@
   --primary-grad: linear-gradient(135deg, #bd93f9 0%, #ff79c6 100%);
   --text-high: #f8f8f2;
   --text-muted: #6272a4;
+}
+
+[data-theme="catppuccin-mocha"] {
+  --bg-main: #1e1e2e;
+  --bg-card: #252538;
+  --bg-card-hover: #2d2d44;
+  --border-color: #363a4f;
+  --border-focus: #cba6f7;
+  --primary: #cba6f7;
+  --accent: #89b4fa;
+  --primary-glow: rgba(203, 166, 247, 0.15);
+  --primary-grad: linear-gradient(135deg, #cba6f7 0%, #b4befe 100%);
+  --text-high: #cdd6f4;
+  --text-muted: #a6adc8;
+}
+
+[data-theme="gruvbox-dark"] {
+  --bg-main: #1d2021;
+  --bg-card: #282828;
+  --bg-card-hover: #32302f;
+  --border-color: #3c3836;
+  --border-focus: #8ec07c;
+  --primary: #8ec07c;
+  --accent: #fabd2f;
+  --primary-glow: rgba(142, 192, 124, 0.15);
+  --primary-grad: linear-gradient(135deg, #8ec07c 0%, #b8bb26 100%);
+  --text-high: #ebdbb2;
+  --text-muted: #a89984;
+}
+
+[data-theme="solarized-dark"] {
+  --bg-main: #002b36;
+  --bg-card: #073642;
+  --bg-card-hover: #0a4756;
+  --border-color: #0e5365;
+  --border-focus: #2aa198;
+  --primary: #2aa198;
+  --accent: #268bd2;
+  --primary-glow: rgba(42, 161, 152, 0.15);
+  --primary-grad: linear-gradient(135deg, #2aa198 0%, #268bd2 100%);
+  --text-high: #93a1a1;
+  --text-muted: #657b83;
+}
+
+[data-theme="synthwave-84"] {
+  --bg-main: #1a162b;
+  --bg-card: #241b3d;
+  --bg-card-hover: #2e2250;
+  --border-color: #432e73;
+  --border-focus: #ff2a85;
+  --primary: #ff2a85;
+  --accent: #05d9e8;
+  --primary-glow: rgba(255, 42, 133, 0.18);
+  --primary-grad: linear-gradient(135deg, #ff2a85 0%, #fe75fe 100%);
+  --text-high: #f8f8fc;
+  --text-muted: #9b8ec4;
+}
+
+[data-theme="matrix-code"] {
+  --bg-main: #040d07;
+  --bg-card: #0a1a0f;
+  --bg-card-hover: #102617;
+  --border-color: #173e22;
+  --border-focus: #00ff66;
+  --primary: #00ff66;
+  --accent: #22c55e;
+  --primary-glow: rgba(0, 255, 102, 0.18);
+  --primary-grad: linear-gradient(135deg, #00ff66 0%, #10b981 100%);
+  --text-high: #e2ffe9;
+  --text-muted: #529968;
+}
+
+[data-theme="nord-frost"] {
+  --bg-main: #242933;
+  --bg-card: #2e3440;
+  --bg-card-hover: #3b4252;
+  --border-color: #434c5e;
+  --border-focus: #88c0d0;
+  --primary: #88c0d0;
+  --accent: #81a1c1;
+  --primary-glow: rgba(136, 192, 208, 0.15);
+  --primary-grad: linear-gradient(135deg, #88c0d0 0%, #81a1c1 100%);
+  --text-high: #eceff4;
+  --text-muted: #94a3b8;
+}
+
+[data-theme="monokai-pro"] {
+  --bg-main: #191919;
+  --bg-card: #222222;
+  --bg-card-hover: #2c2c2c;
+  --border-color: #3a3a3a;
+  --border-focus: #ffd866;
+  --primary: #ffd866;
+  --accent: #ff6188;
+  --primary-glow: rgba(255, 216, 102, 0.15);
+  --primary-grad: linear-gradient(135deg, #ffd866 0%, #fc9867 100%);
+  --text-high: #fcfcfa;
+  --text-muted: #939293;
 }
 
 /* Modo Claro Opcional */

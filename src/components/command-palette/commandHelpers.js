@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { THEMES } from '../settings/settingsHelpers';
 
 export function getBaseCommands({
   onSelectTab,
@@ -98,15 +99,21 @@ export function getBaseCommands({
     });
   }
 
+  // 🎨 Temas Visuales Soberanos Dinámicos
+  const themeCommands = THEMES.map((t) => ({
+    id: `theme-${t.id}`,
+    title: `Tema: ${t.name}`,
+    category: 'Temas',
+    icon: Palette,
+    action: () => {
+      onThemeChange(t.id);
+      onClose();
+    }
+  }));
+
   return [
     ...navCommands,
     ...actions,
-
-    // 🎨 Temas Visuales
-    { id: 'theme-nordic', title: 'Tema: Nordic Slate & Moss (Predeterminado)', category: 'Temas', icon: Palette, action: () => { onThemeChange('nordic-moss'); onClose(); } },
-    { id: 'theme-tokyo', title: 'Tema: Tokyo Night (Indigo Cyberpunk)', category: 'Temas', icon: Palette, action: () => { onThemeChange('tokyo-night'); onClose(); } },
-    { id: 'theme-oled', title: 'Tema: OLED Pure Black (100% Negro & Láser Verde)', category: 'Temas', icon: Palette, action: () => { onThemeChange('oled-black'); onClose(); } },
-    { id: 'theme-amber', title: 'Tema: Amber Terminal (Hacker Ámbar Monocromo)', category: 'Temas', icon: Palette, action: () => { onThemeChange('amber-terminal'); onClose(); } },
-    { id: 'theme-dracula', title: 'Tema: Dracula Dark (Púrpura & Magenta)', category: 'Temas', icon: Palette, action: () => { onThemeChange('dracula'); onClose(); } },
+    ...themeCommands
   ];
 }

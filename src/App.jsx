@@ -105,6 +105,24 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Pre-cargar vistas secundarias en segundo plano durante reposo para cambio de pestaña instantáneo (0ms lag)
+  useEffect(() => {
+    const preloadModules = () => {
+      import('./components/DevOpsView');
+      import('./components/FinancesView');
+      import('./components/TasksView');
+      import('./components/SentinelView');
+      import('./components/LeisureView');
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const handle = window.requestIdleCallback(preloadModules, { timeout: 1200 });
+      return () => window.cancelIdleCallback?.(handle);
+    } else {
+      const timer = setTimeout(preloadModules, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Escuchar evento para abrir onboarding desde Ajustes o Paleta Omnibar
   useEffect(() => {
     const handleOpenOnboarding = () => setShowOnboarding(true);

@@ -229,13 +229,22 @@ pub fn run() {
             // Inicializar Daemon Cron de Notificaciones de Escritorio
             notifications_cron::spawn_notification_cron(app.handle().clone());
 
-            // Auto-arrancar Gateway de Telegram si está habilitado
+            // Auto-arrancar Gateway de Telegram si está habilitado en hilo worker dedicado
             if let Ok(cfg) = config::get_aegis_config() {
                 if cfg.telegram_gateway.enabled && !cfg.telegram_gateway.bot_token.trim().is_empty() {
                     let handle = app.handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        let _ = gateway::start_telegram_gateway_daemon(handle).await;
-                    });
+                    let _ = std::thread::Builder::new()
+                        .name("aegis-telegram-gateway".into())
+                        .spawn(move || {
+                            if let Ok(rt) = tokio::runtime::Builder::new_multi_thread()
+                                .enable_all()
+                                .build()
+                            {
+                                rt.block_on(async move {
+                                    let _ = gateway::start_telegram_gateway_daemon(handle).await;
+                                });
+                            }
+                        });
                 }
             }
 

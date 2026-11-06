@@ -19,7 +19,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
       {/* Grid Fluido de Temas (100% Ancho) */}
       <div>
         <label style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-          Paleta Visual de Alta Densidad (5 Esquemas de Contraste Soberano)
+          Paleta Visual de Alta Densidad ({THEMES.length} Esquemas de Contraste Soberano)
         </label>
         <div className="settings-themes-grid" style={{
           display: 'grid',

@@ -52,10 +52,66 @@ export const THEMES = [
     bg: '#21222c',
     card: '#282a36',
     accent: '#bd93f9'
+  },
+  {
+    id: 'catppuccin-mocha',
+    name: 'Catppuccin Mocha',
+    desc: 'Pasteles suaves sobre lienzo café índigo. Máximo confort visual.',
+    bg: '#1e1e2e',
+    card: '#252538',
+    accent: '#cba6f7'
+  },
+  {
+    id: 'gruvbox-dark',
+    name: 'Gruvbox Retro',
+    desc: 'Tonalidades tierra cálidas, verde bosque y ocre analógico vintage.',
+    bg: '#1d2021',
+    card: '#282828',
+    accent: '#8ec07c'
+  },
+  {
+    id: 'solarized-dark',
+    name: 'Solarized Cyan',
+    desc: 'Cian y aguamarina calibrados sobre azul petróleo profundo.',
+    bg: '#002b36',
+    card: '#073642',
+    accent: '#2aa198'
+  },
+  {
+    id: 'synthwave-84',
+    name: 'Synthwave \'84',
+    desc: 'Neón fucsia y cian eléctrico sobre horizonte púrpura retro-futurista.',
+    bg: '#1a162b',
+    card: '#241b3d',
+    accent: '#ff2a85'
+  },
+  {
+    id: 'matrix-code',
+    name: 'Matrix Cyber',
+    desc: 'Verde terminal fósforo de alta penetración sobre negro carbón.',
+    bg: '#040d07',
+    card: '#0a1a0f',
+    accent: '#00ff66'
+  },
+  {
+    id: 'nord-frost',
+    name: 'Nord Arctic Frost',
+    desc: 'Azul hielo polar sobre azul grisáceo boreal. Limpio y minimalista.',
+    bg: '#242933',
+    card: '#2e3440',
+    accent: '#88c0d0'
+  },
+  {
+    id: 'monokai-pro',
+    name: 'Monokai Pro',
+    desc: 'Amarillo sol cálido y magenta vibrante sobre carbón puro.',
+    bg: '#191919',
+    card: '#222222',
+    accent: '#ffd866'
   }
 ];
 
-export const AEGIS_VERSION = 'v2.10.1';
+export const AEGIS_VERSION = 'v2.12.1';
 
 export const BILLING_LINKS = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },

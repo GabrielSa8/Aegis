@@ -24,8 +24,20 @@ export default defineConfig({
   },
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
+    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : ['es2022', 'safari16'],
     minify: !process.env.TAURI_ENV_DEBUG,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/mermaid') || id.includes('node_modules/elkjs') || id.includes('node_modules/cytoscape') || id.includes('node_modules/katex')) {
+            return 'mermaid-diagram-vendor';
+          }
+          if (id.includes('node_modules/chart.js') || id.includes('node_modules/react-chartjs-2')) {
+            return 'chart-vendor';
+          }
+        }
+      }
+    }
   },
 });
