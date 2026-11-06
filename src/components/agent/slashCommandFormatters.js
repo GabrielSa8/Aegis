@@ -342,13 +342,76 @@ export function renderProgressBar(percentRemaining, totalBlocks = 10) {
 }
 
 /**
- * Parsea la tabla de cuotas reales retornada por el CLI del proveedor
+ * Parsea la tabla o reporte de uso retornado por el CLI del proveedor (agy, claude, codex)
  */
-export function parseProviderQuota(rawText) {
+export function parseProviderQuota(rawText, agentType = 'agy') {
   if (!rawText) return null;
   const lines = rawText.split('\n');
   const items = [];
 
+  // A. Formato Claude Code: "Total cost: $0.0000", "Usage: 120 input, 40 output"
+  if (rawText.includes('Total cost:') || rawText.includes('Usage:') || agentType === 'claude' || agentType === 'anthropic') {
+    let cost = '$0.00';
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let duration = '0s';
+    let subType = 'Pro';
+
+    for (const line of lines) {
+      if (line.includes('Total cost:')) {
+        const parts = line.split('Total cost:');
+        if (parts[1]) cost = parts[1].trim();
+      }
+      if (line.includes('Usage:')) {
+        const m = line.match(/(\d+)\s*input,\s*(\d+)\s*output/i);
+        if (m) {
+          inputTokens = parseInt(m[1], 10);
+          outputTokens = parseInt(m[2], 10);
+        }
+      }
+      if (line.includes('Total duration (wall):')) {
+        const parts = line.split('Total duration (wall):');
+        if (parts[1]) duration = parts[1].trim();
+      }
+      if (line.includes('Subscription:')) {
+        const parts = line.split('Subscription:');
+        if (parts[1]) subType = parts[1].trim().toUpperCase();
+      }
+    }
+
+    const totalUsed = inputTokens + outputTokens;
+    const WINDOW_BUDGET = 50000; // Ventana estimada móvil de 5 horas de Claude Pro (~50k tokens)
+    const remainingPercent = Math.max(0, Math.min(100, Math.round(((WINDOW_BUDGET - totalUsed) / WINDOW_BUDGET) * 100)));
+
+    items.push({
+      family: `Claude AI Plan ${subType}`,
+      limitType: 'Ventana Móvil 5 Horas (Estimada)',
+      percent: remainingPercent,
+      reset: `Consumo: ${totalUsed.toLocaleString()} / ~50k tokens`
+    });
+
+    items.push({
+      family: `Claude AI Plan ${subType}`,
+      limitType: 'Métricas de Sesión CLI',
+      percent: 100,
+      reset: `In: ${inputTokens.toLocaleString()} | Out: ${outputTokens.toLocaleString()} · ${duration}`
+    });
+
+    return items;
+  }
+
+  // B. Formato Codex CLI: "tokens used", "cost", "approval"
+  if (rawText.includes('OpenAI Codex') || rawText.includes('tokens used') || rawText.includes('gpt-')) {
+    items.push({
+      family: 'OpenAI Codex Engine',
+      limitType: 'Estado de Sesión CLI',
+      percent: 100,
+      reset: 'Conectado a OpenAI Codex Local'
+    });
+    return items;
+  }
+
+  // C. Formato agy estándar (Quota tabular)
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.toLowerCase().startsWith('quota:')) continue;
@@ -389,10 +452,10 @@ export function parseProviderSkills(rawText) {
 }
 
 /**
- * Formatea la respuesta de /usage como callout estético táctico de Aegis
+ * Formatea la respuesta de /usage según el proveedor de IA activo
  */
-export function formatUsageResponse(rawOutput, fallbackStats) {
-  const parsedQuotas = parseProviderQuota(rawOutput);
+export function formatUsageResponse(rawOutput, fallbackStats, agentType = 'agy') {
+  const parsedQuotas = parseProviderQuota(rawOutput, agentType);
 
   if (parsedQuotas && parsedQuotas.length > 0) {
     const groups = {};
@@ -401,37 +464,58 @@ export function formatUsageResponse(rawOutput, fallbackStats) {
       groups[q.family].push(q);
     }
 
-    let body = `> [!NOTE] Cuotas y Telemetría del Proveedor\n`;
-    body += `> **Cuenta:** Suscripción Activa en Google Antigravity\n>\n`;
+    const providerNames = {
+      agy: 'Google Antigravity',
+      claude: 'Anthropic Claude Code',
+      codex: 'OpenAI Codex',
+      ollama: 'Ollama Local',
+      deepseek: 'DeepSeek Soberano',
+      openai: 'OpenAI Platform'
+    };
+    const providerTitle = providerNames[agentType] || agentType.toUpperCase();
+
+    let body = `> [!NOTE] Cuotas y Telemetría de ${providerTitle}\n`;
+    body += `> **Motor Activo:** ${providerTitle}\n>\n`;
 
     for (const [family, qList] of Object.entries(groups)) {
       body += `> **${family}:**\n`;
       for (const item of qList) {
-        const bar = renderProgressBar(item.percent);
-        const resetStr = item.reset ? ` · *Reinicio: ${item.reset}*` : '';
-        body += `> - **${item.limitType}:** \`[${bar}] ${item.percent}% restante\`${resetStr}\n`;
+        if (item.percent === 100 && item.reset && !item.reset.includes('Reinicio')) {
+          body += `> - **${item.limitType}:** \`${item.reset}\`\n`;
+        } else {
+          const bar = renderProgressBar(item.percent);
+          const resetStr = item.reset ? ` · *Reinicio: ${item.reset}*` : '';
+          body += `> - **${item.limitType}:** \`[${bar}] ${item.percent}% restante\`${resetStr}\n`;
+        }
       }
       body += `>\n`;
     }
 
-    body += `> ---\n> *Telemetría oficial de límites sincronizada en tiempo real desde tu cuenta.*`;
+    body += `> ---\n> *Telemetría sincronizada en tiempo real desde el motor local.*`;
     return body;
   }
 
   if (fallbackStats) {
-    const fiveHourBar = renderProgressBar(82);
-    const weeklyBar = renderProgressBar(8);
+    const providerNames = {
+      agy: 'Google Antigravity',
+      claude: 'Anthropic Claude Code',
+      codex: 'OpenAI Codex',
+      ollama: 'Ollama Local',
+      deepseek: 'DeepSeek',
+      openai: 'OpenAI'
+    };
+    const pName = providerNames[agentType] || 'Proveedor';
+
     return (
-      `> [!NOTE] Cuotas del Proveedor (Estimación Local)\n` +
-      `> **Gemini Models (Flash):**\n` +
-      `> - **Ventana 5 Horas:** \`[${fiveHourBar}] 82% restante\` · *Reinicio hoy en ~4h*\n` +
-      `> - **Límite Semanal:** \`[${weeklyBar}] 8% restante\` · *Reinicio domingo*\n>\n` +
+      `> [!NOTE] Telemetría de Sesión (${pName})\n` +
+      `> **Motor Activo:** ${pName}\n` +
+      `> **Sesión Activa:** \`${fallbackStats.tokens?.toLocaleString() || 0} tokens estimados\` (${fallbackStats.messagesCount || 0} mensajes intercambiados)\n>\n` +
       `> ---\n` +
-      `> **Sesión Activa:** \`${fallbackStats.tokens?.toLocaleString() || 0} tokens\` (${fallbackStats.messagesCount || 0} msgs)`
+      `> *Para revisar cuotas globales de tu cuenta, consulta la consola web del proveedor en Ajustes.*`
     );
   }
 
-  return `> [!NOTE] Cuotas del Proveedor\n>\n\`\`\`text\n${(rawOutput || '').trim()}\n\`\`\``;
+  return `> [!NOTE] Cuotas del Proveedor (${agentType})\n>\n\`\`\`text\n${(rawOutput || '').trim()}\n\`\`\``;
 }
 
 /**

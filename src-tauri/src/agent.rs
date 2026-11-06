@@ -189,7 +189,8 @@ pub async fn execute_agent_prompt(
     let custom_cmd = cfg.as_ref().and_then(|c| c.agent_custom_cmd.clone());
 
     let agent_binary = match agent_type {
-        "claude" => "claude".to_string(),
+        "claude" | "anthropic" => "claude".to_string(),
+        "codex" | "openai" => "codex".to_string(),
         "ollama" => "ollama".to_string(),
         "custom" => custom_cmd.unwrap_or_else(|| "agy".to_string()),
         _ => {
@@ -1090,7 +1091,8 @@ pub fn execute_provider_command(command: String) -> Result<String, String> {
     let custom_cmd = cfg.as_ref().and_then(|c| c.agent_custom_cmd.clone());
 
     let agent_binary = match agent_type {
-        "claude" => "claude".to_string(),
+        "claude" | "anthropic" => "claude".to_string(),
+        "codex" | "openai" => "codex".to_string(),
         "ollama" => "ollama".to_string(),
         "custom" => custom_cmd.unwrap_or_else(|| "agy".to_string()),
         _ => {
@@ -1105,9 +1107,26 @@ pub fn execute_provider_command(command: String) -> Result<String, String> {
         }
     };
 
-    let output = std::process::Command::new(&agent_binary)
-        .arg("-p")
-        .arg(&command)
+    let mut cmd = std::process::Command::new(&agent_binary);
+
+    // Ajuste de argumentos según el CLI específico
+    if agent_binary.ends_with("codex") {
+        if command == "/usage" || command == "usage" || command == "/cost" {
+            // Codex usa 'exec' no interactivo
+            cmd.arg("exec")
+                .arg("--skip-git-repo-check")
+                .arg("/cost");
+        } else {
+            cmd.arg("exec")
+                .arg("--skip-git-repo-check")
+                .arg(&command);
+        }
+    } else {
+        // agy y claude aceptan -p "<command>"
+        cmd.arg("-p").arg(&command);
+    }
+
+    let output = cmd
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1123,6 +1142,25 @@ pub fn execute_provider_command(command: String) -> Result<String, String> {
         } else {
             format!("Comando falló con status {:?}", output.status)
         });
+    }
+
+    // Si es Claude / Anthropic, inyectar metadatos locales de credenciales si están disponibles
+    if (agent_type == "claude" || agent_type == "anthropic") && (command == "/cost" || command == "/usage") {
+        let cred_file = Path::new(&home).join(".claude/.credentials.json");
+        if cred_file.exists() {
+            if let Ok(content) = std::fs::read_to_string(&cred_file) {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                    let sub_type = val.pointer("/claudeAiOauth/subscriptionType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("pro");
+                    let tier = val.pointer("/claudeAiOauth/rateLimitTier")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("default");
+                    let enriched = format!("{}\nSubscription: {}\nRateLimitTier: {}", stdout, sub_type, tier);
+                    return Ok(enriched);
+                }
+            }
+        }
     }
 
     Ok(if !stdout.trim().is_empty() { stdout } else { stderr })

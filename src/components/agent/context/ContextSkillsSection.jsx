@@ -51,7 +51,7 @@ export function ContextSkillsSection({
             Habilidades Vinculadas ({activeSkills.length} activas)
           </label>
           <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-            {mode === 'modpack' ? 'Presets por modpack táctico' : `Catálogo de ${skillsCatalog.length} skills sueltas`}
+            {mode === 'modpack' ? 'Presets por modpack' : `Catálogo de ${skillsCatalog.length} skills sueltas`}
           </span>
         </div>
 

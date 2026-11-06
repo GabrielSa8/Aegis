@@ -53,7 +53,7 @@ export function CockpitSkillsPanel({
         {/* Modpacks Activos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <span style={{ fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Modpacks Tácticos ({modpacks.length})
+            Modpacks ({modpacks.length})
           </span>
           {modpacks.map(pack => (
             <div

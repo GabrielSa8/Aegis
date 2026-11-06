@@ -9,7 +9,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
       {/* Cabecera */}
       <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
         <h3 style={{ fontSize: '0.88rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-high)' }}>
-          Esquemas de Color Tácticos & Escala
+          Esquemas de Color & Escala
         </h3>
         <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
           Personaliza la paleta visual para optimizar el contraste de cabina y el confort de lectura en cualquier pantalla.

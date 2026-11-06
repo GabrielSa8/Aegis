@@ -284,7 +284,7 @@ function ModelInspectionCard({ activeModel, onSelectModel, agentType = 'agy' }) 
           color: 'var(--text-muted)'
         }}
       >
-        <span>Escribe /model &lt;alias&gt; o usa el menú táctico de la barra superior.</span>
+        <span>Escribe /model &lt;alias&gt; o usa el menú de la barra superior.</span>
         <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>/model</span>
       </div>
     </div>

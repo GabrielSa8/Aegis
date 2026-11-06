@@ -91,7 +91,7 @@ export default function RightContextsDock({
       }}
     >
       <aside
-        aria-label="Selector táctico de contextos de IA"
+        aria-label="Selector de contextos de IA"
         className={`right-dock-capsule ${isPinned ? 'is-pinned' : ''}`}
         style={{
           width: dockWidth,

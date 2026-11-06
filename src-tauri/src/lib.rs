@@ -17,6 +17,7 @@ pub mod ai_providers;
 pub mod gateway;
 pub mod security;
 pub mod environment;
+pub mod discovery;
 
 #[tauri::command]
 fn ping() -> String {
@@ -193,7 +194,13 @@ pub fn run() {
             environment::test_environment_tool,
             ai_providers::get_ai_providers,
             ai_providers::get_api_credentials,
-            ai_providers::save_provider_api_key
+            ai_providers::save_provider_api_key,
+            discovery::inspect_system_environment,
+            discovery::auto_create_default_vault,
+            discovery::complete_system_onboarding,
+            discovery::switch_cli_account,
+            discovery::trigger_cli_account_login,
+            discovery::remove_saved_cli_account
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {

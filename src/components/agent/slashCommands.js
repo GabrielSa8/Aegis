@@ -9,6 +9,22 @@ export { SUBSCRIPTION_MODELS, PROVIDER_MODELS, getModelsForProvider, resolveMode
 
 export const COMMON_SYSTEM_COMMANDS = [
   {
+    id: 'usage',
+    command: '/usage',
+    label: 'Cuota y Telemetría del Proveedor',
+    desc: 'Consulta límites reales, costo y consumo de tokens según el motor activo',
+    icon: 'Activity',
+    category: 'Proveedor'
+  },
+  {
+    id: 'compact',
+    command: '/compact',
+    label: 'Compactar Contexto',
+    desc: 'Comprime el historial de la conversación y libera memoria en el motor',
+    icon: 'Minimize2',
+    category: 'Contexto'
+  },
+  {
     id: 'clear',
     command: '/clear',
     label: 'Vaciar Pantalla',
@@ -150,6 +166,14 @@ export const PROVIDER_COMMANDS = {
     }
   ],
   claude: [
+    {
+      id: 'usage',
+      command: '/usage',
+      label: 'Consumo y Costo de Sesión',
+      desc: 'Consulta tokens consumidos (in/out) y costo en USD acumulado',
+      icon: 'Activity',
+      category: 'Proveedor'
+    },
     {
       id: 'compact',
       command: '/compact',
@@ -295,6 +319,14 @@ export const PROVIDER_COMMANDS = {
   ],
   openai: [
     {
+      id: 'usage',
+      command: '/usage',
+      label: 'Telemetría y Estado OpenAI',
+      desc: 'Consulta estado de sesión CLI y telemetría de cuota de OpenAI',
+      icon: 'Activity',
+      category: 'Proveedor'
+    },
+    {
       id: 'compact',
       command: '/compact',
       label: 'Compactar Contexto',
@@ -355,12 +387,46 @@ export const PROVIDER_COMMANDS = {
   ],
   custom: [
     {
+      id: 'usage',
+      command: '/usage',
+      label: 'Telemetría de Cuota',
+      desc: 'Consulta métricas y cuotas del motor configurado',
+      icon: 'Activity',
+      category: 'Proveedor'
+    },
+    {
       id: 'compact',
       command: '/compact',
       label: 'Compactar Contexto',
       desc: 'Comprime el historial de la conversación',
       icon: 'Minimize2',
       category: 'Contexto'
+    }
+  ],
+  codex: [
+    {
+      id: 'usage',
+      command: '/usage',
+      label: 'Telemetría de Sesión Codex',
+      desc: 'Consulta costo acumulado, tokens y estado en OpenAI Codex',
+      icon: 'Activity',
+      category: 'Proveedor'
+    },
+    {
+      id: 'compact',
+      command: '/compact',
+      label: 'Compactar Contexto',
+      desc: 'Comprime el historial en Codex CLI y libera memoria',
+      icon: 'Minimize2',
+      category: 'Contexto'
+    },
+    {
+      id: 'model',
+      command: '/model',
+      label: 'Modelo Codex',
+      desc: 'Inspecciona el modelo activo en Codex CLI',
+      icon: 'Zap',
+      category: 'Motor'
     }
   ]
 };
@@ -369,11 +435,17 @@ export const PROVIDER_COMMANDS = {
 export const SLASH_COMMANDS = [...PROVIDER_COMMANDS.agy, ...COMMON_SYSTEM_COMMANDS];
 
 /**
- * Obtiene el catálogo de comandos según el proveedor activo
+ * Obtiene el catálogo de comandos según el proveedor activo deduplicando IDs
  */
 export function getSlashCommandsForProvider(agentType = 'agy') {
   const providerCmds = PROVIDER_COMMANDS[agentType] || PROVIDER_COMMANDS.agy;
-  return [...providerCmds, ...COMMON_SYSTEM_COMMANDS];
+  const merged = [...providerCmds, ...COMMON_SYSTEM_COMMANDS];
+  const seen = new Set();
+  return merged.filter((cmd) => {
+    if (seen.has(cmd.id)) return false;
+    seen.add(cmd.id);
+    return true;
+  });
 }
 
 /**

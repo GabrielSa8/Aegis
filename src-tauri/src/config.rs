@@ -117,6 +117,10 @@ fn default_ui_scale() -> f32 {
     1.0
 }
 
+fn default_onboarding_completed() -> bool {
+    true
+}
+
 fn default_true() -> bool {
     true
 }
@@ -284,6 +288,8 @@ pub struct AegisConfig {
     pub theme: String, // "nordic-moss" | "tokyo-night" | "oled-black" | "amber-terminal" | "dracula"
     #[serde(default = "default_ui_scale")]
     pub ui_scale: f32, // 0.9, 1.0, 1.1
+    #[serde(default = "default_onboarding_completed")]
+    pub onboarding_completed: bool,
     pub enable_gamemode: bool,
     pub enable_gamescope_fsr: bool,
     #[serde(default = "default_true")]
@@ -370,6 +376,7 @@ pub fn default_config() -> AegisConfig {
         environment: crate::environment::EnvironmentConfig::default(),
         community_plugins_enabled: std::collections::HashMap::new(),
         api_keys: std::collections::HashMap::new(),
+        onboarding_completed: false,
     }
 }
 

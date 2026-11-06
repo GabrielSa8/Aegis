@@ -112,7 +112,7 @@ function MermaidRenderer({ chart, onExpand }) {
           margin: '0.75rem 0'
         }}
       >
-        Renderizando diagrama táctico...
+        Renderizando diagrama...
       </div>
     );
   }

@@ -11,6 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { DEFAULT_ENABLED_MODULES, getVisibleTabs } from './plugins/pluginRegistry';
 import { useSecurity } from './components/security/useSecurity';
 import MasterLockScreen from './components/security/MasterLockScreen';
+import { OnboardingModal } from './components/onboarding';
 
 // 🧩 Módulos Secundarios Desacoplables (Lazy Loaded para Cero Consumo de RAM si están apagados)
 const FinancesView = lazy(() => import('./components/FinancesView'));
@@ -40,7 +41,7 @@ function ModuleLoader() {
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite'
       }} />
-      <span>Montando módulo táctico...</span>
+      <span>Montando módulo...</span>
     </div>
   );
 }
@@ -56,6 +57,7 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState('nordic-moss');
   const [showSettings, setShowSettings] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [enabledModules, setEnabledModules] = useState(DEFAULT_ENABLED_MODULES);
   const [isDockPinned, setIsDockPinned] = useState(() => {
     try {
@@ -94,8 +96,20 @@ export default function App() {
           setEnabledModules(cfg.enabledModules);
         }
         applyUiScale(cfg?.uiScale);
+
+        // Si es el primer arranque y el onboarding no se ha completado
+        if (cfg?.onboardingCompleted === false) {
+          setShowOnboarding(true);
+        }
       })
       .catch(() => {});
+  }, []);
+
+  // Escuchar evento para abrir onboarding desde Ajustes o Paleta Omnibar
+  useEffect(() => {
+    const handleOpenOnboarding = () => setShowOnboarding(true);
+    window.addEventListener('aegis:open-onboarding', handleOpenOnboarding);
+    return () => window.removeEventListener('aegis:open-onboarding', handleOpenOnboarding);
   }, []);
 
   // Escuchar cambios reactivos en la configuración de módulos
@@ -283,6 +297,17 @@ export default function App() {
           autoLockMinutes={securityStatus.autoLockMinutes}
         />
       )}
+
+      {/* 🚀 Modal de Onboarding Inicial & Guía de Configuración */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={(updatedCfg) => {
+          if (updatedCfg?.theme) {
+            handleThemeChange(updatedCfg.theme);
+          }
+        }}
+      />
     </div>
   );
 }

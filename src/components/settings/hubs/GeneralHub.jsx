@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserCheck, Check, Terminal, FolderGit2 } from 'lucide-react';
+import { UserCheck, Check, Terminal, FolderGit2, Compass } from 'lucide-react';
 import { RESPONSE_STYLES } from '../settingsHelpers';
 import { EnvironmentSettingsSection } from '../environment';
 import FleetReposCard from '../FleetReposCard';
@@ -25,13 +25,45 @@ export function GeneralHub({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Encabezado del Hub */}
-      <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
-        <h3 style={{ fontSize: '0.92rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-high)' }}>
-          Operador & Entorno de Trabajo
-        </h3>
-        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-          Define tu identidad soberana, el tono de ejecución del Agente IA y tus herramientas nativas de desarrollo.
-        </p>
+      <div style={{
+        borderBottom: '1px solid var(--border-color)',
+        paddingBottom: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div>
+          <h3 style={{ fontSize: '0.92rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-high)' }}>
+            Operador & Entorno de Trabajo
+          </h3>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+            Define tu identidad soberana, el tono de ejecución del Agente IA y tus herramientas nativas de desarrollo.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('aegis:open-onboarding'))}
+          className="btn-ghost"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-color)',
+            background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+            color: 'var(--primary)',
+            cursor: 'pointer'
+          }}
+          title="Re-ejecutar el asistente de configuración inicial y atajos del sistema"
+        >
+          <Compass size={14} />
+          <span>Lanzar Guía de Onboarding</span>
+        </button>
       </div>
 
       {/* Grid 2 Columnas: Identidad + Estilo IA */}

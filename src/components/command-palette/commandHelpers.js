@@ -9,7 +9,8 @@ import {
   Palette, 
   Settings, 
   Zap,
-  Lock
+  Lock,
+  Sparkles
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -51,6 +52,16 @@ export function getBaseCommands({
 
   const actions = [
     { id: 'act-settings', title: 'Abrir Ajustes Globales & Flota', category: 'Acciones', icon: Settings, shortcut: 'Ctrl + ,', action: () => { onOpenSettings(); onClose(); } },
+    {
+      id: 'act-onboarding',
+      title: 'Abrir Guía de Inicio & Onboarding Asistido',
+      category: 'Acciones',
+      icon: Sparkles,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('aegis:open-onboarding'));
+        onClose();
+      }
+    },
     { 
       id: 'act-lock', 
       title: 'Bloquear Vault / Cockpit con Contraseña Maestra', 

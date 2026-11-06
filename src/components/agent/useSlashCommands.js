@@ -129,17 +129,20 @@ export function useSlashCommands({
         return;
       }
 
-      // C. Cuotas reales de la cuenta (/usage) -> Solo disponible en agy
+      // C. Cuotas reales de la cuenta (/usage) -> Soportado en agy, claude y codex
       if (cmdId === 'usage' || cmdText === '/usage') {
         try {
-          const rawOutput = await invoke('execute_provider_command', { command: '/usage' });
-          const parsedQuotas = parseProviderQuota(rawOutput) || FALLBACK_QUOTAS;
+          const cfg = await invoke('get_aegis_config').catch(() => null);
+          const currentAgentType = cfg?.agentType || agentType || 'agy';
+          const commandToRun = (currentAgentType === 'claude' || currentAgentType === 'anthropic') ? '/cost' : '/usage';
+          const rawOutput = await invoke('execute_provider_command', { command: commandToRun });
+          const parsedQuotas = parseProviderQuota(rawOutput, currentAgentType);
           onInjectSystemMessage?.({
             id: 'sys_usage_' + Date.now(),
             role: 'assistant',
             cardType: 'usage',
-            cardData: { quotas: parsedQuotas },
-            content: formatUsageResponse(rawOutput),
+            cardData: { quotas: parsedQuotas || [], provider: currentAgentType, raw: rawOutput },
+            content: '',
             context: activeContext?.label || 'General',
             timestamp: 'Ahora'
           });
@@ -150,8 +153,8 @@ export function useSlashCommands({
             id: 'sys_usage_' + Date.now(),
             role: 'assistant',
             cardType: 'usage',
-            cardData: { quotas: FALLBACK_QUOTAS },
-            content: formatUsageResponse(null, { tokens: estTokens, messagesCount: messages.length }),
+            cardData: { quotas: [], provider: agentType, tokens: estTokens, messagesCount: messages.length },
+            content: '',
             context: activeContext?.label || 'General',
             timestamp: 'Ahora'
           });

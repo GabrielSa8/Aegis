@@ -52,7 +52,7 @@ export default function FinancialDiagnosisModal({
   const handleConsultAgent = () => {
     const topCats = categoryConcentration.slice(0, 3).map((c) => `${c.category}: $${Math.round(c.amount).toLocaleString()} (${c.ratio.toFixed(0)}%)`).join(', ');
 
-    const promptText = `Actúa como mi Asesor Financiero Táctico en Aegis. Realiza un diagnóstico exhaustivo y recomendaciones accionables para mi ciclo financiero activo con estos datos reales:
+    const promptText = `Actúa como mi Asesor Financiero en Aegis. Realiza un diagnóstico exhaustivo y recomendaciones accionables para mi ciclo financiero activo con estos datos reales:
 
 📊 **Radiografía del Ciclo Activo:**
 - Total Gastado: $${Math.round(metrics?.totalExpense || 0).toLocaleString()} | Ingresos: $${Math.round(metrics?.totalIncome || 0).toLocaleString()}

@@ -3,6 +3,7 @@ import { BILLING_LINKS } from './settingsHelpers';
 import FallbackChainSection from './FallbackChainSection';
 import ApiCredentialsCard from './ApiCredentialsCard';
 import TacticalSelect from '../ui/TacticalSelect';
+import DetectedAiEnginesCard from './DetectedAiEnginesCard';
 
 const AGENT_OPTIONS = [
   { value: 'agy', label: 'Google Antigravity CLI (agy)', desc: 'Integrado nativo con herramientas del sistema' },
@@ -83,6 +84,15 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
 
           {/* Cadena Fallback de Proveedores */}
           <FallbackChainSection config={config} setConfig={setConfig} />
+
+          {/* Motores IA Detectados y Cuentas Activas */}
+          <DetectedAiEnginesCard
+            currentAgentType={config.agentType || 'agy'}
+            onSelectEngine={(engineId) => {
+              const mappedType = engineId === 'claude' ? 'anthropic' : engineId === 'codex' ? 'openai' : engineId;
+              setConfig({ ...config, agentType: mappedType });
+            }}
+          />
 
           {/* Autenticación Soberana y API Keys */}
           <ApiCredentialsCard onOpenExternal={onOpenExternal} />

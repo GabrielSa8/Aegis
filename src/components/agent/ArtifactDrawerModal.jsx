@@ -40,7 +40,7 @@ function ArtifactDrawerModal({ isOpen, onClose, artifact }) {
 
   const getTitle = () => {
     if (title) return title;
-    if (type === 'mermaid') return 'DIAGRAMA TÁCTICO MERMAID';
+    if (type === 'mermaid') return 'DIAGRAMA MERMAID';
     if (type === 'diff') return 'AUDITOR DE DIFF GIT';
     return `INSPECTOR DE CÓDIGO (${(lang || 'TEXT').toUpperCase()})`;
   };

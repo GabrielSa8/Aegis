@@ -193,7 +193,7 @@ export function useGameCompanion({ gameId, gameTitle, isSteam }) {
         gameId: String(gameId),
         gameTitle,
         isSteam: Boolean(isSteam),
-        sectionTitle: sectionTitle || 'Consejo Táctico',
+        sectionTitle: sectionTitle || 'Consejo de Juego',
         noteContent: content
       });
       setSavedId(msgId);

@@ -18,7 +18,7 @@ export function useAgentStream({
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Aegis Copilot táctico en línea. Conectado al agente local (`agy 1.4.8`). ¿Qué tarea ejecutamos?',
+      content: 'Aegis Copilot en línea. Conectado al agente local (`agy 1.4.8`). ¿Qué tarea ejecutamos?',
       context: activeContext.label,
       timestamp: 'Ahora'
     }
@@ -365,7 +365,7 @@ export function useAgentStream({
       {
         id: 'welcome_' + Date.now(),
         role: 'assistant',
-        content: `Historial despejado. Entorno táctico listo (${activeContext?.label || 'General'} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
+        content: `Historial despejado. Entorno listo (${activeContext?.label || 'General'} · ${effortMode === 'high' ? 'Profundo' : 'Flash'}).`,
         context: activeContext?.label || 'General',
         timestamp: 'Ahora'
       }

@@ -58,7 +58,7 @@ export function ModpackManagerModal({
     onSave({
       id: initialData?.id || `pack_custom_${Date.now()}`,
       name: name.trim(),
-      description: description.trim() || 'Modpack táctico personalizado',
+      description: description.trim() || 'Modpack personalizado',
       category,
       enabled: initialData?.enabled ?? true,
       skills: selectedSkills,
@@ -81,7 +81,7 @@ export function ModpackManagerModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <PackagePlus size={18} color="var(--primary)" />
             <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-high)' }}>
-              {initialData ? 'Editar Modpack Táctico' : 'Crear Nuevo Modpack (Meta-Skill)'}
+              {initialData ? 'Editar Modpack' : 'Crear Nuevo Modpack (Meta-Skill)'}
             </span>
           </div>
           <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem' }}>
@@ -135,7 +135,7 @@ export function ModpackManagerModal({
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Propósito táctico y ahorro de tokens"
+            placeholder="Propósito operativo y ahorro de tokens"
             style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xs)', color: 'var(--text-high)', fontSize: '0.76rem' }}
           />
         </div>

@@ -132,7 +132,7 @@ export default function GameCompanionTab({ gameId, gameTitle, isSteam }) {
           }}>
             <Bot size={28} color="var(--primary)" />
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-high)' }}>
-              Game Companion Táctico
+              Game Companion
             </div>
             <p style={{ fontSize: '0.70rem', maxWidth: '380px', margin: 0 }}>
               Consulta builds óptimas, guías directas para tus logros pendientes o ajustes gráficos optimizados para Intel N150 sin salir del juego.
