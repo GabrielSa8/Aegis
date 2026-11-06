@@ -5,6 +5,7 @@ Complete field manual for every module in Aegis. Outlines prerequisites, UI brea
 ---
 
 ## 📑 Index
+0. [🧭 Cockpit Architecture: The 3 Docks & Contexts](#0-cockpit-architecture-the-3-docks--contexts)
 1. [📚 Obsidian Second Brain (Vault)](#1-obsidian-second-brain-vault)
 2. [🚀 DevOps & Git Fleet Radar](#2-devops--git-fleet-radar)
 3. [💰 Sovereign Finances & LifeOS Timeline](#3-sovereign-finances--lifeos-timeline)
@@ -15,6 +16,30 @@ Complete field manual for every module in Aegis. Outlines prerequisites, UI brea
 8. [🔄 Local P2P Sync & Fleet Mesh](#8-local-p2p-sync--fleet-mesh)
 9. [📱 Telegram Remote Gateway](#9-telegram-remote-gateway)
 10. [⚙️ Master Settings & Environment](#10-master-settings--environment)
+
+---
+
+## 0. 🧭 Cockpit Architecture: The 3 Docks & Contexts
+
+Aegis maximizes vertical and horizontal viewport via a zero-overhead, ultra-dense 3-dock spatial design:
+
+### 1. Top Header Dock (38px Unified Control)
+* **Status Telemetry:** Real-time Git fleet health and system sentinel indicators.
+* **Omnibar (`Ctrl + K`):** Instant fuzzy-search for Obsidian notes, slash commands, sovereign themes, and quick macros.
+* **Master Controls:** Master Lock (`Alt + L`), Zen Mode (`Alt + Z`), Module Tour Guide (`[?]`), and Master Settings (`Ctrl + ,`).
+
+### 2. Left Navigation Dock (Tabs & Modules)
+* **Quick Switch:** Access the 8 operational modules via `Alt + 1..8`.
+* **Zero Viewport Intrusion:** Retractable edge dock that slides in when hovering near the left edge and can be pinned with the top pin button.
+
+### 3. Right Contexts Dock & What are Contexts?
+* **Edge Access:** Retractable dock located on the right edge (auto-expands on hover, pin-able).
+* **What is a Context?** A context is an isolated cognitive workspace for the AI Agent. Each context binds:
+  1. A project filesystem directory (`workingDir`).
+  2. A dedicated set of allowed Agent Skills (saving up to 70% of tokens by pruning unnecessary tools).
+  3. Linked Obsidian Vault reference notes.
+  4. System prompt directives for that specific domain.
+* **Switching:** Clicking any context in the Right Dock instantly scopes the AI agent to that project without restarting or clearing chat history.
 
 ---
 

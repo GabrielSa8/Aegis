@@ -10,6 +10,16 @@ export const MODULE_TOURS = {
     ],
     steps: [
       {
+        title: 'Los 3 Docks & ¿Qué son los Contextos?',
+        desc: 'Navegación espacial del cockpit y aislamiento de entornos para la IA.',
+        details: [
+          'Dock Superior: Control maestro con Omnibar (Ctrl + K), semáforos Git, Modo Zen (Alt + Z) y Guías [?].',
+          'Dock Izquierdo: Barra de pestañas (Alt + 1..8) retráctil al pasar el cursor por el borde izquierdo.',
+          'Dock Derecho (Contextos): Cápsulas que aíslan el proyecto en disco, sus skills activas y notas de Obsidian para que la IA no mezcle archivos ni queme tokens.',
+          'Al hacer clic en un contexto del dock derecho, el agente enfoca su memoria y operaciones en ese proyecto.'
+        ]
+      },
+      {
         title: 'Terminal Interactiva PTY',
         desc: 'Conexión bidireccional directa con procesos CLI del sistema con soporte ANSI y colores.',
         details: [
@@ -292,7 +302,7 @@ export const MODULE_TOURS = {
         title: 'Personalización de Tema & Escala',
         desc: 'Adapta la interfaz a tu gusto visual y monitor.',
         details: [
-          '5 temas integrados: Nordic Slate, Tokyo Night, OLED Pure Black, Amber y Dracula.',
+          '12 temas soberanos integrados: Nordic Slate, Tokyo Night, OLED Pure Black, Amber Terminal, Dracula, Catppuccin, Gruvbox, Solarized, Synthwave \'84, Matrix, Nord Frost y Monokai Pro.',
           'Slider de escala de interfaz (zoom reactivo para pantallas pequeñas o ultrawide).'
         ]
       },
