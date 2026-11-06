@@ -171,8 +171,14 @@ export function useSecurity() {
       } catch {}
     }, 30000);
 
+    let lastActivityTime = 0;
     const handleUserActivity = () => {
-      invoke('record_vault_activity').catch(() => {});
+      const now = Date.now();
+      // Throttle: registrar actividad en Rust como máximo 1 vez cada 15 segundos (anti-inundación IPC)
+      if (now - lastActivityTime >= 15000) {
+        lastActivityTime = now;
+        invoke('record_vault_activity').catch(() => {});
+      }
     };
 
     window.addEventListener('mousemove', handleUserActivity, { passive: true });

@@ -12,7 +12,7 @@
 **A sovereign, hyper-efficient personal operating cockpit and command center engineered in Rust and React 19.**  
 *Unified AI Agents, Obsidian Second Brain, Git Fleet DevOps, Sovereign SQLite Finances, and Real-Time Hardware Telemetry in a 38px ultra-dense canvas.*
 
-[Explore Architecture](#-architecture) • [The 8 Pillars](#-the-8-pillars) • [Benchmarks](#-benchmarks--performance) • [Quickstart](#-quickstart--compilation)
+[Explore Architecture](#-architecture) • [The 8 Pillars](#-the-8-pillars) • [User Guide](docs/USER_GUIDE.md) • [Benchmarks](#-benchmarks--performance) • [Quickstart](#-quickstart--compilation)
 
 </div>
 

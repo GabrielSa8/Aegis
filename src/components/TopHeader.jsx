@@ -7,7 +7,8 @@ import {
   Pin,
   PinOff,
   Minus,
-  Lock
+  Lock,
+  HelpCircle
 } from 'lucide-react';
 import { useAppUpdater, UpdateCockpitPill, UpdateModal } from './updater';
 
@@ -65,8 +66,7 @@ export default function TopHeader({
           flexShrink: 0,
           gap: '10px',
           padding: '0 16px',
-          background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
-          backdropFilter: 'blur(18px)',
+          background: 'color-mix(in srgb, var(--bg-card) 96%, black)',
           border: '1px solid var(--border-color)',
           borderTop: 'none',
           borderRadius: '0 0 18px 18px',
@@ -194,6 +194,36 @@ export default function TopHeader({
             }}
           >
             <Settings size={13} />
+          </button>
+
+          {/* 💡 Guía Interactiva del Módulo Activo */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('aegis:open-tour'))}
+            title="Ver Guía del Módulo Activo"
+            aria-label="Ver Guía del Módulo Activo"
+            style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-sm, 8px)',
+              padding: '4px 7px',
+              color: 'var(--text-muted)',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = 'var(--primary)';
+              e.currentTarget.style.borderColor = 'var(--primary)'; 
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.borderColor = 'var(--border-color)'; 
+            }}
+          >
+            <HelpCircle size={13} />
           </button>
 
           {/* Bloquear Vault */}

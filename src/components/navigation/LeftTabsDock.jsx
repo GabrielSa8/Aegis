@@ -104,8 +104,7 @@ export default function LeftTabsDock({
           borderRadius: '0 18px 18px 0',
           border: '1px solid var(--border-color)',
           borderLeft: 'none',
-          background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
-          backdropFilter: 'blur(20px)',
+          background: 'color-mix(in srgb, var(--bg-card) 96%, black)',
           boxShadow: isHovered 
             ? '8px 0 36px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.15) inset, 0 0 20px color-mix(in srgb, var(--primary) 20%, transparent)' 
             : (isPinned ? '4px 0 20px rgba(0, 0, 0, 0.45)' : '2px 0 12px rgba(0, 0, 0, 0.3)'),

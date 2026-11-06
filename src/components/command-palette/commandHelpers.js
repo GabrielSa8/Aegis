@@ -10,7 +10,8 @@ import {
   Settings, 
   Zap,
   Lock,
-  Sparkles
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { THEMES } from '../settings/settingsHelpers';
@@ -60,6 +61,16 @@ export function getBaseCommands({
       icon: Sparkles,
       action: () => {
         window.dispatchEvent(new CustomEvent('aegis:open-onboarding'));
+        onClose();
+      }
+    },
+    {
+      id: 'act-module-guide',
+      title: 'Ver Guía del Módulo Activo',
+      category: 'Acciones',
+      icon: HelpCircle,
+      action: () => {
+        window.dispatchEvent(new CustomEvent('aegis:open-tour'));
         onClose();
       }
     },

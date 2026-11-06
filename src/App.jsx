@@ -12,6 +12,7 @@ import { DEFAULT_ENABLED_MODULES, getVisibleTabs } from './plugins/pluginRegistr
 import { useSecurity } from './components/security/useSecurity';
 import MasterLockScreen from './components/security/MasterLockScreen';
 import { OnboardingModal } from './components/onboarding';
+import { ModuleTourModal } from './components/tours';
 
 // 🧩 Módulos Secundarios Desacoplables (Lazy Loaded para Cero Consumo de RAM si están apagados)
 const FinancesView = lazy(() => import('./components/FinancesView'));
@@ -326,6 +327,11 @@ export default function App() {
           }
         }}
       />
+
+      {/* 🧭 Guía Interactiva Contextual por Módulo (Tour por Pestaña) */}
+      <ErrorBoundary name="ModuleTour">
+        <ModuleTourModal activeTab={activeTab} />
+      </ErrorBoundary>
     </div>
   );
 }
