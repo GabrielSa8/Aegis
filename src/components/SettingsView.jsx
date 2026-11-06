@@ -22,6 +22,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     setConfig,
     storageStats,
     loading,
+    isDirty,
     saveStatus,
     purgeStatus,
     newRepoName,
@@ -34,6 +35,7 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
     setNewRepoWarning,
     handleSelectTheme,
     handleScaleChange,
+    handleDiscardChanges,
     handleSaveConfig,
     handlePurgeCaches,
     handleAddRepo,
@@ -138,6 +140,8 @@ export default function SettingsView({ onClose, currentTheme, onThemeChange, isF
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenShortcuts={() => setShowShortcuts(true)}
+        isDirty={isDirty}
+        onDiscard={handleDiscardChanges}
       />
 
       <div className="settings-body-layout" style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>

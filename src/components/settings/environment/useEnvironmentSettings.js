@@ -43,9 +43,6 @@ export function useEnvironmentSettings({ config, setConfig }) {
         ...prev,
         environment: { ...currentEnv, ...updates }
       };
-      invoke('save_aegis_config', { config: updated }).catch(err => {
-        console.error('Error guardando configuración de entorno:', err);
-      });
       return updated;
     });
   }, [setConfig]);

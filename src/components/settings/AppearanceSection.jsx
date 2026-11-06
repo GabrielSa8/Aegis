@@ -4,6 +4,9 @@ import { THEMES, UI_SCALE_PRESETS } from './settingsHelpers';
 export default function AppearanceSection({ config, currentTheme, onSelectTheme, onScaleChange }) {
   if (!config) return null;
 
+  const activeThemeId = config.theme || currentTheme;
+  const currentScale = config.uiScale || 1.0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
       {/* Cabecera */}
@@ -27,7 +30,7 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
           gap: '12px'
         }}>
           {THEMES.map((theme) => {
-            const isSelected = currentTheme === theme.id;
+            const isSelected = activeThemeId === theme.id;
             return (
               <div
                 key={theme.id}
@@ -114,14 +117,14 @@ export default function AppearanceSection({ config, currentTheme, onSelectTheme,
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={13} color="var(--primary)" />
             <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
-              Actual: {Math.round((config.uiScale || 1.0) * 100)}%
+              Actual: {Math.round(currentScale * 100)}%
             </span>
           </div>
         </div>
 
         <div className="settings-scale-presets" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
           {UI_SCALE_PRESETS.map((scale) => {
-            const isSelected = Math.abs((config.uiScale || 1.0) - scale.val) < 0.02;
+            const isSelected = Math.abs(currentScale - scale.val) < 0.02;
             return (
               <button
                 key={scale.val}

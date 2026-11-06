@@ -123,7 +123,25 @@ Aegis was specifically engineered and battle-tested on ultra-efficient, resource
 
 ---
 
-## 🚀 Quickstart & Compilation
+## ⚡ Instant Installation (Linux)
+
+Install or update the latest precompiled release, register the desktop launcher, and download official tactical icons with a single sovereign command (no root required):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/GabrielSa8/Aegis/main/scripts/install.sh | bash
+```
+
+*Or via `wget`:*
+```bash
+wget -qO- https://raw.githubusercontent.com/GabrielSa8/Aegis/main/scripts/install.sh | bash
+```
+
+> **Requirements:** 64-bit Linux (Fedora, Debian, Ubuntu, Arch) with `webkit2gtk-4.1`. The script checks dependencies, installs binary to `~/.local/bin/aegis`, and creates `~/.local/share/applications/aegis.desktop`.
+> To uninstall at any time: `curl -fsSL https://raw.githubusercontent.com/GabrielSa8/Aegis/main/scripts/install.sh | bash -s -- --uninstall`
+
+---
+
+## 🚀 Manual Compilation from Source
 
 ### Prerequisites
 - **Linux** (Fedora, Ubuntu, Arch, Debian) with Wayland or X11.

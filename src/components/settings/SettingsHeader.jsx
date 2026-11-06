@@ -1,4 +1,4 @@
-import { Sliders, Save, X, Search, Keyboard } from 'lucide-react';
+import { Sliders, Save, X, Search, Keyboard, Undo2 } from 'lucide-react';
 import { TacticalButton } from '../ui';
 import { AEGIS_VERSION } from './settingsHelpers';
 
@@ -8,7 +8,9 @@ export default function SettingsHeader({
   onClose,
   searchQuery = '',
   setSearchQuery,
-  onOpenShortcuts
+  onOpenShortcuts,
+  isDirty = false,
+  onDiscard
 }) {
   return (
     <div className="settings-header-card" style={{
@@ -120,6 +122,44 @@ export default function SettingsHeader({
           </TacticalButton>
         )}
 
+        {/* Indicador de cambios pendientes */}
+        {isDirty && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent, var(--primary)) 40%, transparent)',
+            fontSize: '0.68rem',
+            color: 'var(--text-high)',
+            fontWeight: 700
+          }}>
+            <span style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'var(--accent, var(--primary))',
+              display: 'inline-block'
+            }} />
+            Cambios sin guardar
+          </div>
+        )}
+
+        {/* Descartar cambios */}
+        {isDirty && onDiscard && (
+          <TacticalButton
+            variant="ghost"
+            size="sm"
+            icon={Undo2}
+            onClick={onDiscard}
+            title="Descartar todos los cambios no guardados y restaurar valores previos"
+          >
+            Descartar
+          </TacticalButton>
+        )}
+
         {saveStatus && (
           <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
             {saveStatus}
@@ -127,13 +167,16 @@ export default function SettingsHeader({
         )}
 
         <TacticalButton
-          variant="primary"
+          variant={isDirty ? "primary" : "secondary"}
           size="sm"
           icon={Save}
           onClick={onSave}
-          style={{ whiteSpace: 'nowrap' }}
+          style={{
+            whiteSpace: 'nowrap',
+            boxShadow: isDirty ? '0 0 12px color-mix(in srgb, var(--primary) 40%, transparent)' : 'none'
+          }}
         >
-          Guardar Todo
+          {isDirty ? 'Guardar Todo' : 'Guardado'}
         </TacticalButton>
 
         {onClose && (

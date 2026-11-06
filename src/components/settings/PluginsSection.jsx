@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ShieldCheck, Layers } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { CORE_MODULES, OPTIONAL_PLUGINS, DEFAULT_ENABLED_MODULES } from '../../plugins/pluginRegistry';
 import PluginsHeader from './plugins/PluginsHeader';
 import CoreModuleCard from './plugins/CoreModuleCard';
@@ -19,10 +18,7 @@ export default function PluginsSection({ config, setConfig }) {
   const updateModules = (newModules, message) => {
     setConfig((prev) => {
       if (!prev) return prev;
-      const updated = { ...prev, enabledModules: newModules };
-      invoke('save_aegis_config', { config: updated }).catch(console.error);
-      window.dispatchEvent(new CustomEvent('aegis:modules-changed', { detail: newModules }));
-      return updated;
+      return { ...prev, enabledModules: newModules };
     });
     if (message) showFeedback(message);
   };
