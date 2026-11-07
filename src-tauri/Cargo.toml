@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "2.13.3"
+version = "2.13.4"
 description = "Aegis - Personal Executive Cockpit & Master Command Center"
 authors = ["Gabriel"]
 license = "MIT"
@@ -33,3 +33,10 @@ aes-gcm = "0.10"
 argon2 = "0.5"
 rand = "0.8"
 hex = "0.4"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

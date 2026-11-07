@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, memo, useCallback } from 'react';
-import mermaid from 'mermaid';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize, Hand } from 'lucide-react';
+
+let mermaidPromise = null;
+function getMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then((m) => m.default || m);
+  }
+  return mermaidPromise;
+}
 
 function getThemePalette() {
   if (typeof window === 'undefined') {
@@ -66,6 +73,7 @@ function MermaidInteractiveCanvas({ chart }) {
 
     const renderSvg = async () => {
       try {
+        const mermaid = await getMermaid();
         const palette = getThemePalette();
         mermaid.initialize({
           startOnLoad: false,

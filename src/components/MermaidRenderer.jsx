@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, memo } from 'react';
-import mermaid from 'mermaid';
 import { Maximize2 } from 'lucide-react';
+
+let mermaidPromise = null;
+function getMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then((m) => m.default || m);
+  }
+  return mermaidPromise;
+}
 
 function getThemePalette() {
   if (typeof window === 'undefined') {
@@ -23,10 +30,10 @@ function getThemePalette() {
   };
 }
 
-function configureMermaid() {
+async function configureMermaid(mermaidInstance) {
   const palette = getThemePalette();
 
-  mermaid.initialize({
+  mermaidInstance.initialize({
     startOnLoad: false,
     theme: 'base',
     themeVariables: {
@@ -76,6 +83,8 @@ function MermaidRenderer({ chart, onExpand }) {
       setError(null);
 
       try {
+        const mermaid = await getMermaid();
+        configureMermaid(mermaid);
         const uniqueId = 'mermaid_' + Math.random().toString(36).substring(2, 9);
         const { svg: renderedSvg } = await mermaid.render(uniqueId, chart.trim());
         if (isMounted) {

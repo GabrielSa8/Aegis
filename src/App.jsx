@@ -3,8 +3,6 @@ import { invoke } from '@tauri-apps/api/core';
 
 import TopHeader from './components/TopHeader';
 import LeftTabsDock from './components/navigation/LeftTabsDock';
-import AgentView from './components/AgentView';
-import VaultView from './components/VaultView';
 import SettingsView from './components/SettingsView';
 import CommandPaletteModal from './components/CommandPaletteModal';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -14,7 +12,9 @@ import MasterLockScreen from './components/security/MasterLockScreen';
 import { OnboardingModal } from './components/onboarding';
 import { ModuleTourModal } from './components/tours';
 
-// 🧩 Módulos Secundarios Desacoplables (Lazy Loaded para Cero Consumo de RAM si están apagados)
+// 🧩 Módulos Desacoplables con Lazy Loading (Zero overhead en arranque)
+const AgentView = lazy(() => import('./components/AgentView'));
+const VaultView = lazy(() => import('./components/VaultView'));
 const FinancesView = lazy(() => import('./components/FinancesView'));
 const DevOpsView = lazy(() => import('./components/DevOpsView'));
 const TasksView = lazy(() => import('./components/TasksView'));

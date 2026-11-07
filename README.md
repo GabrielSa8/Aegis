@@ -2,12 +2,13 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v2.13.3-10b981?style=for-the-badge&logo=shield)
+![Version](https://img.shields.io/badge/version-v2.13.4-10b981?style=for-the-badge&logo=shield)
 ![Tauri v2](https://img.shields.io/badge/Tauri-v2.0-24C8D8?style=for-the-badge&logo=tauri&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-1.80%2B-DEA584?style=for-the-badge&logo=rust&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ESNext-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Wayland-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![Binary Size](https://img.shields.io/badge/Binary%20Size-12%20MB-emerald?style=for-the-badge)
 ![RAM Footprint](https://img.shields.io/badge/RAM-%E2%89%A4%2050%20MB-emerald?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge)
 
@@ -164,7 +165,7 @@ Battle-tested on resource-constrained hardware (**Intel Processor N150, 4 Gracem
 |---|---|---|---|
 | **Idle Memory (VmRSS)** | **~48 – 52 MB** | 420 – 680 MB | **~89% less RAM** |
 | **Startup Time (Cold Launch)** | **~180 ms** | 1,800 – 3,200 ms | **10x faster** |
-| **Binary Size (Standalone)** | **~31 MB** | 140 – 210 MB | **~80% smaller** |
+| **Binary Size (Standalone)** | **12 MB** | 140 – 210 MB | **~94% smaller** |
 | **Hardware Telemetry Cost** | **$O(1)$ ($<0.1\%$ CPU)** | 2 – 5% CPU polling | **Imperceptible overhead** |
 | **Network Sockets (Offline)** | **0 open sockets** | Continuous telemetry pings | **100% Sovereign** |
 

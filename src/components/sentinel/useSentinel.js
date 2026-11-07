@@ -75,8 +75,36 @@ export function useSentinel() {
   useEffect(() => {
     fetchTelemetry();
     if (!autoRefresh) return;
-    const interval = setInterval(fetchTelemetry, 2000);
-    return () => clearInterval(interval);
+
+    let interval = null;
+    const startPolling = () => {
+      if (!interval && document.visibilityState === 'visible') {
+        interval = setInterval(fetchTelemetry, 2000);
+      }
+    };
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTelemetry();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchTelemetry, autoRefresh]);
 
   const handleKillProcess = async (pid, signal = 15) => {
