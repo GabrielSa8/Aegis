@@ -17,10 +17,9 @@ function SkillsCard({ skills = [], rawContent }) {
       style={{
         margin: '8px 0',
         borderRadius: 'var(--radius-md, 8px)',
-        background: 'rgba(19, 23, 29, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
         border: '1px solid var(--border-color)',
-        borderLeft: '4px solid #a855f7',
-        backdropFilter: 'blur(14px)',
+        borderLeft: '4px solid var(--accent, #a855f7)',
         padding: '12px 16px',
         display: 'flex',
         flexDirection: 'column',

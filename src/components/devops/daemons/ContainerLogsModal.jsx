@@ -27,8 +27,7 @@ export function ContainerLogsModal({ container, logs, loading, onClose, onRefres
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(3px)',
+      background: 'rgba(0, 0, 0, 0.82)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

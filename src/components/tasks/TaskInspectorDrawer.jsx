@@ -40,8 +40,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
         zIndex: 900,
         display: 'flex',
         flexDirection: 'column',
-        animation: 'slideInRight 0.18s ease-out',
-        backdropFilter: 'blur(8px)'
+        animation: 'slideInRight 0.18s ease-out'
       }}
     >
       {/* Cabecera del Inspector */}

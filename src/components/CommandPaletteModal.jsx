@@ -35,8 +35,7 @@ export default function CommandPaletteModal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(0, 0, 0, 0.82)',
         zIndex: 10000,
         display: 'flex',
         alignItems: 'flex-start',

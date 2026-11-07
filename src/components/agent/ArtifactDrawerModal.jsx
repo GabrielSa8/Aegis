@@ -71,12 +71,11 @@ function ArtifactDrawerModal({ isOpen, onClose, artifact }) {
           alignItems: 'center',
           gap: '12px',
           padding: '6px 14px',
-          background: 'color-mix(in srgb, var(--bg-card) 92%, black)',
+          background: 'color-mix(in srgb, var(--bg-card) 96%, black)',
           border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-full, 9999px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px var(--primary)',
           zIndex: 100,
-          backdropFilter: 'blur(12px)',
           maxWidth: '92vw'
         }}
       >

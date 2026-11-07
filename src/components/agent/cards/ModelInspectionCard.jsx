@@ -49,10 +49,9 @@ function ModelInspectionCard({ activeModel, onSelectModel, agentType = 'agy' }) 
       style={{
         margin: '8px 0',
         borderRadius: 'var(--radius-md, 8px)',
-        background: 'color-mix(in srgb, var(--bg-card) 92%, black)',
+        background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
         border: '1px solid var(--border-color)',
         borderLeft: '4px solid var(--primary)',
-        backdropFilter: 'blur(14px)',
         padding: '12px 16px',
         display: 'flex',
         flexDirection: 'column',

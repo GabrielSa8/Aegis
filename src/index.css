@@ -2735,8 +2735,6 @@ select:focus-visible {
   border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border-color));
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   z-index: 9999;
   overflow: hidden;
   opacity: 0;

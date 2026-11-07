@@ -91,10 +91,9 @@ function UsageQuotaCard({ quotas: rawQuotas, cardData, provider: rawProvider }) 
       style={{
         margin: '8px 0',
         borderRadius: 'var(--radius-md, 8px)',
-        background: 'rgba(19, 23, 29, 0.75)',
+        background: 'color-mix(in srgb, var(--bg-card) 95%, black)',
         border: '1px solid var(--border-color)',
         borderLeft: '4px solid var(--primary)',
-        backdropFilter: 'blur(14px)',
         padding: '12px 16px',
         display: 'flex',
         flexDirection: 'column',

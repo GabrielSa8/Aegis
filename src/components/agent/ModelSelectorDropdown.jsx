@@ -149,7 +149,6 @@ function ModelSelectorDropdown({
             borderRadius: 'var(--radius-md, 8px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
             padding: '6px',
-            backdropFilter: 'blur(14px)',
             display: 'flex',
             flexDirection: 'column',
             gap: '2px'
