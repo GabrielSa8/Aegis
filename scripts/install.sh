@@ -101,7 +101,7 @@ if command -v curl >/dev/null 2>&1; then
 fi
 
 if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "latest" || "$LATEST_TAG" == "releases" ]]; then
-    LATEST_TAG="v2.12.2"
+    LATEST_TAG="v2.13.3"
 fi
 
 echo -e "${GREEN}✓ Versión objetivo detectada:${NC} ${BOLD}$LATEST_TAG${NC}"
