@@ -13,7 +13,7 @@ export function useTaskGroups({
     const total = parsedTasks.length;
     const completed = parsedTasks.filter((t) => t.completed).length;
     const pending = total - completed;
-    const highPriority = parsedTasks.filter((t) => !t.completed && t.priority === 'high').length;
+    const highPriority = parsedTasks.filter((t) => !t.completed && (t.priority === 'high' || t.dueDate)).length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, pending, completed, highPriority, percent };
   }, [parsedTasks]);

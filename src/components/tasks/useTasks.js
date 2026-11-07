@@ -26,7 +26,7 @@ export function useTasks() {
   // Filtros dinámicos
   const [selectedHub, setSelectedHub] = useState('Todos');
   const [selectedProject, setSelectedProject] = useState('Todos');
-  const [statusFilter, setStatusFilter] = useState('pending'); // 'all', 'pending', 'completed'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'pending', 'focus', 'completed'
   const [searchQuery, setSearchQuery] = useState('');
 
   // Agrupador: 'hub_project' (Jerárquico: Hub > Proyecto), 'project' (Directo por Proyecto), 'hub' (Directo por Hub)
@@ -172,6 +172,7 @@ export function useTasks() {
       if (selectedProject !== 'Todos' && t.project !== selectedProject) return false;
       if (statusFilter === 'pending' && t.completed) return false;
       if (statusFilter === 'completed' && !t.completed) return false;
+      if (statusFilter === 'focus' && (t.completed || (!t.priority === 'high' && !t.dueDate))) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();

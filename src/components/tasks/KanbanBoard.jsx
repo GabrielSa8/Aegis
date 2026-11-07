@@ -1,4 +1,5 @@
-import { FolderGit2, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { FolderGit2, ChevronDown, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { ProjectKanbanSwimlane } from './ProjectKanbanSwimlane';
 import { KanbanColumn } from './KanbanColumn';
 import { resolveProjectTheme } from './taskHelpers';
@@ -17,17 +18,67 @@ export function KanbanBoard({
   onToggle,
   onSelectTask
 }) {
+  const [maximizedProject, setMaximizedProject] = useState(null);
+
   if (kanbanLayout === 'swimlanes') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {/* Banner de Proyecto Enfocado/Agrandado */}
+        {maximizedProject && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.45rem 0.85rem',
+              background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
+              borderRadius: '6px',
+              fontSize: '0.74rem',
+              color: 'var(--text-high)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Maximize2 size={13} color="var(--primary)" />
+              <span>Vista enfocada en proyecto: <strong style={{ color: 'var(--primary)', letterSpacing: '0.02em' }}>{maximizedProject}</strong></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMaximizedProject(null)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'color-mix(in srgb, var(--bg-card) 80%, transparent)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                color: 'var(--text-high)',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <Minimize2 size={11} />
+              <span>Ver todos los proyectos</span>
+            </button>
+          </div>
+        )}
+
         {groupBy === 'hub_project' ? (
           /* Swimlanes agrupadas dentro de cada Hub */
-          Object.entries(tasksHierarchy).map(([hubName, projectsMap]) => {
+          Object.entries(tasksHierarchy)
+            .filter(([_, projectsMap]) => !maximizedProject || Object.keys(projectsMap).includes(maximizedProject))
+            .map(([hubName, projectsMap]) => {
             const isHubCollapsed = collapsedHubs.has(hubName);
             const allHubTasks = Object.values(projectsMap).flat();
             const hubTotal = allHubTasks.length;
             const hubDone = allHubTasks.filter((t) => t.completed).length;
             const hubPercent = hubTotal > 0 ? Math.round((hubDone / hubTotal) * 100) : 0;
+
+            const visibleProjects = Object.entries(projectsMap).filter(
+              ([projectName]) => !maximizedProject || projectName === maximizedProject
+            );
 
             return (
               <div
@@ -79,7 +130,7 @@ export function KanbanBoard({
                 {/* Swimlanes de Proyectos */}
                 {!isHubCollapsed && (
                   <div style={{ padding: '0.65rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {Object.entries(projectsMap).map(([projectName, projTasks]) => {
+                    {visibleProjects.map(([projectName, projTasks]) => {
                       const projKey = `${hubName}::${projectName}`;
                       const isProjCollapsed = collapsedProjects.has(projKey);
                       const pTotal = projTasks.length;
@@ -111,6 +162,8 @@ export function KanbanBoard({
                           doneTasks={pCompleted}
                           onToggleTask={onToggle}
                           onSelectTask={onSelectTask}
+                          isMaximized={maximizedProject === projectName}
+                          onToggleMaximize={() => setMaximizedProject(maximizedProject === projectName ? null : projectName)}
                         />
                       );
                     })}
@@ -121,7 +174,9 @@ export function KanbanBoard({
           })
         ) : (
           /* Swimlanes directas por Proyecto */
-          Object.entries(tasksByProject).map(([projectName, projTasks]) => {
+          Object.entries(tasksByProject)
+            .filter(([projectName]) => !maximizedProject || projectName === maximizedProject)
+            .map(([projectName, projTasks]) => {
             const isProjCollapsed = collapsedProjects.has(projectName);
             const pTotal = projTasks.length;
             const pDone = projTasks.filter((t) => t.completed).length;
@@ -152,6 +207,8 @@ export function KanbanBoard({
                 doneTasks={pCompleted}
                 onToggleTask={onToggle}
                 onSelectTask={onSelectTask}
+                isMaximized={maximizedProject === projectName}
+                onToggleMaximize={() => setMaximizedProject(maximizedProject === projectName ? null : projectName)}
               />
             );
           })

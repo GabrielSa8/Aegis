@@ -28,6 +28,8 @@ export default function TasksView() {
     setViewMode,
     kanbanLayout,
     setKanbanLayout,
+    statusFilter,
+    setStatusFilter,
     collapsedHubs,
     collapsedProjects,
     fetchTasks,
@@ -70,6 +72,8 @@ export default function TasksView() {
         setViewMode={setViewMode}
         kanbanLayout={kanbanLayout}
         setKanbanLayout={setKanbanLayout}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
       />
 
       {/* 🧭 Área Principal de Vistas */}

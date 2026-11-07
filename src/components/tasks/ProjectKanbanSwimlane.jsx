@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronRight, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, Flame, Maximize2, Minimize2 } from 'lucide-react';
 import { TaskCard } from './TaskCard';
 
 export function ProjectKanbanSwimlane({
@@ -13,16 +14,22 @@ export function ProjectKanbanSwimlane({
   focusTasks,
   doneTasks,
   onToggleTask,
-  onSelectTask
+  onSelectTask,
+  isMaximized = false,
+  onToggleMaximize
 }) {
+  const [expandedColumn, setExpandedColumn] = useState(null); // null | 'todo' | 'focus' | 'done'
+  const columnHeight = isMaximized ? 'calc(100vh - 270px)' : '220px';
+
   return (
     <div
       style={{
         background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-        border: `1px solid ${theme.border}`,
+        border: isMaximized ? `1.5px solid ${theme.color}` : `1px solid ${theme.border}`,
         borderRadius: '7px',
         overflow: 'hidden',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+        boxShadow: isMaximized ? `0 4px 20px color-mix(in srgb, ${theme.color} 20%, transparent)` : '0 2px 10px rgba(0,0,0,0.2)',
+        transition: 'all 0.2s ease'
       }}
     >
       {/* Cabecera del Swimlane */}
@@ -58,130 +65,203 @@ export function ProjectKanbanSwimlane({
           <span style={{ fontSize: '0.64rem', color: theme.color, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
             {pDone}/{pTotal} ({pPercent}%)
           </span>
+
+          {onToggleMaximize && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMaximize();
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: isMaximized ? 'color-mix(in srgb, var(--primary) 22%, transparent)' : 'color-mix(in srgb, var(--text-high) 6%, transparent)',
+                border: isMaximized ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                borderRadius: '4px',
+                padding: '2px 7px',
+                color: isMaximized ? 'var(--primary)' : 'var(--text-muted)',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title={isMaximized ? 'Restaurar vista con todos los proyectos' : `Agrandar y enfocar únicamente ${projectName}`}
+            >
+              {isMaximized ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+              <span>{isMaximized ? 'Restaurar' : 'Agrandar'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 3 Columnas del Swimlane */}
+      {/* Columnas del Swimlane */}
       {!isCollapsed && (
         <div
           style={{
             padding: '0.55rem',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gridTemplateColumns: expandedColumn ? '1fr' : 'repeat(auto-fit, minmax(230px, 1fr))',
             gap: '0.55rem',
             background: 'color-mix(in srgb, var(--bg-main) 40%, transparent)'
           }}
         >
           {/* Por Hacer */}
-          <div
-            style={{
-              background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '5px',
-              overflow: 'hidden'
-            }}
-          >
+          {(!expandedColumn || expandedColumn === 'todo') && (
             <div
               style={{
-                padding: '4px 8px',
-                background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
-                borderBottom: '1px solid var(--border-color)',
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                color: 'var(--text-muted)',
+                background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '5px',
+                overflow: 'hidden',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
+                flexDirection: 'column'
               }}
             >
-              <span>📥 Por Hacer</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{todoTasks.length}</span>
-            </div>
-            <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '50px' }}>
-              {todoTasks.length === 0 ? (
-                <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
-                  Sin tareas en cola
+              <div
+                style={{
+                  padding: '5px 8px',
+                  background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
+                  borderBottom: '1px solid var(--border-color)',
+                  fontSize: '0.66rem',
+                  fontWeight: 700,
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0
+                }}
+              >
+                <span>📥 Por Hacer</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{todoTasks.length}</span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedColumn(expandedColumn === 'todo' ? null : 'todo')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '1px', display: 'flex' }}
+                    title={expandedColumn === 'todo' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
+                  >
+                    {expandedColumn === 'todo' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                  </button>
                 </div>
-              ) : (
-                todoTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
-              )}
+              </div>
+              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
+                {todoTasks.length === 0 ? (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
+                    Sin tareas en cola
+                  </div>
+                ) : (
+                  todoTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* En Foco */}
-          <div
-            style={{
-              background: 'color-mix(in srgb, var(--warning) 6%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
-              borderRadius: '5px',
-              overflow: 'hidden'
-            }}
-          >
+          {(!expandedColumn || expandedColumn === 'focus') && (
             <div
               style={{
-                padding: '4px 8px',
-                background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
-                borderBottom: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                color: 'var(--warning)',
+                background: 'color-mix(in srgb, var(--warning) 6%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
+                borderRadius: '5px',
+                overflow: 'hidden',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
+                flexDirection: 'column'
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Flame size={11} color="var(--warning)" />
-                🔥 En Foco
-              </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{focusTasks.length}</span>
-            </div>
-            <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '50px' }}>
-              {focusTasks.length === 0 ? (
-                <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
-                  Sin tareas urgentes
+              <div
+                style={{
+                  padding: '5px 8px',
+                  background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+                  borderBottom: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
+                  fontSize: '0.66rem',
+                  fontWeight: 700,
+                  color: 'var(--warning)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Flame size={11} color="var(--warning)" />
+                  🔥 En Foco
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{focusTasks.length}</span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedColumn(expandedColumn === 'focus' ? null : 'focus')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--warning)', cursor: 'pointer', padding: '1px', display: 'flex' }}
+                    title={expandedColumn === 'focus' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
+                  >
+                    {expandedColumn === 'focus' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                  </button>
                 </div>
-              ) : (
-                focusTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact highlight />)
-              )}
+              </div>
+              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
+                {focusTasks.length === 0 ? (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
+                    Sin tareas urgentes
+                  </div>
+                ) : (
+                  focusTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact highlight />)
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Completadas */}
-          <div
-            style={{
-              background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-              borderRadius: '5px',
-              overflow: 'hidden'
-            }}
-          >
+          {(!expandedColumn || expandedColumn === 'done') && (
             <div
               style={{
-                padding: '4px 8px',
-                background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-                borderBottom: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                color: 'var(--primary)',
+                background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
+                borderRadius: '5px',
+                overflow: 'hidden',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
+                flexDirection: 'column'
               }}
             >
-              <span>✅ Completadas</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{doneTasks.length}</span>
-            </div>
-            <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '3px', minHeight: '50px' }}>
-              {doneTasks.length === 0 ? (
-                <div style={{ padding: '0.6rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.66rem', opacity: 0.6 }}>
-                  Sin completadas
+              <div
+                style={{
+                  padding: '5px 8px',
+                  background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
+                  borderBottom: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
+                  fontSize: '0.66rem',
+                  fontWeight: 700,
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0
+                }}
+              >
+                <span>✅ Completadas</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{doneTasks.length}</span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedColumn(expandedColumn === 'done' ? null : 'done')}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '1px', display: 'flex' }}
+                    title={expandedColumn === 'done' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
+                  >
+                    {expandedColumn === 'done' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+                  </button>
                 </div>
-              ) : (
-                doneTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
-              )}
+              </div>
+              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
+                {doneTasks.length === 0 ? (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
+                    Sin completadas
+                  </div>
+                ) : (
+                  doneTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

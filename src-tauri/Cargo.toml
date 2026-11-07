@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "2.13.2"
+version = "2.13.3"
 description = "Aegis - Personal Executive Cockpit & Master Command Center"
 authors = ["Gabriel"]
 license = "MIT"

@@ -37,7 +37,9 @@ export function TasksHeader({
   viewMode,
   setViewMode,
   kanbanLayout,
-  setKanbanLayout
+  setKanbanLayout,
+  statusFilter,
+  setStatusFilter
 }) {
   return (
     <div
@@ -65,8 +67,12 @@ export function TasksHeader({
           flexWrap: 'wrap'
         }}
       >
-        {/* HUD de Métricas */}
-        <TasksHudStats stats={stats} />
+        {/* HUD de Métricas Interactivo con Filtro Rápido */}
+        <TasksHudStats
+          stats={stats}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+        />
 
         {/* Pomodoro HUD Widget + Personalizador + Refrescar */}
         <div className="tasks-header-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

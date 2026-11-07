@@ -10,6 +10,7 @@ const rootDir = path.resolve(__dirname, '..');
 const packageJsonPath = path.join(rootDir, 'package.json');
 const tauriConfPath = path.join(rootDir, 'src-tauri', 'tauri.conf.json');
 const cargoTomlPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
+const settingsHelpersPath = path.join(rootDir, 'src', 'components', 'settings', 'settingsHelpers.js');
 
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const currentVersion = pkg.version;
@@ -63,7 +64,18 @@ cargoToml = cargoToml.replace(
 );
 fs.writeFileSync(cargoTomlPath, cargoToml, 'utf8');
 
+// 4. Update src/components/settings/settingsHelpers.js (AEGIS_VERSION)
+if (fs.existsSync(settingsHelpersPath)) {
+  let settingsHelpers = fs.readFileSync(settingsHelpersPath, 'utf8');
+  settingsHelpers = settingsHelpers.replace(
+    /(export const AEGIS_VERSION = 'v)[^']+(';)/,
+    `$1${newVersion}$2`
+  );
+  fs.writeFileSync(settingsHelpersPath, settingsHelpers, 'utf8');
+}
+
 console.log(`[Aegis Bump] Version updated: v${currentVersion} -> v${newVersion}`);
 console.log(`  ✓ package.json`);
 console.log(`  ✓ src-tauri/tauri.conf.json`);
 console.log(`  ✓ src-tauri/Cargo.toml`);
+console.log(`  ✓ src/components/settings/settingsHelpers.js`);

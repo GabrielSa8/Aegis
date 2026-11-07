@@ -40,6 +40,9 @@ export function TaskCard({
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+        minHeight: compact ? '44px' : '50px',
         padding: compact ? '6px 8px' : '7px 11px',
         borderRadius: '6px',
         background: task.completed
