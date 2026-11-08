@@ -111,7 +111,7 @@ export const THEMES = [
   }
 ];
 
-export const AEGIS_VERSION = 'v2.14.1';
+export const AEGIS_VERSION = 'v2.15.0';
 
 export const BILLING_LINKS = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },

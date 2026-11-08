@@ -30,6 +30,8 @@ export function OnboardingModal({ isOpen, onClose, onComplete }) {
     setSelectedEditor,
     selectedTerminal,
     setSelectedTerminal,
+    harnessEnabled,
+    setHarnessEnabled,
     handleCreateDefaultVault,
     handleFinish
   } = useOnboarding({
@@ -110,12 +112,14 @@ export function OnboardingModal({ isOpen, onClose, onComplete }) {
             setSelectedEditor={setSelectedEditor}
             selectedTerminal={selectedTerminal}
             setSelectedTerminal={setSelectedTerminal}
+            harnessEnabled={harnessEnabled}
+            setHarnessEnabled={setHarnessEnabled}
             onCreateDefaultVault={handleCreateDefaultVault}
             creatingVault={creatingVault}
           />
         )}
 
-        {step === 3 && <OnboardingStepCheatSheet />}
+        {step === 3 && <OnboardingStepCheatSheet harnessEnabled={harnessEnabled} />}
 
         {/* Botonera Inferior */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.2rem' }}>

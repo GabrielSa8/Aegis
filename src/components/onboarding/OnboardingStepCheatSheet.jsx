@@ -10,7 +10,7 @@ const SHORTCUTS = [
   { kbd: 'Alt + Z', label: 'Modo Zen', desc: 'Ocultar docks y barras para enfoque de lectura máxima' }
 ];
 
-export function OnboardingStepCheatSheet() {
+export function OnboardingStepCheatSheet({ harnessEnabled = true }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)' }}>
@@ -65,9 +65,17 @@ export function OnboardingStepCheatSheet() {
 
         {/* 💡 Explicación de qué son los contextos */}
         <div style={{ padding: '7px 10px', borderRadius: 'var(--radius-sm)', background: 'color-mix(in srgb, var(--bg-card) 40%, transparent)', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-          <Workflow size={15} style={{ color: 'var(--warning, #f59e0b)', flexShrink: 0, marginTop: '2px' }} />
+          <Workflow size={15} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
           <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-high)', lineHeight: 1.4 }}>
             <strong>¿Para qué son los Contextos?</strong> Son cápsulas de trabajo para la IA. Cada contexto enlaza una carpeta de proyecto (<code style={{ fontSize: '0.65rem' }}>workingDir</code>), sus skills activas y sus notas de Obsidian. Al cambiar de contexto con 1 clic en el dock derecho, la IA sabe exactamente qué archivos y herramientas usar sin mezclar proyectos ni saturar tokens.
+          </p>
+        </div>
+
+        {/* 🛡️ Explicación del Aegis Adaptive Harness (Escalado Dinámico por Paso) */}
+        <div style={{ marginTop: '0.45rem', padding: '7px 10px', borderRadius: 'var(--radius-sm)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+          <ShieldCheck size={15} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
+          <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-high)', lineHeight: 1.4 }}>
+            <strong>¿Cómo funciona el Aegis Harness ({harnessEnabled ? 'Activo' : 'Configurable en Ajustes'})?</strong> En lugar de gastar siempre en un modelo lento o cambiar de nivel a mano, evalúa cada subtarea en vivo: ejecuta pasos simples en <strong>L1 (Flash)</strong>, sube a <strong>L2 (Balanceado)</strong> o <strong>L3 (Profundo)</strong> cuando el siguiente paso lo exige, poda archivos ruidosos (<code style={{ fontSize: '0.65rem' }}>lockfiles</code>), alinea el caché KV (-80% latencia) y auto-repara fallos. Puedes alternarlo en la barra superior (<code style={{ fontSize: '0.65rem' }}>Auto L1⇄L3</code>) o en <strong>Ajustes ➔ Motor IA</strong>.
           </p>
         </div>
 

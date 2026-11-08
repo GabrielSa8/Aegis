@@ -29,12 +29,12 @@ export const MODULE_TOURS = {
         ]
       },
       {
-        title: 'Selector Flash vs Profundo',
-        desc: 'Controla la profundidad cognitiva y el consumo de tokens según la tarea.',
+        title: 'Aegis Adaptive Harness (Auto L1⇄L3) vs Manual',
+        desc: 'Enrutamiento inteligente por paso, poda ACI de tokens y auto-verificación.',
         details: [
-          'Modo Flash: Consultas ultrarrápidas y micro-ediciones directas.',
-          'Modo Profundo: Razonamiento multi-paso, planeación y llamada a tools.',
-          'Aislamiento dinámico de contexto para reducir hasta 60% de tokens.'
+          'Modo Auto L1⇄L3 (Recomendado): Evalúa cada subtarea en vivo sin que cambies de nivel a mano (L1 Flash para pasos simples, L2 Balanceado para lógica media y L3 Profundo para arquitectura/bugs).',
+          'Pre-Filtro ACI & KV-Cache: Elimina lockfiles en {{diff}}, trunca logs masivos y alinea el contexto estático para ~80% de ahorro en caché.',
+          'Modo Manual (Flash / Profundo): Puedes fijar manualmente el nivel en la barra superior o desactivar el Harness en Ajustes ➔ Motor IA si prefieres usar tu propio harness.'
         ]
       },
       {

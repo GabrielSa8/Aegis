@@ -295,11 +295,76 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    // Evaluar Aegis Adaptive Harness (6 Pilares: ACI Pruning, KV-Cache Alignment, Dynamic Step L1-L3, Surgical Contract, Verifier, Auto-Heal)
+    let harness_cfg = cfg.as_ref().map(|c| c.harness.clone()).unwrap_or_default();
+    let response_style = cfg
+        .as_ref()
+        .map(|c| c.profile.response_style.as_str())
+        .unwrap_or("caveman");
+    let harness_plan = crate::harness::build_harness_plan(
+        &effective_prompt,
+        context_path.as_deref(),
+        response_style,
+        &harness_cfg,
+    );
+
+    let is_auto_effort = effort
+        .as_deref()
+        .map(|e| e.trim().is_empty() || e.eq_ignore_ascii_case("auto"))
+        .unwrap_or(true);
+
+    let resolved_effort = if harness_plan.active {
+        effective_prompt = harness_plan.transformed_prompt.clone();
+        if is_auto_effort && harness_cfg.dynamic_step_scaling {
+            Some(harness_plan.initial_effort.clone())
+        } else if is_auto_effort {
+            Some("low".to_string())
+        } else {
+            effort
+        }
+    } else if is_auto_effort {
+        Some("low".to_string())
+    } else {
+        effort
+    };
+
+    let harness_telemetry_line = if harness_plan.active {
+        let route_badges = harness_plan
+            .steps
+            .iter()
+            .map(|s| format!("P{}:{}", s.step_number, s.badge))
+            .collect::<Vec<_>>()
+            .join(" ⇄ ");
+        Some(format!(
+            "🛡️ [Aegis Harness Activo · Ruta: {} · Nivel Inicial: {} · KV-Cache Alineado · Ahorro Est.: -{}% (~{} tokens)]",
+            route_badges,
+            harness_plan.initial_effort.to_uppercase(),
+            harness_plan.reduction_percent,
+            harness_plan.tokens_saved
+        ))
+    } else {
+        None
+    };
+
+    let resolved_model = if harness_plan.active && is_auto_effort && agent_type != "agy" {
+        crate::harness::resolve_tier_model_for_provider(
+            agent_type,
+            resolved_effort.as_deref().unwrap_or("low"),
+            model.as_deref(),
+        )
+        .or(model)
+    } else {
+        model
+    };
+
     let mut chain: Vec<String> = Vec::new();
     if let Some(c) = cfg.as_ref() {
         for e in c.fallback_entries.iter().filter(|e| e.engine == agent_type) {
             let m = e.model.trim();
-            if !m.is_empty() && Some(m) != model.as_deref().map(str::trim) && !chain.iter().any(|x| x == m) {
+            if !m.is_empty()
+                && Some(m) != resolved_model.as_deref().map(str::trim)
+                && !chain.iter().any(|x| x == m)
+            {
                 chain.push(m.to_string());
             }
         }
@@ -309,7 +374,7 @@ pub async fn execute_agent_prompt(
         app,
         agent_binary,
         prompt: effective_prompt,
-        effort,
+        effort: resolved_effort,
         ctx_workspace,
         context_path,
         home,
@@ -317,8 +382,12 @@ pub async fn execute_agent_prompt(
         chunk_seq: Arc::new(AtomicU64::new(0)),
         mounted_skills,
         auto_cortex_skills,
+        harness_telemetry_line,
+        harness_steps: harness_plan.steps,
+        dynamic_scaling_enabled: harness_cfg.enabled && harness_cfg.dynamic_step_scaling && is_auto_effort,
+        auto_heal_enabled: harness_cfg.enabled && harness_cfg.auto_heal_escalation,
     };
-    spawn_attempt(ctx, model, chain).await?;
+    spawn_attempt(ctx, resolved_model, chain).await?;
     Ok(format!("Stream iniciado ({})", stream_id))
 }
 
@@ -336,6 +405,10 @@ struct AttemptCtx {
     chunk_seq: Arc<AtomicU64>,
     mounted_skills: Vec<String>,
     auto_cortex_skills: Vec<String>,
+    harness_telemetry_line: Option<String>,
+    harness_steps: Vec<crate::harness::HarnessStep>,
+    dynamic_scaling_enabled: bool,
+    auto_heal_enabled: bool,
 }
 
 /// Detecta errores de cuota/rate-limit (429) del proveedor en un fragmento de salida.
@@ -388,13 +461,16 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     }
 
     // Inyección de nivel de esfuerzo/razonamiento (low para flash, high para profundo)
-    // Si el id del modelo ya trae intensidad (-low/-medium/-high), --effort entra en conflicto y se omite.
+    // Si el id del modelo ya trae intensidad (-low/-medium/-high) o el binario no lo soporta, se omite.
     let model_has_level = model.as_deref().map_or(false, |m| {
         let m = m.trim();
         m.ends_with("-low") || m.ends_with("-medium") || m.ends_with("-high")
     });
     if let Some(ref eff) = effort {
-        if !eff.trim().is_empty() && !model_has_level {
+        if !eff.trim().is_empty()
+            && !model_has_level
+            && crate::harness::binary_supports_effort_flag(&agent_binary)
+        {
             cmd.arg("--effort").arg(eff.trim());
         }
     }
@@ -458,9 +534,15 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     };
     let _ = app.emit("agent-stream", init_chunk);
 
-    // Emitir telemetría de skills montadas en el contexto y auto-activadas por Hermes Cortex
-    if !ctx.mounted_skills.is_empty() || !ctx.auto_cortex_skills.is_empty() {
+    // Emitir telemetría de Harness Aegis, skills montadas en el contexto y auto-activadas por Hermes Cortex
+    if ctx.harness_telemetry_line.is_some()
+        || !ctx.mounted_skills.is_empty()
+        || !ctx.auto_cortex_skills.is_empty()
+    {
         let mut lines = Vec::new();
+        if let Some(ref h_line) = ctx.harness_telemetry_line {
+            lines.push(h_line.clone());
+        }
         if !ctx.mounted_skills.is_empty() {
             lines.push(format!("🧩 [Skills Montadas: {}]", ctx.mounted_skills.join(", ")));
         }
@@ -481,6 +563,14 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
         let _ = app.emit("agent-stream", skills_chunk);
     }
 
+    // Estado compartido de monitoreo de proceso en tiempo real (detecta L1 -> L2 -> L3 por herramientas/razonamiento)
+    let initial_runtime_level = effort.as_deref().unwrap_or("low");
+    let runtime_state = Arc::new(Mutex::new(crate::harness::RuntimeProcessState::new(
+        initial_runtime_level,
+    )));
+    let runtime_scaling_active = ctx.dynamic_scaling_enabled;
+    let hot_handoff_requested = Arc::new(AtomicBool::new(false));
+
     // Streaming de stdout
     let app_stdout = app.clone();
     let stream_id_stdout = stream_id.clone();
@@ -489,10 +579,15 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     let quota_stdout = Arc::clone(&quota_hit);
     let emitted_stdout = Arc::clone(&emitted);
     let done_stdout = Arc::clone(&done_emitted);
+    let harness_steps_stdout = ctx.harness_steps.clone();
+    let runtime_state_stdout = Arc::clone(&runtime_state);
+    let hot_handoff_stdout = Arc::clone(&hot_handoff_requested);
+    let auto_heal_stdout = ctx.auto_heal_enabled;
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout).lines();
         let mut captured_conv_id: Option<String> = None;
         let mut processed_thinking_steps: std::collections::HashSet<i64> = std::collections::HashSet::new();
+        let mut harness_step_cursor: usize = 0;
 
         while let Ok(Some(line)) = reader.next_line().await {
             if line.trim().is_empty() {
@@ -541,6 +636,27 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
                                     if let Some(ref cid) = captured_conv_id {
                                         let thoughts = extract_unseen_thoughts(&home_stream, cid, &mut processed_thinking_steps).await;
                                         for th in thoughts {
+                                            if runtime_scaling_active {
+                                                let mut rt = runtime_state_stdout.lock().await;
+                                                if let Some(esc) = rt.inspect_thought_action(&th) {
+                                                    let esc_chunk = AgentStreamChunk {
+                                                        stream_id: stream_id_stdout.clone(),
+                                                        seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
+                                                        event_type: "delta".into(),
+                                                        content: format!(
+                                                            "<thought>\n⚡ [Escalado de Proceso en Vivo: {} -> {} ({})]\n</thought>\n",
+                                                            esc.from_badge, esc.to_badge, esc.reason
+                                                        ),
+                                                        step_type: Some("thinking".into()),
+                                                        duration_seconds: None,
+                                                        input_tokens: None,
+                                                        output_tokens: None,
+                                                        total_tokens: None,
+                                                    };
+                                                    let _ = emit_tracked(&app_stdout, esc_chunk, &emitted_stdout, &done_stdout);
+                                                }
+                                            }
+
                                             let formatted_thinking = format!(
                                                 "<thought>\n🧠 [Razonamiento Técnico]\n{}\n</thought>\n",
                                                 th
@@ -601,6 +717,75 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
                                                 total_tokens: None,
                                             };
                                             let _ = emit_tracked(&app_stdout, chunk, &emitted_stdout, &done_stdout);
+
+                                            // 3a. Inspección de proceso en tiempo real (detecta L1 -> L2 -> L3 por herramientas ejecutadas aunque el prompt sea vago)
+                                            if runtime_scaling_active {
+                                                let mut rt = runtime_state_stdout.lock().await;
+                                                if let Some(esc) = rt.inspect_tool_action(tool_name, &params_str, output_str) {
+                                                    let rt_chunk = AgentStreamChunk {
+                                                        stream_id: stream_id_stdout.clone(),
+                                                        seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
+                                                        event_type: "delta".into(),
+                                                        content: format!(
+                                                            "<thought>\n⚡ [Escalado de Proceso en Vivo: {} -> {} ({})]\n</thought>\n",
+                                                            esc.from_badge, esc.to_badge, esc.reason
+                                                        ),
+                                                        step_type: Some("thinking".into()),
+                                                        duration_seconds: None,
+                                                        input_tokens: None,
+                                                        output_tokens: None,
+                                                        total_tokens: None,
+                                                    };
+                                                    let _ = emit_tracked(&app_stdout, rt_chunk, &emitted_stdout, &done_stdout);
+
+                                                    // Hot-Handoff en Caliente: si arrancó en L1 (low) y una herramienta arrojó fallo crítico L3,
+                                                    // cortar el subproceso L1 al instante y relanzar en L3 (high) con el diagnóstico exacto.
+                                                    if esc.trigger_hot_handoff && auto_heal_stdout {
+                                                        drop(rt);
+                                                        hot_handoff_stdout.store(true, Ordering::SeqCst);
+                                                        let handoff_chunk = AgentStreamChunk {
+                                                            stream_id: stream_id_stdout.clone(),
+                                                            seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
+                                                            event_type: "delta".into(),
+                                                            content: "<thought>\n🔥 [Hot-Handoff Harness: Cortando proceso L1 (LOW) en caliente y transfiriendo a motor L3 (HIGH) con el error exacto capturado]\n</thought>\n".into(),
+                                                            step_type: Some("thinking".into()),
+                                                            duration_seconds: None,
+                                                            input_tokens: None,
+                                                            output_tokens: None,
+                                                            total_tokens: None,
+                                                        };
+                                                        let _ = emit_tracked(&app_stdout, handoff_chunk, &emitted_stdout, &done_stdout);
+                                                        if let Some(pid) = get_pid_map().lock().await.remove(&stream_id_stdout) {
+                                                            let _ = std::process::Command::new("kill")
+                                                                .arg("-TERM")
+                                                                .arg(format!("-{}", pid))
+                                                                .status();
+                                                        }
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            // 3b. Emitir transición dinámica de paso del Harness si hay múltiples pasos explícitos
+                                            if harness_steps_stdout.len() > 1 && harness_step_cursor + 1 < harness_steps_stdout.len() {
+                                                harness_step_cursor += 1;
+                                                let hs = &harness_steps_stdout[harness_step_cursor];
+                                                let step_chunk = AgentStreamChunk {
+                                                    stream_id: stream_id_stdout.clone(),
+                                                    seq: chunk_seq_stdout.fetch_add(1, Ordering::SeqCst),
+                                                    event_type: "delta".into(),
+                                                    content: format!(
+                                                        "<thought>\n⚡ [Escalado Dinámico Harness: Paso {} -> Nivel {} ({})]\n</thought>\n",
+                                                        hs.step_number, hs.badge, hs.reason
+                                                    ),
+                                                    step_type: Some("thinking".into()),
+                                                    duration_seconds: None,
+                                                    input_tokens: None,
+                                                    output_tokens: None,
+                                                    total_tokens: None,
+                                                };
+                                                let _ = emit_tracked(&app_stdout, step_chunk, &emitted_stdout, &done_stdout);
+                                            }
                                         }
                                     }
                                 }
@@ -709,6 +894,8 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     let done_stderr = Arc::clone(&done_emitted);
     let ctx_retry = ctx.clone();
     let model_failed = model.clone();
+    let runtime_state_stderr = Arc::clone(&runtime_state);
+    let hot_handoff_stderr = Arc::clone(&hot_handoff_requested);
     tokio::spawn(async move {
         let mut reader = BufReader::new(stderr).lines();
         let mut err_buffer = String::new();
@@ -722,6 +909,35 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
         get_pid_map().lock().await.remove(&stream_id_stderr);
 
         let status = child.wait().await;
+
+        // Hot-Handoff en Caliente (L1 -> L3): el proceso L1 fue cortado intencionalmente al detectar fallo crítico L3 en herramienta
+        if hot_handoff_stderr.load(Ordering::SeqCst) && !done_stderr.load(Ordering::SeqCst) {
+            let handoff_prompt = runtime_state_stderr
+                .lock()
+                .await
+                .take_hot_handoff_prompt(&ctx_retry.prompt)
+                .unwrap_or_else(|| ctx_retry.prompt.clone());
+            let mut escalated_ctx = ctx_retry.clone();
+            escalated_ctx.prompt = handoff_prompt;
+            escalated_ctx.effort = Some("high".to_string());
+            escalated_ctx.auto_heal_enabled = false;
+            escalated_ctx.harness_telemetry_line = None;
+            if let Err(e) = spawn_attempt(escalated_ctx, model_failed.clone(), remaining).await {
+                let fail = AgentStreamChunk {
+                    stream_id: stream_id_stderr.clone(),
+                    seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                    event_type: "error".into(),
+                    content: e,
+                    step_type: None,
+                    duration_seconds: None,
+                    input_tokens: None,
+                    output_tokens: None,
+                    total_tokens: None,
+                };
+                let _ = app_stderr.emit("agent-stream", fail);
+            }
+            return;
+        }
 
         // Fallback Chain: cuota agotada sin contenido previo -> mismo prompt con el siguiente modelo
         let quota = quota_stderr.load(Ordering::SeqCst) || is_quota_error(&err_buffer);
@@ -761,19 +977,70 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
             }
         }
         if let Ok(exit_status) = status {
-            if !exit_status.success() && !err_buffer.is_empty() {
-                let chunk = AgentStreamChunk {
-                    stream_id: stream_id_stderr.clone(),
-                    seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
-                    event_type: "error".into(),
-                    content: err_buffer,
-                    step_type: None,
-                    duration_seconds: None,
-                    input_tokens: None,
-                    output_tokens: None,
-                    total_tokens: None,
-                };
-                let _ = app_stderr.emit("agent-stream", chunk);
+            if !exit_status.success() {
+                // Pilar 6: Auto-Heal Escalation — Si falló en L1 (low) o L2 (medium), escalar al nivel detectado en el proceso o al siguiente
+                let curr_eff = ctx_retry.effort.as_deref().unwrap_or("low");
+                let rt_detected = runtime_state_stderr.lock().await.current_level.clone();
+                if ctx_retry.auto_heal_enabled
+                    && !done_stderr.load(Ordering::SeqCst)
+                    && (curr_eff == "low" || curr_eff == "medium")
+                {
+                    let next_eff = if rt_detected == "high" || curr_eff == "medium" {
+                        "high"
+                    } else {
+                        "medium"
+                    };
+                    let next_badge = if next_eff == "medium" { "L2 (Balanceado)" } else { "L3 (Profundo)" };
+                    let heal_notice = AgentStreamChunk {
+                        stream_id: stream_id_stderr.clone(),
+                        seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                        event_type: "delta".into(),
+                        content: format!(
+                            "<thought>\n⚡ [Auto-Heal Harness: Fallo detectado en `{}` -> Escalando automáticamente a `{}`]\n</thought>\n",
+                            curr_eff.to_uppercase(),
+                            next_badge
+                        ),
+                        step_type: Some("thinking".into()),
+                        duration_seconds: None,
+                        input_tokens: None,
+                        output_tokens: None,
+                        total_tokens: None,
+                    };
+                    let _ = app_stderr.emit("agent-stream", heal_notice);
+                    let mut escalated_ctx = ctx_retry.clone();
+                    escalated_ctx.effort = Some(next_eff.to_string());
+                    escalated_ctx.auto_heal_enabled = next_eff != "high";
+                    if let Err(e) = spawn_attempt(escalated_ctx, model_failed.clone(), remaining).await {
+                        let fail = AgentStreamChunk {
+                            stream_id: stream_id_stderr.clone(),
+                            seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                            event_type: "error".into(),
+                            content: e,
+                            step_type: None,
+                            duration_seconds: None,
+                            input_tokens: None,
+                            output_tokens: None,
+                            total_tokens: None,
+                        };
+                        let _ = app_stderr.emit("agent-stream", fail);
+                    }
+                    return;
+                }
+
+                if !err_buffer.is_empty() {
+                    let chunk = AgentStreamChunk {
+                        stream_id: stream_id_stderr.clone(),
+                        seq: chunk_seq_stderr.fetch_add(1, Ordering::SeqCst),
+                        event_type: "error".into(),
+                        content: err_buffer,
+                        step_type: None,
+                        duration_seconds: None,
+                        input_tokens: None,
+                        output_tokens: None,
+                        total_tokens: None,
+                    };
+                    let _ = app_stderr.emit("agent-stream", chunk);
+                }
             }
         }
     });

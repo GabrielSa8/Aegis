@@ -409,6 +409,7 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
             "enableGamemode": cfg.enable_gamemode,
             "enableGamescopeFsr": cfg.enable_gamescope_fsr,
             "agentType": cfg.agent_type,
+            "harness": cfg.harness,
             "closeToTray": cfg.close_to_tray,
             "minimizeToTray": cfg.minimize_to_tray
         })
@@ -572,6 +573,12 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
             if let Some(at) = st.get("agentType").and_then(|v| v.as_str()) {
                 if !at.is_empty() {
                     current_cfg.agent_type = at.to_string();
+                    cfg_modified = true;
+                }
+            }
+            if let Some(hr) = st.get("harness") {
+                if let Ok(h_cfg) = serde_json::from_value::<crate::harness::HarnessConfig>(hr.clone()) {
+                    current_cfg.harness = h_cfg;
                     cfg_modified = true;
                 }
             }

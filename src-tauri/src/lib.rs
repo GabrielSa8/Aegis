@@ -18,6 +18,7 @@ pub mod gateway;
 pub mod security;
 pub mod environment;
 pub mod discovery;
+pub mod harness;
 
 #[tauri::command]
 fn ping() -> String {
@@ -49,6 +50,7 @@ pub fn run() {
             agent::save_attachment,
             agent::import_attachment,
             agent::list_workspace_files,
+            harness::analyze_prompt_harness,
             vault::get_vault_notes,
             vault::read_vault_note,
             vault::save_vault_note,

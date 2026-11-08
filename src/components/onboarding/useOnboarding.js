@@ -17,6 +17,7 @@ export function useOnboarding({ onComplete }) {
   const [selectedEngine, setSelectedEngine] = useState('agy');
   const [selectedEditor, setSelectedEditor] = useState('auto');
   const [selectedTerminal, setSelectedTerminal] = useState('auto');
+  const [harnessEnabled, setHarnessEnabled] = useState(true);
 
   const fetchInspection = useCallback(async () => {
     try {
@@ -33,6 +34,7 @@ export function useOnboarding({ onComplete }) {
         if (res.currentConfig.agentType) setSelectedEngine(res.currentConfig.agentType);
         if (res.currentConfig.environment?.preferredEditor) setSelectedEditor(res.currentConfig.environment.preferredEditor);
         if (res.currentConfig.environment?.preferredTerminal) setSelectedTerminal(res.currentConfig.environment.preferredTerminal);
+        if (typeof res.currentConfig.harness?.enabled === 'boolean') setHarnessEnabled(res.currentConfig.harness.enabled);
       }
 
       // Si no hay bóveda seleccionada pero se detectaron bóvedas
@@ -75,7 +77,8 @@ export function useOnboarding({ onComplete }) {
         vaultPath: selectedVault,
         agentType: selectedEngine,
         preferredEditor: selectedEditor,
-        preferredTerminal: selectedTerminal
+        preferredTerminal: selectedTerminal,
+        harnessEnabled
       };
 
       const updated = await invoke('complete_system_onboarding', { payload });
@@ -112,6 +115,8 @@ export function useOnboarding({ onComplete }) {
     setSelectedEditor,
     selectedTerminal,
     setSelectedTerminal,
+    harnessEnabled,
+    setHarnessEnabled,
     handleCreateDefaultVault,
     handleFinish
   };

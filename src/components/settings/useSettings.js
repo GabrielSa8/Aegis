@@ -135,6 +135,7 @@ export function useSettings({ onThemeChange }) {
       if (res.enabledModules) {
         window.dispatchEvent(new CustomEvent('aegis:modules-changed', { detail: res.enabledModules }));
       }
+      window.dispatchEvent(new CustomEvent('aegis:config-reloaded', { detail: res }));
 
       setSaveStatus('Configuración persistida con éxito.');
       setTimeout(() => setSaveStatus(null), 3500);

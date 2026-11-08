@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Cpu, Terminal, Plus, CheckCircle2, AlertCircle, Puzzle } from 'lucide-react';
+import { BookOpen, Cpu, Terminal, Plus, Shield, Puzzle } from 'lucide-react';
 import { TacticalButton } from '../ui';
 
 export function OnboardingStepDiscovery({
@@ -13,6 +13,8 @@ export function OnboardingStepDiscovery({
   setSelectedEditor,
   selectedTerminal,
   setSelectedTerminal,
+  harnessEnabled = true,
+  setHarnessEnabled,
   onCreateDefaultVault,
   creatingVault
 }) {
@@ -150,6 +152,60 @@ export function OnboardingStepDiscovery({
               </div>
             );
           })}
+        </div>
+
+        {/* 2b. Switch Aegis Adaptive Harness (6 Pilares — Auto L1⇄L3) */}
+        <div
+          style={{
+            marginTop: '4px',
+            padding: '8px 10px',
+            borderRadius: 'var(--radius-sm)',
+            background: harnessEnabled
+              ? 'color-mix(in srgb, var(--primary) 10%, transparent)'
+              : 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
+            border: `1px solid ${harnessEnabled ? 'color-mix(in srgb, var(--primary) 40%, transparent)' : 'var(--border-color)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <Shield size={16} style={{ color: harnessEnabled ? 'var(--primary)' : 'var(--text-muted)', marginTop: '2px', flexShrink: 0 }} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                  Aegis Adaptive Harness (Auto-Nivel L1 ⇄ L2 ⇄ L3)
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.60rem',
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: harnessEnabled
+                      ? 'color-mix(in srgb, var(--primary) 18%, transparent)'
+                      : 'color-mix(in srgb, var(--border-color) 40%, transparent)',
+                    color: harnessEnabled ? 'var(--primary)' : 'var(--text-muted)'
+                  }}
+                >
+                  {harnessEnabled ? 'RECOMENDADO · ACTIVO' : 'MODO MANUAL / EXTERNO'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', lineHeight: 1.35, marginTop: '2px' }}>
+                No necesitas cambiar el nivel manualmente: detecta la complejidad de cada paso en tiempo real (inicia en L1 rápido, sube a L2/L3 si el paso es complejo y baja a L1 si vuelve a ser simple), poda tokens innecesarios y auto-verifica salidas. Desactívalo si prefieres usar tu propio harness.
+              </div>
+            </div>
+          </div>
+
+          <label className="tactical-switch" style={{ flexShrink: 0 }}>
+            <input
+              type="checkbox"
+              checked={Boolean(harnessEnabled)}
+              onChange={(e) => setHarnessEnabled && setHarnessEnabled(e.target.checked)}
+            />
+            <span className="tactical-slider" />
+          </label>
         </div>
       </div>
 

@@ -813,6 +813,7 @@ pub struct OnboardingCompletionPayload {
     pub agent_type: Option<String>,
     pub preferred_editor: Option<String>,
     pub preferred_terminal: Option<String>,
+    pub harness_enabled: Option<bool>,
 }
 
 #[tauri::command]
@@ -848,6 +849,9 @@ pub fn complete_system_onboarding(payload: OnboardingCompletionPayload) -> Resul
     }
     if let Some(term) = payload.preferred_terminal {
         cfg.environment.preferred_terminal = term;
+    }
+    if let Some(h_enabled) = payload.harness_enabled {
+        cfg.harness.enabled = h_enabled;
     }
 
     cfg.onboarding_completed = true;

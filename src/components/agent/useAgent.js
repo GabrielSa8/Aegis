@@ -20,8 +20,8 @@ export function useAgent() {
   const [selectedContextId, setSelectedContextId] = useState(() => contexts[0]?.id || 'general');
   const activeContext = contexts.find((c) => c.id === selectedContextId) || contexts[0] || DEFAULT_CONTEXTS[0];
 
-  // Nivel de esfuerzo / modelo activo ('low' = Flash, 'high' = Profundo)
-  const [effortMode, setEffortMode] = useState(activeContext.effort || 'low');
+  // Nivel de esfuerzo / modelo activo ('auto' = Harness L1⇄L3, 'low' = Flash, 'high' = Profundo)
+  const [effortMode, setEffortMode] = useState('auto');
   const effortRef = useRef(effortMode);
   useEffect(() => {
     effortRef.current = effortMode;
@@ -37,18 +37,28 @@ export function useAgent() {
   const [prompt, setPrompt] = useState('');
   const [agentType, setAgentType] = useState('agy');
 
-  // Carga reactiva de perfil y proveedor configurado
+  // Carga reactiva de perfil, proveedor configurado y estado del Harness Aegis
   useEffect(() => {
-    invoke('get_aegis_config')
-      .then((cfg) => {
-        if (cfg?.profile?.name) {
-          setOperatorName(cfg.profile.name);
-        }
-        if (cfg?.agentType) {
-          setAgentType(cfg.agentType);
-        }
-      })
-      .catch((e) => console.error('Error cargando perfil en AgentView:', e));
+    const syncFromConfig = () => {
+      invoke('get_aegis_config')
+        .then((cfg) => {
+          if (cfg?.profile?.name) {
+            setOperatorName(cfg.profile.name);
+          }
+          if (cfg?.agentType) {
+            setAgentType(cfg.agentType);
+          }
+          if (cfg?.harness?.enabled === false) {
+            setEffortMode((prev) => (prev === 'auto' ? (activeContextRef.current?.effort || 'low') : prev));
+          } else {
+            setEffortMode('auto');
+          }
+        })
+        .catch((e) => console.error('Error cargando perfil en AgentView:', e));
+    };
+    syncFromConfig();
+    window.addEventListener('aegis:config-reloaded', syncFromConfig);
+    return () => window.removeEventListener('aegis:config-reloaded', syncFromConfig);
   }, []);
 
   // Quick Macros
@@ -77,7 +87,7 @@ export function useAgent() {
     setSelectedContextId(id);
     const target = contexts.find((c) => c.id === id);
     if (target && target.effort) {
-      setEffortMode(target.effort);
+      setEffortMode((prev) => (prev === 'auto' ? 'auto' : target.effort));
     }
   };
 
