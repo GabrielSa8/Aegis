@@ -10,7 +10,9 @@ function TerminalStreamViewport({
   onCopy,
   onPermissionResponse,
   loadingProgress,
-  onSelectModel
+  onSelectModel,
+  agentType,
+  activeModel
 }) {
   return (
     <div 
@@ -28,6 +30,8 @@ function TerminalStreamViewport({
           onPermissionResponse={onPermissionResponse}
           loadingProgress={loadingProgress}
           onSelectModel={onSelectModel}
+          agentType={agentType}
+          activeModel={activeModel}
         />
       ))}
     </div>

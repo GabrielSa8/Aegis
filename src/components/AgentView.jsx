@@ -166,6 +166,8 @@ export default function AgentView() {
           onPermissionResponse={handlePermissionResponse}
           loadingProgress={loadingProgress}
           onSelectModel={setActiveModel}
+          agentType={agentType}
+          activeModel={activeModel}
         />
       </div>
 

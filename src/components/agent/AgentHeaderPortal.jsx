@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Brain, History, Trash2, Cpu } from 'lucide-react';
+import { Brain, History, Trash2, Cpu, Coins } from 'lucide-react';
 import EffortLaserSwitch from './EffortLaserSwitch';
 import ModelSelectorDropdown from './ModelSelectorDropdown';
+import { isPayPerTokenProvider, calculateTokenCostUsd, formatUsdCost } from './pricingModels';
 
 export default function AgentHeaderPortal({
   portalTarget,
@@ -51,13 +52,22 @@ export default function AgentHeaderPortal({
       return String(num);
     };
 
+    const isPayPerToken = isPayPerTokenProvider(agentType);
+    const sessionCostUsd = isPayPerToken
+      ? calculateTokenCostUsd(agentType, activeModel, input, output)
+      : null;
+    const formattedCost = isPayPerToken ? formatUsdCost(sessionCostUsd) : null;
+
     return {
       total,
       input,
       output,
-      formatted: formatNum(total)
+      formatted: formatNum(total),
+      isPayPerToken,
+      sessionCostUsd,
+      formattedCost
     };
-  }, [messages]);
+  }, [messages, agentType, activeModel]);
 
   if (!targetEl) return null;
 
@@ -133,28 +143,47 @@ export default function AgentHeaderPortal({
         <Trash2 size={13} />
       </button>
 
-      {/* 🪙 Métrica Táctica de Tokens de la Sesión */}
+      {/* 🪙 Métrica Táctica de Tokens de la Sesión (+ Costo USD en API de Pago) */}
       <div 
-        title={`Telemetría de Sesión: ${tokenStats.total.toLocaleString()} tokens (${tokenStats.input.toLocaleString()} in | ${tokenStats.output.toLocaleString()} out)`}
+        title={
+          tokenStats.isPayPerToken && tokenStats.formattedCost
+            ? `Telemetría Facturable: ${tokenStats.total.toLocaleString()} tokens (${tokenStats.input.toLocaleString()} in | ${tokenStats.output.toLocaleString()} out) · Costo Acumulado: $${tokenStats.sessionCostUsd.toFixed(5)} USD`
+            : `Telemetría de Sesión: ${tokenStats.total.toLocaleString()} tokens (${tokenStats.input.toLocaleString()} in | ${tokenStats.output.toLocaleString()} out)`
+        }
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '5px',
-          background: 'color-mix(in srgb, var(--primary) 14%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
+          background: tokenStats.isPayPerToken && tokenStats.formattedCost
+            ? 'color-mix(in srgb, var(--accent, #38bdf8) 14%, transparent)'
+            : 'color-mix(in srgb, var(--primary) 14%, transparent)',
+          border: tokenStats.isPayPerToken && tokenStats.formattedCost
+            ? '1px solid color-mix(in srgb, var(--accent, #38bdf8) 35%, transparent)'
+            : '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
           borderRadius: 'var(--radius-sm, 8px)',
           padding: '3px 8px',
           fontSize: '0.72rem',
           fontWeight: 700,
           fontFamily: 'var(--font-mono, monospace)',
-          color: 'var(--primary)',
+          color: tokenStats.isPayPerToken && tokenStats.formattedCost
+            ? 'var(--accent, #38bdf8)'
+            : 'var(--primary)',
           cursor: 'help',
           flexShrink: 0,
           whiteSpace: 'nowrap'
         }}
       >
-        <Cpu size={12} color="var(--primary)" />
-        <span>{tokenStats.formatted} tk</span>
+        {tokenStats.isPayPerToken && tokenStats.formattedCost ? (
+          <>
+            <Coins size={12} color="currentColor" />
+            <span>{tokenStats.formatted} tk · {tokenStats.formattedCost}</span>
+          </>
+        ) : (
+          <>
+            <Cpu size={12} color="currentColor" />
+            <span>{tokenStats.formatted} tk</span>
+          </>
+        )}
       </div>
     </div>,
     targetEl

@@ -1,10 +1,11 @@
-import { memo } from 'react';
-import { Check, Copy, ShieldAlert } from 'lucide-react';
+import { memo, useMemo } from 'react';
+import { Check, Copy, ShieldAlert, Coins } from 'lucide-react';
 import MarkdownViewer from '../MarkdownViewer';
 import ThoughtAccordion from './ThoughtAccordion';
 import { parseThoughtBlocks, renderAsciiProgress } from './agentHelpers';
 import { UsageQuotaCard, ModelInspectionCard, CreditsCard, SkillsCard, CortexCard } from './cards';
 import { useSmoothStream } from './useSmoothStream';
+import { isPayPerTokenProvider, calculateTokenCostUsd, formatUsdCost } from './pricingModels';
 
 function TerminalMessageEntry({
   message: m,
@@ -14,7 +15,9 @@ function TerminalMessageEntry({
   onCopy,
   onPermissionResponse,
   loadingProgress,
-  onSelectModel
+  onSelectModel,
+  agentType,
+  activeModel
 }) {
   const isUser = m.role === 'user';
   const isStreaming = Boolean(!isUser && m.loading);
@@ -25,6 +28,28 @@ function TerminalMessageEntry({
   const { thoughts, cleanContent, activeSkills = [] } = !isUser
     ? parseThoughtBlocks(smoothContent)
     : { thoughts: '', cleanContent: m.content, activeSkills: [] };
+
+  // Telemetría financiera táctica: solo para proveedores con API de pago por token
+  const costTelemetry = useMemo(() => {
+    if (isUser || !isPayPerTokenProvider(agentType)) return null;
+
+    const inTk = m.inputTokens || (m.totalTokens ? Math.round(m.totalTokens * 0.75) : 0);
+    const outTk = m.outputTokens || (m.totalTokens ? Math.round(m.totalTokens * 0.25) : 0);
+    const totalTk = m.totalTokens || (inTk + outTk);
+
+    if (totalTk <= 0) return null;
+
+    const costUsd = calculateTokenCostUsd(agentType, activeModel, inTk, outTk);
+    const formattedCost = formatUsdCost(costUsd);
+
+    return {
+      totalTk,
+      inTk,
+      outTk,
+      costUsd,
+      formattedCost
+    };
+  }, [isUser, agentType, activeModel, m.totalTokens, m.inputTokens, m.outputTokens]);
 
   return (
     <div className={`zen-stream-entry ${isUser ? 'is-user' : 'is-assistant'}`}>
@@ -84,6 +109,30 @@ function TerminalMessageEntry({
           {!isUser && (
             <span className={`zen-meta-status ${m.isError ? 'status-err' : m.loading ? 'status-run' : 'status-ok'}`}>
               {m.isError ? 'err' : m.loading ? 'run' : 'ok'}
+            </span>
+          )}
+
+          {/* Telemetría financiera en vivo (exclusiva para APIs de pago por token) */}
+          {!isUser && costTelemetry && costTelemetry.formattedCost && (
+            <span
+              className="zen-meta-tag"
+              title={`Consumo Facturable: ${costTelemetry.totalTk.toLocaleString()} tokens (${costTelemetry.inTk.toLocaleString()} in | ${costTelemetry.outTk.toLocaleString()} out) · Costo estimado: $${costTelemetry.costUsd.toFixed(5)} USD`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                color: 'var(--accent, #38bdf8)',
+                borderColor: 'color-mix(in srgb, var(--accent, #38bdf8) 40%, transparent)',
+                background: 'color-mix(in srgb, var(--accent, #38bdf8) 12%, transparent)',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+                padding: '1px 6px'
+              }}
+            >
+              <Coins size={10} color="currentColor" />
+              <span>{costTelemetry.formattedCost}</span>
             </span>
           )}
 
