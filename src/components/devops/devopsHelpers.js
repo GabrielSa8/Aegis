@@ -44,7 +44,7 @@ export function getSkillCategory(skill) {
 }
 
 /**
- * Paquetes de Modpacks iniciales universales y soberanos.
+ * Paquetes de Modpacks iniciales universales y portables.
  */
 export const DEFAULT_MODPACKS = [
   {
@@ -76,7 +76,7 @@ export const DEFAULT_MODPACKS = [
   },
   {
     id: 'pack_mobile_android',
-    name: 'Android Soberano (Granja)',
+    name: 'Android Granja',
     description: 'Kotlin moderno, Jetpack Compose, audio SoundPool y arquitectura limpia.',
     category: 'frontend',
     enabled: false,

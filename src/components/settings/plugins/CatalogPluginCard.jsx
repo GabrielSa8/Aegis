@@ -7,12 +7,24 @@ import {
   GitPullRequest, 
   Download, 
   CheckCircle2, 
-  Star 
+  Star,
+  Gamepad2,
+  PiggyBank,
+  CheckSquare,
+  Activity,
+  GitBranch,
+  Trash2,
+  Shield
 } from 'lucide-react';
 import TacticalBadge from '../../ui/TacticalBadge';
 import TacticalButton from '../../ui/TacticalButton';
 
 const ICON_MAP = {
+  Gamepad2,
+  PiggyBank,
+  CheckSquare,
+  Activity,
+  GitBranch,
   Coins,
   CloudRain,
   Music,
@@ -50,7 +62,7 @@ export default function CatalogPluginCard({
             width: '34px',
             height: '34px',
             borderRadius: 'var(--radius-sm)',
-            background: isInstalled ? 'var(--primary-glow)' : 'rgba(255,255,255,0.03)',
+            background: isInstalled ? 'var(--primary-glow)' : 'color-mix(in srgb, var(--text-high) 4%, transparent)',
             border: '1px solid ' + (isInstalled ? 'var(--primary)' : 'var(--border-color)'),
             display: 'flex',
             alignItems: 'center',
@@ -75,14 +87,16 @@ export default function CatalogPluginCard({
         </div>
 
         {isInstalled ? (
-          <label className="tactical-switch" style={{ cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={isEnabled}
-              onChange={() => onToggle(item.id, isEnabled)}
-            />
-            <span className="slider round"></span>
-          </label>
+          <TacticalButton
+            variant="secondary"
+            size="sm"
+            onClick={() => onToggle(item.id, false)}
+            title="Desinstalar módulo y liberar memoria"
+            style={{ color: 'var(--danger)' }}
+          >
+            <Trash2 size={12} style={{ marginRight: '4px' }} />
+            Desinstalar
+          </TacticalButton>
         ) : (
           <TacticalButton
             variant="primary"
@@ -102,22 +116,31 @@ export default function CatalogPluginCard({
         {item.description}
       </p>
 
-      {/* Footer: Calificación + Descargas + Estado */}
+      {/* Footer: Estado + Permisos / Métricas Reales */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingTop: '0.5rem',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderTop: '1px solid color-mix(in srgb, var(--border-color) 40%, transparent)',
         fontSize: '0.66rem',
         color: 'var(--text-muted)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--accent)' }}>
-            <Star size={11} fill="currentColor" /> {item.stars}
-          </span>
-          <span>•</span>
-          <span>{item.downloads} descargas</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {item.stars > 0 && item.downloads > 0 ? (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--accent)' }}>
+                <Star size={11} fill="currentColor" /> {item.stars}
+              </span>
+              <span>•</span>
+              <span>{item.downloads} descargas</span>
+            </>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+              <Shield size={11} color="var(--primary)" />
+              Módulo Nativo
+            </span>
+          )}
         </div>
 
         {isInstalled && (

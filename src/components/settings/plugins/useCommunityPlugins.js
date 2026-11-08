@@ -40,6 +40,14 @@ export function useCommunityPlugins() {
     fetchCatalog();
   }, [fetchPlugins, fetchCatalog]);
 
+  useEffect(() => {
+    const onReload = () => {
+      fetchPlugins();
+    };
+    window.addEventListener('aegis:config-reloaded', onReload);
+    return () => window.removeEventListener('aegis:config-reloaded', onReload);
+  }, [fetchPlugins]);
+
   const showActionMessage = (msg) => {
     setActionMessage(msg);
     setTimeout(() => setActionMessage(null), 3500);

@@ -270,7 +270,7 @@ pub fn create_plugin_scaffold(
             name.trim().to_string()
         },
         version: "1.0.0".to_string(),
-        description: "Extensión comunitaria soberana para Aegis Cockpit.".to_string(),
+        description: "Extensión comunitaria para Aegis Cockpit.".to_string(),
         author: std::env::var("USER").unwrap_or_else(|_| "Developer".to_string()),
         icon: Some("Puzzle".to_string()),
         category: if category.trim().is_empty() {
@@ -372,71 +372,200 @@ pub async fn fetch_community_plugins_catalog() -> Result<Vec<CatalogPluginItem>,
 fn get_curated_catalog_plugins() -> Vec<CatalogPluginItem> {
     vec![
         CatalogPluginItem {
-            id: "crypto-live-ticker".to_string(),
-            name: "Crypto Live Ticker".to_string(),
-            version: "1.0.2".to_string(),
-            description: "Monitor en vivo de precios BTC, ETH y SOL con micro-sparklines en el dock superior.".to_string(),
-            author: "AegisLab".to_string(),
-            category: "Finanzas".to_string(),
-            download_url: String::new(),
-            icon: Some("Coins".to_string()),
-            stars: 142,
-            downloads: 1250,
-            permissions: vec!["network".to_string()],
-        },
-        CatalogPluginItem {
-            id: "weather-radar-hud".to_string(),
-            name: "Weather Radar HUD".to_string(),
-            version: "1.1.0".to_string(),
-            description: "Widget meteorológico minimalista y satelital sin APIs de pago ni rastreo.".to_string(),
-            author: "NordicSovereign".to_string(),
-            category: "Utilidades".to_string(),
-            download_url: String::new(),
-            icon: Some("CloudRain".to_string()),
-            stars: 89,
-            downloads: 870,
-            permissions: vec!["network".to_string()],
-        },
-        CatalogPluginItem {
-            id: "spotify-mini-controller".to_string(),
-            name: "Spotify Mini Controller".to_string(),
-            version: "2.0.1".to_string(),
-            description: "Control de reproducción nativo para Spotify y clientes MPRIS Linux desde la cabecera.".to_string(),
-            author: "AegisLab".to_string(),
+            id: "gaming".to_string(),
+            name: "Centro de Ocio & Gaming".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Lanzador de juegos para Linux con aceleración GameMode, perfiles Proton/Wine, FSR upscaling y tracking de sesiones.".to_string(),
+            author: "Aegis Core".to_string(),
             category: "Gaming".to_string(),
             download_url: String::new(),
-            icon: Some("Music".to_string()),
-            stars: 215,
-            downloads: 2400,
-            permissions: vec!["system:info".to_string()],
+            icon: Some("Gamepad2".to_string()),
+            stars: 0,
+            downloads: 0,
+            permissions: vec!["system:process".to_string(), "storage".to_string()],
         },
         CatalogPluginItem {
-            id: "pomodoro-led-sync".to_string(),
-            name: "Pomodoro LED Sync".to_string(),
+            id: "finances".to_string(),
+            name: "Finanzas & Presupuestos".to_string(),
             version: "1.0.0".to_string(),
-            description: "Sincronizador de sesiones de enfoque con teclados RGB y notificaciones sutiles de sonido.".to_string(),
-            author: "HackerFlow".to_string(),
+            description: "Control de gastos, ingresos, radar de liquidez proyectado y simulador de compras diferidas (MSI) en SQLite local.".to_string(),
+            author: "Aegis Core".to_string(),
+            category: "Finanzas".to_string(),
+            download_url: String::new(),
+            icon: Some("PiggyBank".to_string()),
+            stars: 0,
+            downloads: 0,
+            permissions: vec!["storage".to_string()],
+        },
+        CatalogPluginItem {
+            id: "tasks".to_string(),
+            name: "Gestor de Tareas & Prioridades".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Tablero Kanban de 3 estados, matriz Eisenhower y sincronización bidireccional con tareas Markdown de Obsidian.".to_string(),
+            author: "Aegis Core".to_string(),
             category: "Productividad".to_string(),
             download_url: String::new(),
-            icon: Some("Timer".to_string()),
-            stars: 64,
-            downloads: 530,
-            permissions: vec!["system:info".to_string()],
+            icon: Some("CheckSquare".to_string()),
+            stars: 0,
+            downloads: 0,
+            permissions: vec!["storage".to_string(), "fs:vault".to_string()],
         },
         CatalogPluginItem {
-            id: "github-activity-radar".to_string(),
-            name: "GitHub Activity Radar".to_string(),
-            version: "1.2.4".to_string(),
-            description: "Feed de actividad en tiempo real de tus repositorios y pull requests asignados.".to_string(),
-            author: "DevOpsMatrix".to_string(),
+            id: "sentinel".to_string(),
+            name: "Centinela Host & Telemetría".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Monitoreo en tiempo real de CPU, memoria, ZRAM, alertas térmicas (>85°C) y administrador táctico de procesos.".to_string(),
+            author: "Aegis Core".to_string(),
+            category: "Sistema".to_string(),
+            download_url: String::new(),
+            icon: Some("Activity".to_string()),
+            stars: 0,
+            downloads: 0,
+            permissions: vec!["system:telemetry".to_string(), "system:process".to_string()],
+        },
+        CatalogPluginItem {
+            id: "devops".to_string(),
+            name: "DevOps & Flota Git".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Auditoría multi-repositorio unificada, branches divergentes, commits pendientes y estado de sincronización remota.".to_string(),
+            author: "Aegis Core".to_string(),
             category: "DevOps".to_string(),
             download_url: String::new(),
-            icon: Some("GitPullRequest".to_string()),
-            stars: 178,
-            downloads: 1890,
-            permissions: vec!["network".to_string()],
+            icon: Some("GitBranch".to_string()),
+            stars: 0,
+            downloads: 0,
+            permissions: vec!["system:git".to_string(), "fs:repos".to_string()],
         },
     ]
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginFileRecord {
+    pub relative_path: String,
+    pub content_hex: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportedCommunityPlugin {
+    pub id: String,
+    pub files: Vec<PluginFileRecord>,
+}
+
+pub fn export_community_plugins_payload() -> Result<Vec<ExportedCommunityPlugin>, String> {
+    let plugins_dir = get_plugins_dir()?;
+    let mut exported = Vec::new();
+
+    if !plugins_dir.exists() {
+        return Ok(exported);
+    }
+
+    let entries = fs::read_dir(&plugins_dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            let manifest_path = path.join("plugin.json");
+            if manifest_path.is_file() {
+                let plugin_id = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                let mut files = Vec::new();
+                let _ = collect_plugin_files(&path, &path, &mut files);
+                if !files.is_empty() {
+                    exported.push(ExportedCommunityPlugin {
+                        id: plugin_id,
+                        files,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(exported)
+}
+
+fn collect_plugin_files(
+    base_dir: &Path,
+    current_dir: &Path,
+    files: &mut Vec<PluginFileRecord>,
+) -> Result<(), String> {
+    let entries = fs::read_dir(current_dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Ok(bytes) = fs::read(&path) {
+                if bytes.len() <= 5 * 1024 * 1024 {
+                    if let Ok(stripped) = path.strip_prefix(base_dir) {
+                        let rel_path = stripped.to_string_lossy().to_string();
+                        files.push(PluginFileRecord {
+                            relative_path: rel_path,
+                            content_hex: hex::encode(bytes),
+                        });
+                    }
+                }
+            }
+        } else if path.is_dir() {
+            let _ = collect_plugin_files(base_dir, &path, files);
+        }
+    }
+    Ok(())
+}
+
+pub fn import_community_plugins_payload(
+    plugins: Vec<ExportedCommunityPlugin>,
+) -> Result<usize, String> {
+    let plugins_dir = get_plugins_dir()?;
+    let mut installed_count = 0;
+
+    for plugin in plugins {
+        if !plugin
+            .id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            continue;
+        }
+
+        let target_dir = plugins_dir.join(&plugin.id);
+        if !target_dir.exists() {
+            let _ = fs::create_dir_all(&target_dir);
+        }
+
+        let mut has_manifest = false;
+        for file in plugin.files {
+            let rel = Path::new(&file.relative_path);
+            if rel.components().any(|c| {
+                matches!(
+                    c,
+                    std::path::Component::ParentDir | std::path::Component::RootDir
+                )
+            }) {
+                continue;
+            }
+
+            if file.relative_path == "plugin.json" {
+                has_manifest = true;
+            }
+
+            let file_target = target_dir.join(rel);
+            if let Some(parent) = file_target.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+
+            if let Ok(bytes) = hex::decode(&file.content_hex) {
+                let _ = fs::write(file_target, bytes);
+            }
+        }
+
+        if has_manifest {
+            installed_count += 1;
+        }
+    }
+
+    Ok(installed_count)
 }
 
 #[cfg(test)]

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { saveBudget, deleteBudget, addCategory, deleteCategory } from '../../../utils/storage';
 
 /**
- * useManageBudgets — Custom Hook que encapsula la lógica soberana de
+ * useManageBudgets — Custom Hook que encapsula la lógica de
  * creación, eliminación y ajuste de presupuestos por categoría.
  */
 export function useManageBudgets({

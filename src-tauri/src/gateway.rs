@@ -389,7 +389,7 @@ async fn handle_incoming_telegram_message(
                 client,
                 token,
                 chat_id,
-                "✅ *Emparejamiento Exitoso*\nEste dispositivo móvil ahora está autorizado como Gateway Soberano de Aegis.\n\nEscribe `/help` para ver comandos disponibles.",
+                "✅ *Emparejamiento Exitoso*\nEste dispositivo móvil ahora está autorizado como Gateway de Aegis.\n\nEscribe `/help` para ver comandos disponibles.",
             ).await;
             let _ = app.emit("aegis:gateway-paired", chat_id);
             return;

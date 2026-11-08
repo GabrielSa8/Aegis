@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Cpu, Terminal, Plus, CheckCircle2, AlertCircle, Gamepad2 } from 'lucide-react';
+import { BookOpen, Cpu, Terminal, Plus, CheckCircle2, AlertCircle, Puzzle } from 'lucide-react';
 import { TacticalButton } from '../ui';
 
 export function OnboardingStepDiscovery({
@@ -153,7 +153,7 @@ export function OnboardingStepDiscovery({
         </div>
       </div>
 
-      {/* 3. Entorno de Desarrollo & Gaming */}
+      {/* 3. Entorno de Desarrollo & Extensiones */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
         {/* Editores y Terminales */}
         <div style={{ background: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.65rem' }}>
@@ -175,20 +175,14 @@ export function OnboardingStepDiscovery({
           </div>
         </div>
 
-        {/* Steam */}
+        {/* Arquitectura Modular & Modo Mínimo */}
         <div style={{ background: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.65rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-high)', marginBottom: '4px' }}>
-            <Gamepad2 size={14} color="var(--primary)" />
-            <span>Biblioteca Gaming Steam</span>
+            <Puzzle size={14} color="var(--primary)" />
+            <span>Arquitectura Modular</span>
           </div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {steam?.installed ? (
-              <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
-                ✓ Steam detectado ({steam.games_count} juegos instalados listos en 1 clic)
-              </span>
-            ) : (
-              <span>Steam no instalado en rutas estándar</span>
-            )}
+          <div style={{ fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+            Aegis arranca en <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Modo Mínimo (~18 MB RAM)</span>. En <span style={{ color: 'var(--text-high)', fontWeight: 600 }}>Ajustes ➔ Plugins</span> podrás instalar en 1-clic lo que necesites (Finanzas, Tareas, Centinela, Flota Git o Gaming).
           </div>
         </div>
       </div>

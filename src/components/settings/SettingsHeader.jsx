@@ -1,4 +1,4 @@
-import { Sliders, Save, X, Search, Keyboard, Undo2 } from 'lucide-react';
+import { Sliders, Save, X, Search, Keyboard, Undo2, AlertTriangle } from 'lucide-react';
 import { TacticalButton } from '../ui';
 import { AEGIS_VERSION } from './settingsHelpers';
 
@@ -41,7 +41,7 @@ export default function SettingsHeader({
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <h2 className="settings-header-title" style={{ fontSize: '0.92rem', fontWeight: 800, margin: 0, color: 'var(--text-high)', whiteSpace: 'nowrap' }}>
-              Centro de Configuración & Soberanía
+              Centro de Configuración & Sistema
             </h2>
             <span style={{
               fontSize: '0.62rem',
@@ -62,7 +62,24 @@ export default function SettingsHeader({
         </div>
       </div>
 
-      <div className="settings-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, marginLeft: 'auto' }}>
+      <div className="settings-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, marginLeft: 'auto', flexWrap: 'wrap' }}>
+        {/* Aclaración permanente de guardado */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '4px 8px',
+          borderRadius: 'var(--radius-sm)',
+          background: isDirty ? 'color-mix(in srgb, var(--warning) 12%, transparent)' : 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
+          border: `1px solid ${isDirty ? 'color-mix(in srgb, var(--warning) 30%, transparent)' : 'var(--border-color)'}`,
+          fontSize: '0.66rem',
+          color: isDirty ? 'var(--warning)' : 'var(--text-muted)',
+          whiteSpace: 'nowrap'
+        }}>
+          <AlertTriangle size={12} color={isDirty ? 'var(--warning)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+          <span>Ningún cambio será realizado de forma permanente hasta no dar en guardar</span>
+        </div>
+
         {/* Buscador táctico rápido de secciones/ajustes */}
         {setSearchQuery && (
           <div className="settings-search-bar" style={{

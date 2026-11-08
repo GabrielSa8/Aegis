@@ -81,7 +81,7 @@ export default function SystemBackupCard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Archive size={16} color="var(--primary)" />
             <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-high)' }}>
-              Respaldo Integral 3-2-1 Soberano (.aegisbackup)
+              Respaldo Integral 3-2-1 (.aegisbackup)
             </span>
           </div>
           <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>

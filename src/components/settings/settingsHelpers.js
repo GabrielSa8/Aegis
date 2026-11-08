@@ -111,7 +111,7 @@ export const THEMES = [
   }
 ];
 
-export const AEGIS_VERSION = 'v2.14.0';
+export const AEGIS_VERSION = 'v2.14.1';
 
 export const BILLING_LINKS = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },
@@ -122,7 +122,7 @@ export const BILLING_LINKS = [
 ];
 
 export const MASTER_SHORTCUTS = [
-  { key: 'Alt + 1..8', desc: 'Navegación instantánea entre pestañas de Aegis' },
+  { key: 'Alt + 1..N', desc: 'Navegación instantánea entre pestañas activas de Aegis' },
   { key: 'Ctrl + K', desc: 'Abrir Paleta de Comandos Omnibar & Buscador' },
   { key: 'Ctrl + O', desc: 'Alternar vista de pensamiento y herramientas del Agente' },
   { key: 'Ctrl + B', desc: 'Alternar panel lateral de carpetas en Bóveda' },

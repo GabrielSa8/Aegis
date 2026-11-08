@@ -14,7 +14,7 @@ export const MODULE_TOURS = {
         desc: 'Navegación espacial del cockpit y aislamiento de entornos para la IA.',
         details: [
           'Dock Superior: Control maestro con Omnibar (Ctrl + K), semáforos Git, Modo Zen (Alt + Z) y Guías [?].',
-          'Dock Izquierdo: Barra de pestañas (Alt + 1..8) retráctil al pasar el cursor por el borde izquierdo.',
+          'Dock Izquierdo: Barra de pestañas dinámicas (Alt + 1..N) retráctil al pasar el cursor por el borde izquierdo.',
           'Dock Derecho (Contextos): Cápsulas que aíslan el proyecto en disco, sus skills activas y notas de Obsidian para que la IA no mezcle archivos ni queme tokens.',
           'Al hacer clic en un contexto del dock derecho, el agente enfoca su memoria y operaciones en ese proyecto.'
         ]
@@ -52,7 +52,7 @@ export const MODULE_TOURS = {
 
   finances: {
     id: 'finances',
-    title: 'Sovereign Finances & LifeOS',
+    title: 'Finances & LifeOS',
     badge: 'Alt + 2',
     description: 'Cockpit financiero y timeline multi-dominio 100% offline respaldado por SQLite.',
     prerequisites: [
@@ -302,7 +302,7 @@ export const MODULE_TOURS = {
         title: 'Personalización de Tema & Escala',
         desc: 'Adapta la interfaz a tu gusto visual y monitor.',
         details: [
-          '12 temas soberanos integrados: Nordic Slate, Tokyo Night, OLED Pure Black, Amber Terminal, Dracula, Catppuccin, Gruvbox, Solarized, Synthwave \'84, Matrix, Nord Frost y Monokai Pro.',
+          '12 temas integrados: Nordic Slate, Tokyo Night, OLED Pure Black, Amber Terminal, Dracula, Catppuccin, Gruvbox, Solarized, Synthwave \'84, Matrix, Nord Frost y Monokai Pro.',
           'Slider de escala de interfaz (zoom reactivo para pantallas pequeñas o ultrawide).'
         ]
       },

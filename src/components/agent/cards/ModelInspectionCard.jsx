@@ -35,7 +35,7 @@ function ModelInspectionCard({ activeModel, onSelectModel, agentType = 'agy' }) 
     agentType === 'claude' || agentType === 'anthropic'
       ? 'Anthropic Claude'
       : agentType === 'deepseek'
-        ? 'DeepSeek (Oficial / Soberano)'
+        ? 'DeepSeek (Oficial)'
         : agentType === 'openai'
           ? 'OpenAI API'
           : agentType === 'openrouter'

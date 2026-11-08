@@ -60,7 +60,7 @@ function UsageQuotaCard({ quotas: rawQuotas, cardData, provider: rawProvider }) 
     codex: 'OpenAI Codex',
     openai: 'OpenAI Platform',
     ollama: 'Ollama Local',
-    deepseek: 'DeepSeek Soberano',
+    deepseek: 'DeepSeek',
     openrouter: 'OpenRouter Platform',
     custom: 'CLI Local Personalizado'
   };

@@ -369,7 +369,7 @@ fn build_skill_draft(
             .unwrap_or(&base_md)
             .trim_end();
         let appended = format!(
-            "{clean_base}\n\n{CORTEX_SECTION_HEADER}\n> Reglas soberanas y correcciones extraídas de tus sesiones en Aegis ({hits} señales, {errors} correcciones/fricciones):\n\n### Directrices y Consultas del Operador\n{queries_md}\n\n### Acuerdos Técnicos Aplicados\n{takeaways_md}\n"
+            "{clean_base}\n\n{CORTEX_SECTION_HEADER}\n> Reglas locales y correcciones extraídas de tus sesiones en Aegis ({hits} señales, {errors} correcciones/fricciones):\n\n### Directrices y Consultas del Operador\n{queries_md}\n\n### Acuerdos Técnicos Aplicados\n{takeaways_md}\n"
         );
         (
             format!("Evolución de Skill Instalada: {}", slug),

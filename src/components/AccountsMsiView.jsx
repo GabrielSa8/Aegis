@@ -38,7 +38,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* 💳 SECCIÓN 1: CUENTAS Y TARJETAS SOBERANAS */}
+      {/* 💳 SECCIÓN 1: CUENTAS Y TARJETAS */}
       <AccountsSection
         paymentMethods={paymentMethods}
         onAddClick={() => setShowAccountModal(true)}

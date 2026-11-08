@@ -106,20 +106,23 @@ export function useGaming() {
       const steamItems = Array.isArray(unifiedCatalog)
         ? unifiedCatalog
             .filter((g) => g.isSteam || Boolean(g.appId))
-            .map((g) => ({
-              appId: g.appId,
-              name: g.title,
-              title: g.title,
-              coverImage: g.coverUrl,
-              coverUrl: g.coverUrl,
-              bannerUrl: g.bannerUrl,
-              isInstalled: g.isInstalled,
-              lastPlayedDevice: g.lastPlayedDevice,
-              achievementsUnlocked: g.achievementsUnlocked,
-              achievementsTotal: g.achievementsTotal,
-              totalPlayTimeSeconds: g.totalPlayTimeSeconds,
-              isSteam: true
-            }))
+            .map((g) => {
+              const cover = g.coverImage || g.coverUrl || (g.appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.appId}/library_600x900.jpg` : null);
+              return {
+                appId: g.appId,
+                name: g.title,
+                title: g.title,
+                coverImage: cover,
+                coverUrl: cover,
+                bannerUrl: g.bannerUrl || cover,
+                isInstalled: g.isInstalled,
+                lastPlayedDevice: g.lastPlayedDevice,
+                achievementsUnlocked: g.achievementsUnlocked,
+                achievementsTotal: g.achievementsTotal,
+                totalPlayTimeSeconds: g.totalPlayTimeSeconds,
+                isSteam: true
+              };
+            })
         : [];
 
       setSteamGames(steamItems);

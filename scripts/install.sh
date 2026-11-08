@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Aegis — Sovereign Cognitive Desktop Cockpit
+# Aegis — Cognitive Desktop Cockpit
 # One-Line Installer & Updater for Linux
 # https://github.com/GabrielSa8/Aegis
 # ==============================================================================
@@ -44,7 +44,7 @@ echo " ██╔══██║██╔══╝  ██║   ██║██�
 echo " ██║  ██║███████╗╚██████╔╝██║███████║"
 echo " ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝"
 echo -e "${NC}"
-echo -e "${BOLD}Sovereign Cognitive Desktop Cockpit — One-Line Installer${NC}"
+echo -e "${BOLD}Cognitive Desktop Cockpit — One-Line Installer${NC}"
 echo "---------------------------------------------------------"
 
 # 1. OS & Architecture Check
@@ -86,7 +86,7 @@ check_dependencies() {
 check_dependencies
 
 # 3. Resolve Latest Release Tag dynamically (Resilient to GitHub API rate-limits)
-echo -e "${BLUE}🔍 Consultando última versión soberana en GitHub...${NC}"
+echo -e "${BLUE}🔍 Consultando última versión oficial en GitHub...${NC}"
 
 LATEST_TAG=""
 if command -v curl >/dev/null 2>&1; then

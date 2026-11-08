@@ -32,7 +32,7 @@ export default function LeftTabsDock({
 }) {
   const visibleTabs = TABS.filter((tab) => {
     if (tab.id === 'agent' || tab.id === 'vault' || tab.id === 'settings') return true;
-    return enabledModules[tab.id] !== false;
+    return Boolean(enabledModules[tab.id]);
   }).map((tab, idx) => ({
     ...tab,
     shortcut: String(idx + 1)

@@ -39,7 +39,7 @@ export default function FinanceStructureView({
     return () => { mounted = false; };
   }, [safeTransactions.length]);
 
-  // Hook soberano de Cuentas, MSI y Recurrentes
+  // Hook de Cuentas, MSI y Recurrentes
   const {
     paymentMethods, msiPlans, recurringExpenses,
     showAccountModal, setShowAccountModal,
@@ -269,7 +269,7 @@ export default function FinanceStructureView({
         </div>
       </div>
 
-      {/* Modales Soberanos */}
+      {/* Modales */}
       <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} accountForm={accountForm} setAccountForm={setAccountForm} onSubmit={handleSaveAccount} />
       <MsiModal isOpen={showMsiModal} onClose={() => setShowMsiModal(false)} msiForm={msiForm} setMsiForm={setMsiForm} paymentMethods={paymentMethods} onSubmit={handleSaveMsi} />
       <RecurringModal isOpen={showRecurringModal} onClose={() => setShowRecurringModal(false)} recurringForm={recurringForm} setRecurringForm={setRecurringForm} paymentMethods={paymentMethods} onSubmit={handleSaveRecurring} />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldCheck, Layers } from 'lucide-react';
+import { ShieldCheck, Layers, AlertTriangle } from 'lucide-react';
 import { CORE_MODULES, OPTIONAL_PLUGINS, DEFAULT_ENABLED_MODULES } from '../../plugins/pluginRegistry';
 import PluginsHeader from './plugins/PluginsHeader';
 import CoreModuleCard from './plugins/CoreModuleCard';
@@ -24,12 +24,12 @@ export default function PluginsSection({ config, setConfig }) {
   };
 
   const handleToggle = (id) => {
-    const isCurrentlyEnabled = enabledModules[id] !== false;
+    const isCurrentlyEnabled = Boolean(enabledModules[id]);
     const nextState = !isCurrentlyEnabled;
     const updated = { ...enabledModules, [id]: nextState };
     updateModules(
       updated, 
-      nextState ? `Módulo "${id}" activado.` : `Módulo "${id}" desactivado. Recursos liberados.`
+      nextState ? `Módulo "${id}" instalado y activado.` : `Módulo "${id}" desactivado. Recursos liberados.`
     );
   };
 
@@ -41,7 +41,7 @@ export default function PluginsSection({ config, setConfig }) {
       devops: false,
       gaming: false
     };
-    updateModules(minimal, 'Modo Mínimo Soberano activo. Solo Agente y Bóveda.');
+    updateModules(minimal, 'Modo Mínimo activo. Solo Agente, Bóveda y Sistema (~18 MB RAM).');
   };
 
   const handleEnableAll = () => {
@@ -52,7 +52,7 @@ export default function PluginsSection({ config, setConfig }) {
       devops: true,
       gaming: true
     };
-    updateModules(all, 'Todos los módulos opcionales activados.');
+    updateModules(all, 'Todos los módulos opcionales instalados y activados.');
   };
 
   const activeCount = Object.entries(enabledModules)
@@ -85,28 +85,29 @@ export default function PluginsSection({ config, setConfig }) {
         </div>
       </div>
 
-      {/* 🧩 2. Plugins Opcionales & Desacoplables */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-          <Layers size={14} color="var(--primary)" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Plugins Opcionales & Descargables
-          </span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.75rem' }}>
-          {OPTIONAL_PLUGINS.map((plug) => (
-            <PluginCard
-              key={plug.id}
-              plugin={plug}
-              isEnabled={enabledModules[plug.id] !== false}
-              onToggle={handleToggle}
-            />
-          ))}
-        </div>
+      {/* ⚠️ Aclaración importante de persistencia */}
+      <div style={{
+        padding: '8px 12px',
+        borderRadius: 'var(--radius-sm)',
+        background: 'color-mix(in srgb, var(--primary) 8%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)',
+        fontSize: '0.72rem',
+        color: 'var(--text-high)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <AlertTriangle size={15} color="var(--primary)" style={{ flexShrink: 0 }} />
+        <span>
+          <strong>Aviso de Persistencia:</strong> Ningún cambio será realizado de forma permanente hasta no dar en guardar. Si instalas o desinstalas un módulo, debes pulsar <strong>"Guardar Todo"</strong> en la cabecera superior para que se preserve en tu Dock y sistema.
+        </span>
       </div>
 
-      {/* 🚀 3. Ecosistema de Extensiones y Sideloading (Fase G.5.1) */}
-      <CommunityPluginsDeck />
+      {/* 🧩 2. Catálogo & Extensiones Instaladas */}
+      <CommunityPluginsDeck
+        enabledModules={enabledModules}
+        onToggleModule={handleToggle}
+      />
     </div>
   );
 }

@@ -52,7 +52,7 @@ export const COMMON_SYSTEM_COMMANDS = [
     id: 'cortex',
     command: '/cortex',
     label: 'Hermes Cortex (Auto-Evolución)',
-    desc: 'Inspecciona patrones de hábitos (0 tokens) y propuestas soberanas de skills',
+    desc: 'Inspecciona patrones de hábitos (0 tokens) y propuestas de skills',
     icon: 'Brain',
     category: 'Agente'
   }

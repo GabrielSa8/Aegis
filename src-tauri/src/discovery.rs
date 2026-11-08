@@ -485,7 +485,7 @@ pub fn detect_ai_engines() -> Vec<DetectedAiEngine> {
             name: "Codex Agent CLI (codex)".to_string(),
             installed: true,
             path: codex_path.map(|p| p.to_string_lossy().to_string()),
-            details: Some("Agente CLI soberano detectado en sistema".to_string()),
+            details: Some("Agente CLI detectado en sistema".to_string()),
             account_email: codex_email,
             plan_type: codex_plan,
             auth_status: codex_status,
@@ -498,12 +498,12 @@ pub fn detect_ai_engines() -> Vec<DetectedAiEngine> {
     let ollama_installed = ollama_path.is_some();
     engines.push(DetectedAiEngine {
         id: "ollama".to_string(),
-        name: "Ollama Local (Offline / Soberano)".to_string(),
+        name: "Ollama Local (Offline)".to_string(),
         installed: ollama_installed,
         path: ollama_path.map(|p| p.to_string_lossy().to_string()),
         details: Some("Inferencia local sin conexión ni costo de tokens".to_string()),
         account_email: Some("Localhost (Offline)".to_string()),
-        plan_type: Some("100% Gratuito / Soberano".to_string()),
+        plan_type: Some("100% Gratuito / Local".to_string()),
         auth_status: "local".to_string(),
         saved_accounts: Vec::new(),
     });
@@ -512,7 +512,7 @@ pub fn detect_ai_engines() -> Vec<DetectedAiEngine> {
     let has_deepseek = std::env::var("DEEPSEEK_API_KEY").map(|k| !k.trim().is_empty()).unwrap_or(false);
     engines.push(DetectedAiEngine {
         id: "deepseek".to_string(),
-        name: "DeepSeek API (Soberano)".to_string(),
+        name: "DeepSeek API".to_string(),
         installed: has_deepseek,
         path: None,
         details: Some(if has_deepseek { "Variable DEEPSEEK_API_KEY detectada" } else { "Requiere API key" }.to_string()),
@@ -772,7 +772,7 @@ pub fn auto_create_default_vault(custom_name: Option<String>) -> Result<String, 
     let inicio_content = format!(
         "---\naliases:\n  - Inicio\n  - Tablero\ntags:\n  - cerebro-ia\n  - inicio\nfecha_creacion: {today}\n---\n\n\
         # 🛡️ Aegis — Tablero Maestro de Vida & Conocimiento\n\n\
-        > [!NOTE] Bóveda Soberana Inicializada\n\
+        > [!NOTE] Bóveda Inicializada\n\
         > Esta bóveda fue generada automáticamente por Aegis en formato Obsidian Markdown 100% libre y compatible.\n\n\
         ## 📌 Hubs Principales\n\
         * [[00 Sistema/Inbox|📥 Inbox & Bandeja de Entrada]]\n\

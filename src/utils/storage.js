@@ -1,4 +1,4 @@
-// Sistema de persistencia soberana local para LifeOS Finanzas (SQLite embebido en Tauri v2 + Fallback IndexedDB)
+// Sistema de persistencia local para LifeOS Finanzas (SQLite embebido en Tauri v2 + Fallback IndexedDB)
 import { invoke } from '@tauri-apps/api/core';
 import {
   getAllTransactions as idbGetAllTransactions,

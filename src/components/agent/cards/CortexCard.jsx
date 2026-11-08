@@ -49,7 +49,7 @@ function CortexCard({ cardData }) {
               Hermes Cortex · Núcleo de Meta-Aprendizaje
             </span>
             <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
-              Logger silencioso en SQLite (0 tokens) · Compuerta de aprobación soberana
+              Logger silencioso en SQLite (0 tokens) · Compuerta de aprobación del usuario
             </div>
           </div>
         </div>

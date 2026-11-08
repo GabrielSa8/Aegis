@@ -31,13 +31,13 @@ export function getBaseCommands({
     { tabId: 'tasks', title: 'Ir a Tareas de Bóveda', icon: CheckSquare },
     { tabId: 'sentinel', title: 'Ir a Centinela & Telemetría Host', icon: Activity },
     { tabId: 'gaming', title: 'Ir a Gaming Cockpit & Aceleración', icon: Gamepad2 },
-    { tabId: 'settings', title: 'Ir a Sistema & Configuración Soberana', icon: Settings },
+    { tabId: 'settings', title: 'Ir a Sistema & Configuración', icon: Settings },
   ];
 
   const navCommands = allTabs
     .filter((cmd) => {
       if (cmd.tabId === 'agent' || cmd.tabId === 'vault' || cmd.tabId === 'settings') return true;
-      return enabledModules[cmd.tabId] !== false;
+      return Boolean(enabledModules[cmd.tabId]);
     })
     .map((cmd, idx) => ({
       id: `nav-${cmd.tabId}`,
@@ -97,7 +97,7 @@ export function getBaseCommands({
     }
   ];
 
-  if (enabledModules.gaming !== false) {
+  if (Boolean(enabledModules.gaming)) {
     actions.push({ 
       id: 'act-steam', 
       title: 'Lanzar Steam con GameMode', 
@@ -110,7 +110,7 @@ export function getBaseCommands({
     });
   }
 
-  // 🎨 Temas Visuales Soberanos Dinámicos
+  // 🎨 Temas Visuales Dinámicos
   const themeCommands = THEMES.map((t) => ({
     id: `theme-${t.id}`,
     title: `Tema: ${t.name}`,

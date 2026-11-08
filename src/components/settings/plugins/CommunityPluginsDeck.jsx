@@ -8,9 +8,10 @@ import CreatePluginModal from './CreatePluginModal';
 import TacticalButton from '../../ui/TacticalButton';
 import TacticalBadge from '../../ui/TacticalBadge';
 
-const CATEGORIES = ['Todos', 'Finanzas', 'Utilidades', 'Productividad', 'DevOps', 'Gaming'];
+const CATEGORIES = ['Todos', 'Gaming', 'Finanzas', 'Productividad', 'Sistema', 'DevOps', 'Utilidades'];
+const OFFICIAL_IDS = ['finances', 'tasks', 'sentinel', 'devops', 'gaming'];
 
-export default function CommunityPluginsDeck() {
+export default function CommunityPluginsDeck({ enabledModules = {}, onToggleModule = () => {} }) {
   const {
     plugins,
     catalog,
@@ -40,6 +41,16 @@ export default function CommunityPluginsDeck() {
     });
     return map;
   }, [plugins]);
+
+  const activeOfficialCount = useMemo(() => {
+    return OFFICIAL_IDS.filter(id => Boolean(enabledModules[id])).length;
+  }, [enabledModules]);
+
+  const totalInstalled = activeOfficialCount + plugins.length;
+
+  const installedOfficialItems = useMemo(() => {
+    return catalog.filter(item => OFFICIAL_IDS.includes(item.id) && Boolean(enabledModules[item.id]));
+  }, [catalog, enabledModules]);
 
   const filteredCatalog = useMemo(() => {
     return catalog.filter(item => {
@@ -77,7 +88,7 @@ export default function CommunityPluginsDeck() {
             }}
           >
             <Compass size={13} color={activeTab === 'catalog' ? 'var(--primary)' : 'currentColor'} />
-            <span>Catálogo Comunitario ({catalog.length})</span>
+            <span>Catálogo ({catalog.length})</span>
           </button>
 
           <button
@@ -99,7 +110,7 @@ export default function CommunityPluginsDeck() {
             }}
           >
             <PackageCheck size={13} color={activeTab === 'installed' ? 'var(--primary)' : 'currentColor'} />
-            <span>Instalados ({plugins.length})</span>
+            <span>Instalados ({totalInstalled})</span>
           </button>
         </div>
 
@@ -206,16 +217,31 @@ export default function CommunityPluginsDeck() {
           {/* Grid del Catálogo */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.75rem' }}>
             {filteredCatalog.map(item => {
-              const installed = installedMap[item.id];
+              const isOfficial = OFFICIAL_IDS.includes(item.id);
+              const installed = isOfficial ? Boolean(enabledModules[item.id]) : Boolean(installedMap[item.id]);
+              const isEnabled = isOfficial ? Boolean(enabledModules[item.id]) : (installedMap[item.id]?.isEnabled ?? false);
+
               return (
                 <CatalogPluginCard
                   key={item.id}
                   item={item}
-                  isInstalled={Boolean(installed)}
-                  isEnabled={installed ? installed.isEnabled : false}
+                  isInstalled={installed}
+                  isEnabled={isEnabled}
                   isInstalling={installingPluginId === item.id}
-                  onInstall={installFromCatalog}
-                  onToggle={togglePlugin}
+                  onInstall={(catItem) => {
+                    if (isOfficial) {
+                      onToggleModule(catItem.id);
+                    } else {
+                      installFromCatalog(catItem);
+                    }
+                  }}
+                  onToggle={(id, current) => {
+                    if (isOfficial) {
+                      onToggleModule(id);
+                    } else {
+                      togglePlugin(id, current);
+                    }
+                  }}
                 />
               );
             })}
@@ -225,7 +251,7 @@ export default function CommunityPluginsDeck() {
 
       {/* Vista Instalados: Lista o Empty State */}
       {activeTab === 'installed' && (
-        plugins.length === 0 ? (
+        totalInstalled === 0 ? (
           <div style={{
             padding: '2rem 1rem',
             borderRadius: 'var(--radius-md)',
@@ -239,14 +265,26 @@ export default function CommunityPluginsDeck() {
           }}>
             <Sparkles size={20} color="var(--primary)" style={{ opacity: 0.6 }} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-high)' }}>
-              No tienes extensiones comunitarias instaladas
+              No tienes módulos ni extensiones instaladas
             </span>
             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              Explora el <strong>Catálogo Comunitario</strong> para instalar plugins verificados en 1-clic.
+              Explora el <strong>Catálogo de Extensiones</strong> para instalar el Centro de Gaming, Finanzas, Tareas, Centinela o DevOps en 1-clic.
             </span>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.75rem' }}>
+            {/* Módulos oficiales instalados/activos */}
+            {installedOfficialItems.map(item => (
+              <CatalogPluginCard
+                key={item.id}
+                item={item}
+                isInstalled={true}
+                isEnabled={true}
+                onInstall={() => onToggleModule(item.id)}
+                onToggle={(id) => onToggleModule(id)}
+              />
+            ))}
+            {/* Plugins comunitarios de disco */}
             {plugins.map(p => (
               <CommunityPluginCard
                 key={p.manifest.id}

@@ -37,7 +37,7 @@ export function useAgent() {
   const [prompt, setPrompt] = useState('');
   const [agentType, setAgentType] = useState('agy');
 
-  // Carga reactiva de perfil soberano y proveedor configurado
+  // Carga reactiva de perfil y proveedor configurado
   useEffect(() => {
     invoke('get_aegis_config')
       .then((cfg) => {

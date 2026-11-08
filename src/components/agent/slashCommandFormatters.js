@@ -103,7 +103,7 @@ export const PROVIDER_MODELS = {
       provider: 'Meta (Ollama)',
       family: 'Llama',
       badge: '🖥️ Local',
-      desc: 'Modelo local soberano ejecutándose 100% en tu máquina.',
+      desc: 'Modelo local ejecutándose 100% en tu máquina.',
       effort: 'low'
     },
     {
@@ -469,7 +469,7 @@ export function formatUsageResponse(rawOutput, fallbackStats, agentType = 'agy')
       claude: 'Anthropic Claude Code',
       codex: 'OpenAI Codex',
       ollama: 'Ollama Local',
-      deepseek: 'DeepSeek Soberano',
+      deepseek: 'DeepSeek',
       openai: 'OpenAI Platform'
     };
     const providerTitle = providerNames[agentType] || agentType.toUpperCase();

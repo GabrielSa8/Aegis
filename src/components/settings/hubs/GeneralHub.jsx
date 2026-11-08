@@ -39,7 +39,7 @@ export function GeneralHub({
             Operador & Entorno de Trabajo
           </h3>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
-            Define tu identidad soberana, el tono de ejecución del Agente IA y tus herramientas nativas de desarrollo.
+            Define tu perfil, el tono de ejecución del Agente IA y tus herramientas nativas de desarrollo.
           </p>
         </div>
         <button
@@ -99,7 +99,7 @@ export function GeneralHub({
                 type="text"
                 value={profile.name || ''}
                 onChange={(e) => updateProfile({ name: e.target.value })}
-                placeholder="Operador Soberano"
+                placeholder="Operador"
                 style={{ fontSize: '0.78rem' }}
               />
             </div>

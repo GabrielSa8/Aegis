@@ -29,7 +29,7 @@ import {
 export const CORE_MODULES = [
   {
     id: 'agent',
-    name: 'Agente Soberano IA',
+    name: 'Agente IA',
     description: 'Terminal de interacción inteligente, comandos bash, razonamiento profundo y fallback multi-modelo.',
     icon: Bot,
     category: 'Núcleo Primario',
@@ -50,7 +50,7 @@ export const CORE_MODULES = [
   {
     id: 'settings',
     name: 'Sistema & Gestor de Plugins',
-    description: 'Configuración soberana, control de almacenamiento SQLite, gestión de módulos y ajustes de perfil.',
+    description: 'Configuración del sistema, control de almacenamiento SQLite, gestión de módulos y ajustes de perfil.',
     icon: Settings,
     category: 'Núcleo Primario',
     isCore: true,
@@ -68,7 +68,7 @@ export const OPTIONAL_PLUGINS = [
     category: 'Productividad Personal',
     isCore: false,
     ramImpact: 'Ligero (~6 MB)',
-    defaultEnabled: true,
+    defaultEnabled: false,
     shortcut: 'Alt + 2',
     features: [
       'Radar de liquidez proyectado',
@@ -85,7 +85,7 @@ export const OPTIONAL_PLUGINS = [
     category: 'Productividad Personal',
     isCore: false,
     ramImpact: 'Mínimo (~3 MB)',
-    defaultEnabled: true,
+    defaultEnabled: false,
     shortcut: 'Alt + 5',
     features: [
       'Tablero Kanban interactivo',
@@ -102,7 +102,7 @@ export const OPTIONAL_PLUGINS = [
     category: 'Sistema & Rendimiento',
     isCore: false,
     ramImpact: 'Moderado (~12 MB)',
-    defaultEnabled: true,
+    defaultEnabled: false,
     shortcut: 'Alt + 6',
     features: [
       'Lectura térmica con alerta preventiva >85°C',
@@ -119,7 +119,7 @@ export const OPTIONAL_PLUGINS = [
     category: 'Desarrollo de Software',
     isCore: false,
     ramImpact: 'Bajo (~4 MB)',
-    defaultEnabled: true,
+    defaultEnabled: false,
     shortcut: 'Alt + 4',
     features: [
       'Auditoría multi-repositorio unificada',
@@ -136,7 +136,7 @@ export const OPTIONAL_PLUGINS = [
     category: 'Gaming & Ocio',
     isCore: false,
     ramImpact: 'Bajo en reposo (~5 MB)',
-    defaultEnabled: true,
+    defaultEnabled: false,
     shortcut: 'Alt + 7',
     features: [
       'Aceleración GameMode con 1-clic',
@@ -150,11 +150,11 @@ export const OPTIONAL_PLUGINS = [
 export const ALL_PLUGINS = [...CORE_MODULES, ...OPTIONAL_PLUGINS];
 
 export const DEFAULT_ENABLED_MODULES = {
-  finances: true,
-  tasks: true,
-  sentinel: true,
-  devops: true,
-  gaming: true
+  finances: false,
+  tasks: false,
+  sentinel: false,
+  devops: false,
+  gaming: false
 };
 
 export const TAB_ORDER = [
@@ -171,6 +171,6 @@ export const TAB_ORDER = [
 export function getVisibleTabs(enabledModules = {}) {
   return TAB_ORDER.filter((id) => {
     if (id === 'agent' || id === 'vault' || id === 'settings') return true;
-    return enabledModules[id] !== false;
+    return Boolean(enabledModules[id]);
   });
 }

@@ -86,11 +86,11 @@ export default function ApiCredentialsCard({ onOpenExternal }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <KeyRound size={15} color="var(--primary)" />
           <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-high)' }}>
-            Autenticación Soberana y API Keys
+            Autenticación y Claves API
           </span>
         </div>
         <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-          Almacenamiento local soberano ($XDG_CONFIG_HOME)
+          Almacenamiento local ($XDG_CONFIG_HOME)
         </span>
       </div>
 

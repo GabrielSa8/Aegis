@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Gamepad2, Play, Download, HardDriveDownload } from 'lucide-react';
 import { formatPlayDuration } from './gameHelpers';
 import GameCardHeaderBadges from './GameCardHeaderBadges';
@@ -13,9 +13,31 @@ const GameCard = memo(function GameCard({
   onDelete,
   onOpenDetails
 }) {
+  const defaultCover = isSteam
+    ? (game.coverImage || game.coverUrl || (game.appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_600x900.jpg` : null))
+    : game.bannerUrl;
+
+  const [imgSrc, setImgSrc] = useState(defaultCover);
   const [imgFailed, setImgFailed] = useState(false);
-  const coverSrc = isSteam ? (game.coverImage || game.coverUrl) : game.bannerUrl;
-  const hasCover = Boolean(coverSrc) && !imgFailed;
+
+  useEffect(() => {
+    const fresh = isSteam
+      ? (game.coverImage || game.coverUrl || (game.appId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_600x900.jpg` : null))
+      : game.bannerUrl;
+    setImgSrc(fresh);
+    setImgFailed(!fresh);
+  }, [game.coverImage, game.coverUrl, game.bannerUrl, game.appId, isSteam]);
+
+  const handleImageError = () => {
+    if (isSteam && game.appId && imgSrc && !imgSrc.includes('header.jpg')) {
+      // Fallback secundario a header horizontal oficial de Steam
+      setImgSrc(`https://cdn.akamai.steamstatic.com/steam/apps/${game.appId}/header.jpg`);
+    } else {
+      setImgFailed(true);
+    }
+  };
+
+  const hasCover = Boolean(imgSrc) && !imgFailed;
   const isInstalled = game.isInstalled ?? true;
 
   const totalSecs = gameStats?.totalPlayTimeSeconds || 0;
@@ -54,11 +76,11 @@ const GameCard = memo(function GameCard({
       {/* Portada Full Image si está disponible */}
       {hasCover ? (
         <img
-          src={coverSrc}
+          src={imgSrc}
           alt={game.name || game.title}
           loading="lazy"
           decoding="async"
-          onError={() => setImgFailed(true)}
+          onError={handleImageError}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : (

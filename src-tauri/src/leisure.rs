@@ -180,6 +180,15 @@ fn get_local_steam_cover(app_id: &str) -> Option<String> {
             }
         }
     }
+
+    // Fallback al CDN oficial de Steam si no se encuentra en caché local en disco
+    if app_id.chars().all(|c| c.is_ascii_digit()) && !app_id.is_empty() {
+        return Some(format!(
+            "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
+            app_id
+        ));
+    }
+
     None
 }
 
@@ -1049,7 +1058,7 @@ fn get_steam_achievement_progress_map() -> HashMap<String, (usize, usize)> {
         }
     }
 
-    // 5. Integrar desbloqueos soberanos de SQLite (game_achievement_unlocks)
+    // 5. Integrar desbloqueos locales de SQLite (game_achievement_unlocks)
     if let Ok(conn) = get_db_connection() {
         if let Ok(mut stmt) = conn.prepare(
             "SELECT game_id, SUM(CASE WHEN unlocked = 1 THEN 1 ELSE 0 END) FROM game_achievement_unlocks GROUP BY game_id",
@@ -1767,7 +1776,7 @@ tags:
 
 # 🎮 Reseña: {title}
 
-> [!NOTE] Metadatos Tácticos (Aegis Soberano)
+> [!NOTE] Metadatos (Aegis)
 > - **Plataforma:** {platform}
 > - **Tiempo Acumulado:** {hours:.1} h ({total_secs} s)
 > - **Puntuación:** {stars} ({rating}/5)
@@ -1777,7 +1786,7 @@ tags:
 {rev}
 
 ---
-*Vinculado desde Aegis Gaming & Aceleración Soberana — [[MOC - Personal y Ocio]]*
+*Vinculado desde Aegis Gaming — [[MOC - Personal y Ocio]]*
 "#,
             title = game_title,
             rating = rating,
@@ -2084,13 +2093,13 @@ tags:
 
 # 🎮 Bitácora: {title}
 
-> [!NOTE] Metadatos Tácticos (Aegis Soberano)
+> [!NOTE] Metadatos (Aegis)
 > - **Plataforma:** {platform}
 > - **Fecha:** {date}
 
 {entry}
 ---
-*Vinculado desde Aegis Gaming & Aceleración Soberana — [[MOC - Personal y Ocio]]*
+*Vinculado desde Aegis Gaming — [[MOC - Personal y Ocio]]*
 "#,
             title = game_title,
             platform = platform_str,
@@ -2311,13 +2320,21 @@ pub fn get_unified_game_catalog() -> Result<Vec<UnifiedGameItem>, String> {
             (None, None)
         };
 
+        let resolved_cover = cover_image.or_else(|| {
+            if is_steam {
+                app_id.as_deref().and_then(get_local_steam_cover)
+            } else {
+                None
+            }
+        });
+
         result.push(UnifiedGameItem {
             id,
             app_id,
             title,
             is_steam,
             is_installed,
-            cover_image,
+            cover_image: resolved_cover,
             banner_url,
             total_play_time_seconds,
             sessions_count,

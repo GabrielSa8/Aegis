@@ -114,7 +114,7 @@ export default function SettingsSidebar({ activeSection, onSelectSection, search
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.66rem' }}>
           <ShieldCheck size={13} color="var(--primary)" />
-          <span style={{ fontWeight: 600 }}>Cero Hardcode · 100% Soberano</span>
+          <span style={{ fontWeight: 600 }}>Cero Hardcode · 100% Local</span>
         </div>
         <span style={{ fontSize: '0.6rem', color: 'color-mix(in srgb, var(--text-muted) 70%, transparent)' }}>
           4 Hubs Consolidados · Full Bleed UI

@@ -1,5 +1,5 @@
 /**
- * ⚡ Algoritmo Soberano de Burn-Rate, Runway y Proyección de Fin de Ciclo (Fase 2.5)
+ * ⚡ Algoritmo de Burn-Rate, Runway y Proyección de Fin de Ciclo (Fase 2.5)
  * O(1) tiempo de ejecución, 100% local, 0 tokens.
  */
 

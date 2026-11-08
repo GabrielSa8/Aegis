@@ -227,7 +227,8 @@ pub fn run() {
                 eprintln!("[Aegis Tray Warning]: No se pudo inicializar tray icon: {}", e);
             }
 
-            // Inicializar Sincronización Soberana P2P en background
+            // Inicializar Sincronización P2P en background
+            sync::set_app_handle(app.handle().clone());
             sync::init_p2p_background_services();
 
             // Inicializar Daemon Cron de Notificaciones de Escritorio

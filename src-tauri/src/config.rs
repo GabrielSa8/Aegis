@@ -40,7 +40,7 @@ pub struct UserProfile {
 impl Default for UserProfile {
     fn default() -> Self {
         Self {
-            name: "Operador Soberano".to_string(),
+            name: "Operador".to_string(),
             role: "Ingeniero de Software & Sistemas".to_string(),
             avatar_emoji: "🛡️".to_string(),
             response_style: "caveman".to_string(),
@@ -89,26 +89,26 @@ impl Default for NotificationsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnabledModulesConfig {
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub finances: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub tasks: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub sentinel: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub devops: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub gaming: bool,
 }
 
 impl Default for EnabledModulesConfig {
     fn default() -> Self {
         Self {
-            finances: true,
-            tasks: true,
-            sentinel: true,
-            devops: true,
-            gaming: true,
+            finances: false,
+            tasks: false,
+            sentinel: false,
+            devops: false,
+            gaming: false,
         }
     }
 }

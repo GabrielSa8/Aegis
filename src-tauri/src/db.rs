@@ -162,7 +162,7 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             created_at TEXT NOT NULL
         );
 
-        -- Tablas v2.7.0 (Fase 7.4): Registro Soberano de Sesiones, Tiempos, Reseñas y Logros
+        -- Tablas v2.7.0 (Fase 7.4): Registro de Sesiones, Tiempos, Reseñas y Logros
         CREATE TABLE IF NOT EXISTS game_sessions (
             id TEXT PRIMARY KEY,
             game_id TEXT NOT NULL,

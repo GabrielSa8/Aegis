@@ -4,7 +4,7 @@ import { BudgetCategoryRow } from './BudgetCategoryRow';
 import { CreateApartadoForm } from './CreateApartadoForm';
 
 /**
- * ManageBudgetsModal — Panel soberano de gestión integral de apartados y presupuestos.
+ * ManageBudgetsModal — Panel de gestión integral de apartados y presupuestos.
  * Layout respirable, alta ergonomía visual y cero solapamiento de controles.
  */
 export function ManageBudgetsModal({

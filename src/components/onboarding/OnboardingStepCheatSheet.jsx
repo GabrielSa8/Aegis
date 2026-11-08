@@ -3,10 +3,10 @@ import { ShieldCheck, PanelTop, PanelLeft, PanelRight, Workflow } from 'lucide-r
 
 const SHORTCUTS = [
   { kbd: 'Ctrl + K', label: 'Paleta Omnibar', desc: 'Buscador universal de notas, temas, acciones y macros' },
-  { kbd: 'Alt + 1..8', label: 'Navegación Cockpit', desc: 'Conmutación directa entre las 8 pestañas operativas' },
+  { kbd: 'Alt + 1..N', label: 'Navegación Dinámica', desc: 'Conmutación entre módulos activos (inicia con Núcleo: Alt+1 Agente, Alt+2 Bóveda, Alt+3 Sistema)' },
   { kbd: 'Ctrl + O', label: 'Acordeón de Pensamiento', desc: 'Expandir o contraer razonamiento y herramientas de la IA' },
-  { kbd: 'Alt + L', label: 'Cierre Soberano', desc: 'Bloqueo instantáneo de pantalla con cifrado AES-256' },
-  { kbd: 'Ctrl + ,', label: 'Centro de Ajustes', desc: 'Acceso directo a los 4 macro-hubs de configuración' },
+  { kbd: 'Alt + L', label: 'Bloqueo de Pantalla', desc: 'Bloqueo instantáneo de pantalla con cifrado AES-256' },
+  { kbd: 'Ctrl + ,', label: 'Centro de Ajustes', desc: 'Acceso directo a configuración y gestor de plugins' },
   { kbd: 'Alt + Z', label: 'Modo Zen', desc: 'Ocultar docks y barras para enfoque de lectura máxima' }
 ];
 
@@ -47,7 +47,7 @@ export function OnboardingStepCheatSheet() {
               <span>Dock Izquierdo (Módulos)</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.67rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
-              Navegación de las 8 pestañas (<kbd className="tactical-kbd" style={{ fontSize: '0.62rem' }}>Alt+1..8</kbd>). Pasa el cursor por el borde izquierdo para desplegarlo o fíjalo con la chincheta.
+              Navegación dinámica de módulos (<kbd className="tactical-kbd" style={{ fontSize: '0.62rem' }}>Alt+1..N</kbd>). Pasa el cursor por el borde izquierdo para desplegarlo o fíjalo con la chincheta.
             </p>
           </div>
 
@@ -68,6 +68,14 @@ export function OnboardingStepCheatSheet() {
           <Workflow size={15} style={{ color: 'var(--warning, #f59e0b)', flexShrink: 0, marginTop: '2px' }} />
           <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-high)', lineHeight: 1.4 }}>
             <strong>¿Para qué son los Contextos?</strong> Son cápsulas de trabajo para la IA. Cada contexto enlaza una carpeta de proyecto (<code style={{ fontSize: '0.65rem' }}>workingDir</code>), sus skills activas y sus notas de Obsidian. Al cambiar de contexto con 1 clic en el dock derecho, la IA sabe exactamente qué archivos y herramientas usar sin mezclar proyectos ni saturar tokens.
+          </p>
+        </div>
+
+        {/* 🚀 Primer paso recomendado: Plugins */}
+        <div style={{ marginTop: '0.45rem', padding: '7px 10px', borderRadius: 'var(--radius-sm)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1rem' }}>🧩</span>
+          <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-high)', lineHeight: 1.4 }}>
+            <strong>Primer paso recomendado:</strong> Abre <strong>Ajustes (<kbd className="tactical-kbd" style={{ fontSize: '0.62rem' }}>Ctrl+,</kbd> o <kbd className="tactical-kbd" style={{ fontSize: '0.62rem' }}>Alt+3</kbd>) ➔ Plugins</strong> para activar en 1 clic los módulos que quieras usar (Finanzas, Tareas Kanban, Centinela Host, Flota Git o Gaming).
           </p>
         </div>
       </div>

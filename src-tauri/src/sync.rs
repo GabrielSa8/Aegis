@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tauri::Emitter;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Notify;
@@ -12,6 +13,17 @@ use crate::config::{get_aegis_config, save_aegis_config, TrustedDevice};
 use crate::db::get_db_connection;
 
 pub static P2P_ACTIVE: AtomicBool = AtomicBool::new(false);
+static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
+
+pub fn set_app_handle(handle: tauri::AppHandle) {
+    let _ = APP_HANDLE.set(handle);
+}
+
+pub fn notify_config_updated(cfg: &crate::config::AegisConfig) {
+    if let Some(app) = APP_HANDLE.get() {
+        let _ = app.emit("aegis:config-reloaded", cfg);
+    }
+}
 
 fn get_local_ip() -> String {
     // Técnica estándar POSIX/Windows: bind efímero y connect a IP pública para resolver ruta local en kernel sin enviar tráfico
@@ -224,26 +236,61 @@ pub fn init_p2p_background_services() {
 
 async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Result<(), String> {
     let mut buffer = Vec::new();
-    let mut temp = [0u8; 4096];
+    let mut temp = [0u8; 8192];
+    let mut header_pos_opt = None;
 
-    // Leer cabecera HTTP mínima
+    // 1. Leer cabecera HTTP mínima (\r\n\r\n)
     loop {
         let n = stream.read(&mut temp).await.map_err(|e| e.to_string())?;
         if n == 0 {
             break;
         }
         buffer.extend_from_slice(&temp[..n]);
-        if buffer.windows(4).any(|w| w == b"\r\n\r\n") {
+        if let Some(pos) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
+            header_pos_opt = Some(pos);
             break;
         }
-        if buffer.len() > 1024 * 1024 * 16 {
-            // Límite de seguridad 16MB
+        if buffer.len() > 64 * 1024 {
             break;
         }
     }
 
-    let request_str = String::from_utf8_lossy(&buffer);
-    let mut lines = request_str.lines();
+    let header_pos = match header_pos_opt {
+        Some(pos) => pos,
+        None => return Ok(()),
+    };
+
+    let headers_part = String::from_utf8_lossy(&buffer[..header_pos]).into_owned();
+    let mut content_length = 0usize;
+    for line in headers_part.lines() {
+        let lower = line.to_lowercase();
+        if lower.starts_with("content-length:") {
+            if let Some(val) = line.split(':').nth(1) {
+                content_length = val.trim().parse::<usize>().unwrap_or(0);
+            }
+        }
+    }
+
+    // 2. Leer resto del body según Content-Length
+    let total_required = header_pos + 4 + content_length;
+    while buffer.len() < total_required {
+        let n = stream.read(&mut temp).await.map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        buffer.extend_from_slice(&temp[..n]);
+        if buffer.len() > 64 * 1024 * 1024 {
+            break;
+        }
+    }
+
+    let body_bytes = if buffer.len() >= header_pos + 4 {
+        &buffer[header_pos + 4..]
+    } else {
+        &[][..]
+    };
+
+    let mut lines = headers_part.lines();
     let req_line = lines.next().unwrap_or("");
     let parts: Vec<&str> = req_line.split_whitespace().collect();
     if parts.len() < 2 {
@@ -264,10 +311,7 @@ async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Re
         });
         send_http_json_response(stream, 200, &res_json).await?;
     } else if method == "POST" && path == "/api/pair" {
-        // Encontrar body
-        let body_str = request_str.split("\r\n\r\n").nth(1).unwrap_or("");
-        let parse_res: Result<serde_json::Value, _> = serde_json::from_str(body_str);
-        if let Ok(body) = parse_res {
+        if let Ok(body) = serde_json::from_slice::<serde_json::Value>(body_bytes) {
             let req_pin = body.get("pin").and_then(|v| v.as_str()).unwrap_or("");
             let req_id = body.get("requesterId").and_then(|v| v.as_str()).unwrap_or("");
             let req_name = body.get("requesterName").and_then(|v| v.as_str()).unwrap_or("Dispositivo Remoto");
@@ -302,8 +346,7 @@ async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Re
         let export_data = export_sync_database_payload()?;
         send_http_json_response(stream, 200, &export_data).await?;
     } else if method == "POST" && path == "/api/sync/import" {
-        let body_str = request_str.split("\r\n\r\n").nth(1).unwrap_or("");
-        if let Ok(payload) = serde_json::from_str::<serde_json::Value>(body_str) {
+        if let Ok(payload) = serde_json::from_slice::<serde_json::Value>(body_bytes) {
             let merged = import_sync_database_payload(payload)?;
             let res = serde_json::json!({ "success": true, "itemsMerged": merged });
             send_http_json_response(stream, 200, &res).await?;
@@ -353,7 +396,7 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
     let game_sessions = crate::leisure::sqlite_export_game_sessions().unwrap_or_default();
     let timeline = crate::finances::sqlite_get_timeline_events().unwrap_or_default();
 
-    // Preferencias sincronizables de Ajustes (perfil, tema, límites de tokens, alertas, módulos)
+    // Preferencias sincronizables de Ajustes (perfil, tema, límites de tokens, alertas, módulos, plugins)
     let syncable_settings = crate::config::get_aegis_config().ok().map(|cfg| {
         serde_json::json!({
             "profile": cfg.profile,
@@ -362,11 +405,16 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
             "tokenBudget": cfg.token_budget,
             "notifications": cfg.notifications,
             "enabledModules": cfg.enabled_modules,
+            "communityPluginsEnabled": cfg.community_plugins_enabled,
+            "enableGamemode": cfg.enable_gamemode,
+            "enableGamescopeFsr": cfg.enable_gamescope_fsr,
             "agentType": cfg.agent_type,
             "closeToTray": cfg.close_to_tray,
             "minimizeToTray": cfg.minimize_to_tray
         })
     });
+
+    let community_plugins = crate::plugins::export_community_plugins_payload().unwrap_or_default();
 
     Ok(serde_json::json!({
         "deviceId": get_unique_device_id(),
@@ -379,7 +427,8 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
         "gameStats": game_stats,
         "gameSessions": game_sessions,
         "timelineEvents": timeline,
-        "settings": syncable_settings
+        "settings": syncable_settings,
+        "communityPlugins": community_plugins
     }))
 }
 
@@ -457,7 +506,16 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
         }
     }
 
-    // Preferencias sincronizables de Ajustes (Perfil, Tema, Alertas, Módulos, Tokens)
+    // Plugins comunitarios (archivos y manifiestos de extensiones instaladas)
+    if let Some(arr) = payload.get("communityPlugins").and_then(|v| v.as_array()) {
+        if let Ok(exported) = serde_json::from_value::<Vec<crate::plugins::ExportedCommunityPlugin>>(serde_json::Value::Array(arr.clone())) {
+            if let Ok(count) = crate::plugins::import_community_plugins_payload(exported) {
+                total_imported += count;
+            }
+        }
+    }
+
+    // Preferencias sincronizables de Ajustes (Perfil, Tema, Alertas, Módulos, Plugins, Tokens)
     if let Some(st) = payload.get("settings").and_then(|v| v.as_object()) {
         if let Ok(mut current_cfg) = crate::config::get_aegis_config() {
             let mut cfg_modified = false;
@@ -490,10 +548,25 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
                     cfg_modified = true;
                 }
             }
+            // Sincronizar módulos oficiales (unión inclusiva: si el otro dispositivo los tiene activos, se transfieren y activan)
             if let Some(em) = st.get("enabledModules") {
                 if let Ok(modules) = serde_json::from_value::<crate::config::EnabledModulesConfig>(em.clone()) {
-                    current_cfg.enabled_modules = modules;
+                    current_cfg.enabled_modules.finances = current_cfg.enabled_modules.finances || modules.finances;
+                    current_cfg.enabled_modules.tasks = current_cfg.enabled_modules.tasks || modules.tasks;
+                    current_cfg.enabled_modules.sentinel = current_cfg.enabled_modules.sentinel || modules.sentinel;
+                    current_cfg.enabled_modules.devops = current_cfg.enabled_modules.devops || modules.devops;
+                    current_cfg.enabled_modules.gaming = current_cfg.enabled_modules.gaming || modules.gaming;
                     cfg_modified = true;
+                }
+            }
+            // Sincronizar estados de plugins comunitarios (unión inclusiva)
+            if let Some(cpe) = st.get("communityPluginsEnabled").and_then(|v| v.as_object()) {
+                for (k, v) in cpe {
+                    if let Some(b) = v.as_bool() {
+                        let cur = current_cfg.community_plugins_enabled.get(k).copied().unwrap_or(false);
+                        current_cfg.community_plugins_enabled.insert(k.clone(), cur || b);
+                        cfg_modified = true;
+                    }
                 }
             }
             if let Some(at) = st.get("agentType").and_then(|v| v.as_str()) {
@@ -502,10 +575,19 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
                     cfg_modified = true;
                 }
             }
+            if let Some(gm) = st.get("enableGamemode").and_then(|v| v.as_bool()) {
+                current_cfg.enable_gamemode = current_cfg.enable_gamemode || gm;
+                cfg_modified = true;
+            }
+            if let Some(fsr) = st.get("enableGamescopeFsr").and_then(|v| v.as_bool()) {
+                current_cfg.enable_gamescope_fsr = current_cfg.enable_gamescope_fsr || fsr;
+                cfg_modified = true;
+            }
 
             if cfg_modified {
-                if let Ok(_) = crate::config::save_aegis_config(current_cfg) {
+                if let Ok(_) = crate::config::save_aegis_config(current_cfg.clone()) {
                     total_imported += 1;
+                    notify_config_updated(&current_cfg);
                 }
             }
         }
@@ -717,7 +799,8 @@ pub async fn trigger_p2p_replicate(
                 dev.last_synced_at = Some(now_str.clone());
             }
         }
-        let _ = save_aegis_config(cfg);
+        let _ = save_aegis_config(cfg.clone());
+        notify_config_updated(&cfg);
     }
 
     let elapsed = start_time.elapsed().as_millis();

@@ -42,11 +42,36 @@ export function useSettings({ onThemeChange }) {
     loadData();
   }, [loadData]);
 
+  // Escucha reactiva si la configuración se recarga externamente (ej. sincronización P2P)
+  useEffect(() => {
+    const onReload = (e) => {
+      if (e.detail) {
+        setConfig(e.detail);
+        initialConfigRef.current = JSON.parse(JSON.stringify(e.detail));
+      } else {
+        loadData();
+      }
+    };
+    window.addEventListener('aegis:config-reloaded', onReload);
+    return () => window.removeEventListener('aegis:config-reloaded', onReload);
+  }, [loadData]);
+
   // Detección estricta de cambios sin guardar
   const isDirty = useMemo(() => {
     if (!config || !initialConfigRef.current) return false;
     return JSON.stringify(config) !== JSON.stringify(initialConfigRef.current);
   }, [config]);
+
+  // Difundir estado de cambios pendientes para guardias de navegación
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('aegis:settings-dirty-changed', { detail: isDirty }));
+  }, [isDirty]);
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('aegis:settings-dirty-changed', { detail: false }));
+    };
+  }, []);
 
   // Selección de tema: sólo actualiza borrador y previsualiza en DOM; NO persiste en disco
   const handleSelectTheme = useCallback((themeId) => {
@@ -111,13 +136,25 @@ export function useSettings({ onThemeChange }) {
         window.dispatchEvent(new CustomEvent('aegis:modules-changed', { detail: res.enabledModules }));
       }
 
-      setSaveStatus('Configuración soberana persistida con éxito.');
+      setSaveStatus('Configuración persistida con éxito.');
       setTimeout(() => setSaveStatus(null), 3500);
     } catch (e) {
       setSaveStatus(`Error guardando: ${e}`);
       setTimeout(() => setSaveStatus(null), 3500);
     }
   }, [config, onThemeChange]);
+
+  // Escuchar órdenes externas de guardado y descarte (ej. alertas de navegación)
+  useEffect(() => {
+    const handleSaveEvent = () => handleSaveConfig();
+    const handleDiscardEvent = () => handleDiscardChanges();
+    window.addEventListener('aegis:save-settings', handleSaveEvent);
+    window.addEventListener('aegis:discard-settings', handleDiscardEvent);
+    return () => {
+      window.removeEventListener('aegis:save-settings', handleSaveEvent);
+      window.removeEventListener('aegis:discard-settings', handleDiscardEvent);
+    };
+  }, [handleSaveConfig, handleDiscardChanges]);
 
   // Purgar cachés temporales
   const handlePurgeCaches = useCallback(async () => {

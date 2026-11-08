@@ -60,7 +60,7 @@ export default function P2pSyncSection() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-high)' }}>
-                Sincronización P2P Soberana (LAN Directa)
+                Sincronización P2P (LAN Directa)
               </span>
               <TacticalBadge variant={isEnabled ? 'success' : 'default'} size="sm">
                 {isEnabled ? 'ACTIVO' : 'INACTIVO'}

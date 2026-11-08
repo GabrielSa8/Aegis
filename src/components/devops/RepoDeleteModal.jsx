@@ -95,7 +95,7 @@ export function RepoDeleteModal({
         {isProtected && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--warning, #f59e0b)', fontSize: '0.72rem' }}>
             <ShieldAlert size={14} flexShrink={0} />
-            <span>Repositorio protegido por directriz soberana. La destrucción física de archivos está bloqueada.</span>
+            <span>Repositorio protegido por directriz del sistema. La destrucción física de archivos está bloqueada.</span>
           </div>
         )}
 

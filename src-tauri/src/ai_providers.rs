@@ -30,7 +30,7 @@ pub struct ProviderCatalog {
     pub models: Vec<ProviderModelInfo>,
 }
 
-/// Clave de API almacenada de forma soberana
+/// Clave de API almacenada de forma local segura
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredApiKey {
@@ -115,7 +115,7 @@ pub fn get_all_providers_catalog() -> Vec<ProviderCatalog> {
         },
         ProviderCatalog {
             id: "deepseek".to_string(),
-            name: "DeepSeek (Oficial / API Soberana)".to_string(),
+            name: "DeepSeek (Oficial)".to_string(),
             category: "cloud".to_string(),
             requires_api_key: true,
             env_key_name: Some("DEEPSEEK_API_KEY".to_string()),
@@ -287,7 +287,7 @@ pub fn get_all_providers_catalog() -> Vec<ProviderCatalog> {
         },
         ProviderCatalog {
             id: "ollama".to_string(),
-            name: "Ollama (Local / Soberano)".to_string(),
+            name: "Ollama (Local)".to_string(),
             category: "local".to_string(),
             requires_api_key: false,
             env_key_name: None,
@@ -302,7 +302,7 @@ pub fn get_all_providers_catalog() -> Vec<ProviderCatalog> {
                     family: "Llama".to_string(),
                     tier: "flash".to_string(),
                     badge: "🖥️ Local".to_string(),
-                    desc: "Modelo soberano local ultra-rápido ejecutándose 100% en host.".to_string(),
+                    desc: "Modelo local ultra-rápido ejecutándose 100% en host.".to_string(),
                     effort: Some("low".to_string()),
                 },
                 ProviderModelInfo {

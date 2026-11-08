@@ -52,7 +52,7 @@ export function OnboardingModal({ isOpen, onClose, onComplete }) {
             </div>
             <div>
               <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-high)' }}>
-                Bienvenido a Aegis — Centro de Mando Soberano
+                Bienvenido a Aegis — Centro de Mando
               </h2>
               <p style={{ fontSize: '0.72rem', margin: 0, color: 'var(--text-muted)' }}>
                 Configuración inicial y auto-descubrimiento en 3 pasos rápidos.
@@ -64,7 +64,7 @@ export function OnboardingModal({ isOpen, onClose, onComplete }) {
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
               Paso {step} de 3
             </span>
-            <TacticalBadge variant="primary">v2.11.0</TacticalBadge>
+            <TacticalBadge variant="primary">v2.14.1</TacticalBadge>
           </div>
         </div>
 

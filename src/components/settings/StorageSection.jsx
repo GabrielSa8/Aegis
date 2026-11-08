@@ -11,7 +11,7 @@ export default function StorageSection({ config, setConfig, storageStats, purgeS
       {/* Cabecera */}
       <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
         <h3 style={{ fontSize: '0.88rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-high)' }}>
-          Rutas, Almacenamiento & Respaldo Soberano
+          Rutas, Almacenamiento & Respaldo
         </h3>
         <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
           Aegis opera sin intermediarios de nube. Todos los datos, bases SQLite y notas Markdown residen en el sistema local.
@@ -159,7 +159,7 @@ export default function StorageSection({ config, setConfig, storageStats, purgeS
             </p>
           </div>
 
-          {/* Respaldo Soberano 3-2-1 */}
+          {/* Respaldo 3-2-1 */}
           <SystemBackupCard />
         </div>
 

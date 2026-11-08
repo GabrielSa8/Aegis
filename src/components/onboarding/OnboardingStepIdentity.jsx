@@ -24,7 +24,7 @@ export function OnboardingStepIdentity({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-high)' }}>
           <User size={15} color="var(--primary)" />
-          <span>Perfil del Operador Soberano</span>
+          <span>Perfil del Operador</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>

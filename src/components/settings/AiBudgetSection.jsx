@@ -7,7 +7,7 @@ import DetectedAiEnginesCard from './DetectedAiEnginesCard';
 
 const AGENT_OPTIONS = [
   { value: 'agy', label: 'Google Antigravity CLI (agy)', desc: 'Integrado nativo con herramientas del sistema' },
-  { value: 'deepseek', label: 'DeepSeek (V3 / R1)', desc: 'API Soberana de bajo coste y razonamiento' },
+  { value: 'deepseek', label: 'DeepSeek (V3 / R1)', desc: 'API de bajo coste y razonamiento' },
   { value: 'anthropic', label: 'Anthropic Claude', desc: 'Haiku, Sonnet y Opus para ingeniería de precisión' },
   { value: 'openai', label: 'OpenAI API', desc: 'GPT-4o, 4o-mini y modelos de razonamiento formal' },
   { value: 'openrouter', label: 'OpenRouter Multi-Cloud', desc: 'Enrutador agregado con failover dinámico' },
@@ -94,7 +94,7 @@ export default function AiBudgetSection({ config, setConfig, updateTokenBudget, 
             }}
           />
 
-          {/* Autenticación Soberana y API Keys */}
+          {/* Autenticación y API Keys */}
           <ApiCredentialsCard onOpenExternal={onOpenExternal} />
         </div>
 

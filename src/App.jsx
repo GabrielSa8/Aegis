@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { AlertTriangle } from 'lucide-react';
+import { TacticalButton } from './components/ui';
 
 import TopHeader from './components/TopHeader';
 import LeftTabsDock from './components/navigation/LeftTabsDock';
@@ -60,6 +63,9 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [enabledModules, setEnabledModules] = useState(DEFAULT_ENABLED_MODULES);
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+  const [pendingTargetTab, setPendingTargetTab] = useState(null);
+  const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [isDockPinned, setIsDockPinned] = useState(() => {
     try {
       return localStorage.getItem('aegis_dock_pinned') === 'true';
@@ -106,6 +112,48 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Sincronización reactiva en vivo de ajustes y módulos (ej. P2P LAN replication)
+  useEffect(() => {
+    let unlistenTauri = null;
+
+    const handleConfigUpdate = (newCfg) => {
+      if (!newCfg) return;
+      if (newCfg.theme) {
+        setCurrentTheme(newCfg.theme);
+        document.documentElement.setAttribute('data-theme', newCfg.theme);
+      }
+      if (newCfg.enabledModules) {
+        setEnabledModules(newCfg.enabledModules);
+      }
+      if (newCfg.uiScale) {
+        applyUiScale(newCfg.uiScale);
+      }
+    };
+
+    listen('aegis:config-reloaded', (event) => {
+      handleConfigUpdate(event.payload);
+    }).then((unsub) => {
+      unlistenTauri = unsub;
+    }).catch(() => {});
+
+    const onDomReload = (e) => handleConfigUpdate(e.detail);
+    window.addEventListener('aegis:config-reloaded', onDomReload);
+
+    return () => {
+      if (unlistenTauri) unlistenTauri();
+      window.removeEventListener('aegis:config-reloaded', onDomReload);
+    };
+  }, []);
+
+  // Asegurar que si la pestaña activa se desactiva, caiga limpiamente al Agente
+  useEffect(() => {
+    const visible = getVisibleTabs(enabledModules);
+    const normalizedTab = activeTab === 'leisure' ? 'gaming' : activeTab;
+    if (!visible.includes(normalizedTab)) {
+      setActiveTab('agent');
+    }
+  }, [enabledModules, activeTab]);
+
   // Pre-cargar vistas secundarias en segundo plano durante reposo para cambio de pestaña instantáneo (0ms lag)
   useEffect(() => {
     const preloadModules = () => {
@@ -123,6 +171,25 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, []);
+
+  // Escuchar si hay cambios sin guardar en Ajustes para guardia de navegación
+  useEffect(() => {
+    const handleDirtyChanged = (e) => {
+      setIsSettingsDirty(Boolean(e.detail));
+    };
+    window.addEventListener('aegis:settings-dirty-changed', handleDirtyChanged);
+    return () => window.removeEventListener('aegis:settings-dirty-changed', handleDirtyChanged);
+  }, []);
+
+  // Interceptar navegación cuando se intenta salir de Ajustes con cambios sin guardar
+  const handleRequestTabChange = (targetTab) => {
+    if (activeTab === 'settings' && isSettingsDirty && targetTab !== 'settings') {
+      setPendingTargetTab(targetTab);
+      setShowUnsavedConfirmModal(true);
+      return;
+    }
+    setActiveTab(targetTab);
+  };
 
   // Escuchar evento para abrir onboarding desde Ajustes o Paleta Omnibar
   useEffect(() => {
@@ -152,7 +219,7 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
-  // Atajos de teclado globales (Ctrl + K, Alt + 1..8, Alt + Z y Ctrl + ,)
+  // Atajos de teclado globales (Ctrl + K, Alt + 1..N, Alt + Z y Ctrl + ,)
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ctrl + K para abrir Paleta de Comandos Omnibar
@@ -193,14 +260,14 @@ export default function App() {
           const visible = getVisibleTabs(enabledModules);
           if (num <= visible.length) {
             e.preventDefault();
-            setActiveTab(visible[num - 1]);
+            handleRequestTabChange(visible[num - 1]);
           }
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showCommandPalette, showSettings, enabledModules]);
+  }, [showCommandPalette, showSettings, enabledModules, isSettingsDirty, activeTab]);
 
   // Ping al núcleo Rust local y escucha de cambio de pestañas táctico
   useEffect(() => {
@@ -209,11 +276,11 @@ export default function App() {
       .catch(() => setCoreStatus('Modo Web Standalone'));
 
     const handleSwitchTab = (e) => {
-      if (e.detail?.tab) setActiveTab(e.detail.tab);
+      if (e.detail?.tab) handleRequestTabChange(e.detail.tab);
     };
     window.addEventListener('aegis:switch-tab', handleSwitchTab);
     return () => window.removeEventListener('aegis:switch-tab', handleSwitchTab);
-  }, []);
+  }, [isSettingsDirty, activeTab]);
 
   return (
     <div style={{
@@ -231,7 +298,7 @@ export default function App() {
       {/* 🧭 Barra Superior Unificada (Navegación + Telemetría en 38px) */}
       <TopHeader 
         coreStatus={coreStatus} 
-        onOpenSettings={() => setActiveTab('settings')}
+        onOpenSettings={() => handleRequestTabChange('settings')}
         onOpenCommandPalette={() => setShowCommandPalette(true)}
         isMasterPasswordEnabled={securityStatus.masterPasswordEnabled}
         onLockVault={lockVault}
@@ -248,7 +315,7 @@ export default function App() {
       }}>
         <LeftTabsDock
           activeTab={activeTab === 'leisure' ? 'gaming' : activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={handleRequestTabChange}
           isPinned={isDockPinned}
           onTogglePin={handleToggleDockPin}
           enabledModules={enabledModules}
@@ -302,11 +369,100 @@ export default function App() {
       <CommandPaletteModal
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
-        onSelectTab={setActiveTab}
-        onOpenSettings={() => setActiveTab('settings')}
+        onSelectTab={handleRequestTabChange}
+        onOpenSettings={() => handleRequestTabChange('settings')}
         onThemeChange={handleThemeChange}
         enabledModules={enabledModules}
       />
+
+      {/* ⚠️ Alerta de Salida sin Guardar de Ajustes */}
+      {showUnsavedConfirmModal && (
+        <div className="modal-overlay" style={{ zIndex: 3000 }}>
+          <div className="modal-content glass" style={{
+            maxWidth: '460px',
+            padding: '1.25rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'color-mix(in srgb, var(--warning) 15%, transparent)',
+                color: 'var(--warning)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-high)' }}>
+                  ¿Salir sin guardar los cambios?
+                </h3>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Tienes ajustes o plugins modificados sin persistir.
+                </span>
+              </div>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+              Ningún cambio será realizado de forma permanente hasta no dar en guardar. Si sales ahora, los cambios no se verán en tu sistema y se descartarán.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <TacticalButton
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowUnsavedConfirmModal(false);
+                  setPendingTargetTab(null);
+                }}
+              >
+                Continuar editando
+              </TacticalButton>
+
+              <TacticalButton
+                variant="secondary"
+                size="sm"
+                style={{ color: 'var(--danger)' }}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('aegis:discard-settings'));
+                  setIsSettingsDirty(false);
+                  setShowUnsavedConfirmModal(false);
+                  if (pendingTargetTab) {
+                    setActiveTab(pendingTargetTab);
+                    setPendingTargetTab(null);
+                  }
+                }}
+              >
+                Salir sin guardar
+              </TacticalButton>
+
+              <TacticalButton
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('aegis:save-settings'));
+                  setIsSettingsDirty(false);
+                  setShowUnsavedConfirmModal(false);
+                  if (pendingTargetTab) {
+                    setActiveTab(pendingTargetTab);
+                    setPendingTargetTab(null);
+                  }
+                }}
+              >
+                Guardar y salir
+              </TacticalButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🛡️ Pantalla de Bloqueo de Seguridad (Master Lock Screen) */}
       {securityStatus.masterPasswordEnabled && securityStatus.isLocked && (

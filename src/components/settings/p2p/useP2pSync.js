@@ -100,6 +100,10 @@ export function useP2pSync() {
       });
       setLastSyncResult(result);
       await fetchStatus();
+      try {
+        const freshCfg = await invoke('get_aegis_config');
+        window.dispatchEvent(new CustomEvent('aegis:config-reloaded', { detail: freshCfg }));
+      } catch (_) {}
       return { success: true, result };
     } catch (err) {
       const msg = typeof err === 'string' ? err : 'Error durante replicación P2P';
