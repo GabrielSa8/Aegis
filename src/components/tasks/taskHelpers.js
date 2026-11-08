@@ -156,12 +156,21 @@ export function parseTask(t, customizations) {
     .replace(/\s+/g, ' ')
     .trim();
 
+  let status = t.status || (t.completed ? 'done' : 'todo');
+  if (!t.completed && (status === 'in_progress' || /#(en-proceso|doing|proceso|activa)\b/i.test(text))) {
+    status = 'in_progress';
+  } else if (t.completed) {
+    status = 'done';
+  }
+
   const rawProject = getTaskProject(t);
   const theme = resolveProjectTheme(rawProject, customizations);
   const cleanProjectName = extractLeadingEmoji(rawProject).cleanStr;
 
   return {
     ...t,
+    status,
+    completed: status === 'done',
     customId,
     dependsOn,
     dueDate,

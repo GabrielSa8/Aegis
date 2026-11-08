@@ -1,14 +1,19 @@
-import React from 'react';
-import { CheckSquare, FileText, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckSquare, FileText, Lock, Zap } from 'lucide-react';
 import { TaskCardBadges } from './TaskCardBadges';
+import { TaskCardActions } from './TaskCardActions';
 
 export function TaskCard({
   task,
   onToggle,
+  onSetStatus,
   onSelectTask,
   compact = false,
   highlight = false
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
   const theme = task.theme || {
     icon: '📁',
     color: 'var(--text-muted)',
@@ -17,83 +22,107 @@ export function TaskCard({
   };
 
   const isBlocked = task.isBlocked && !task.completed;
+  const isInProgress = task.status === 'in_progress' && !task.completed;
+  const isDone = task.completed || task.status === 'done';
 
   const handleCheckboxClick = (e) => {
     e.stopPropagation();
     if (isBlocked) return;
-    onToggle(task);
+    if (onSetStatus) {
+      onSetStatus(task, isDone ? 'todo' : 'done');
+    } else if (onToggle) {
+      onToggle(task);
+    }
   };
 
   const handleCardClick = () => {
     if (onSelectTask) {
       onSelectTask(task);
-    } else {
+    } else if (onToggle) {
       onToggle(task);
     }
+  };
+
+  const handleQuickAction = (e, targetStatus) => {
+    e.stopPropagation();
+    if (isBlocked) return;
+    if (onSetStatus) {
+      onSetStatus(task, targetStatus);
+    } else if (onToggle) {
+      onToggle(task);
+    }
+  };
+
+  const handleDragStart = (e) => {
+    if (isBlocked) {
+      e.preventDefault();
+      return;
+    }
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({
+        id: task.id,
+        file_path: task.file_path,
+        line_number: task.line_number,
+        filePath: task.file_path,
+        lineNumber: task.line_number,
+        status: task.status || (task.completed ? 'done' : 'todo')
+      })
+    );
   };
 
   return (
     <div
       onClick={handleCardClick}
-      className={`task-card-item ${task.completed ? 'is-completed' : ''} ${isBlocked ? 'is-blocked' : ''} ${highlight ? 'is-highlight' : ''}`}
+      draggable={!isBlocked}
+      onDragStart={handleDragStart}
+      onDragEnd={() => setIsDragging(false)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`task-card-item ${isDone ? 'is-completed' : ''} ${isInProgress ? 'is-in-progress' : ''} ${isBlocked ? 'is-blocked' : ''}`}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         flexShrink: 0,
         boxSizing: 'border-box',
-        minHeight: compact ? '44px' : '50px',
-        padding: compact ? '6px 8px' : '7px 11px',
+        minHeight: compact ? '44px' : '52px',
+        padding: compact ? '6px 8px' : '8px 11px',
         borderRadius: '6px',
-        background: task.completed
+        background: isDone
           ? 'color-mix(in srgb, var(--bg-card) 50%, transparent)'
           : isBlocked
           ? 'linear-gradient(135deg, color-mix(in srgb, var(--danger) 8%, transparent) 0%, var(--bg-card) 100%)'
+          : isInProgress
+          ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, var(--bg-card) 100%)'
           : highlight
           ? 'linear-gradient(135deg, color-mix(in srgb, var(--warning) 8%, transparent) 0%, var(--bg-card) 100%)'
           : 'var(--bg-card)',
         border: isBlocked
           ? '1px solid color-mix(in srgb, var(--danger) 35%, transparent)'
+          : isInProgress
+          ? '1px solid color-mix(in srgb, var(--accent) 55%, transparent)'
           : highlight
           ? '1px solid color-mix(in srgb, var(--warning) 35%, transparent)'
           : '1px solid var(--border-color)',
-        boxShadow: highlight
+        boxShadow: isInProgress
+          ? '0 2px 12px color-mix(in srgb, var(--accent) 18%, transparent)'
+          : highlight
           ? '0 2px 10px color-mix(in srgb, var(--warning) 10%, transparent)'
-          : task.completed
+          : isDone
           ? 'none'
           : '0 2px 8px rgba(0, 0, 0, 0.25)',
-        cursor: 'pointer',
+        cursor: isBlocked ? 'not-allowed' : 'grab',
+        opacity: isDragging ? 0.4 : 1,
         transition: 'all 0.16s ease',
-        gap: '9px',
+        gap: '8px',
         position: 'relative',
         overflow: 'hidden'
       }}
-      onMouseEnter={(e) => {
-        if (!task.completed) {
-          e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.borderColor = isBlocked
-            ? 'var(--danger)'
-            : 'color-mix(in srgb, var(--primary) 60%, transparent)';
-          e.currentTarget.style.boxShadow = isBlocked
-            ? '0 4px 14px color-mix(in srgb, var(--danger) 25%, transparent)'
-            : '0 4px 14px color-mix(in srgb, var(--primary) 20%, transparent)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!task.completed) {
-          e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = isBlocked
-            ? 'color-mix(in srgb, var(--danger) 35%, transparent)'
-            : highlight
-            ? 'color-mix(in srgb, var(--warning) 35%, transparent)'
-            : 'var(--border-color)';
-          e.currentTarget.style.boxShadow = highlight
-            ? '0 2px 10px color-mix(in srgb, var(--warning) 10%, transparent)'
-            : '0 2px 8px rgba(0, 0, 0, 0.25)';
-        }
-      }}
     >
-      {/* Tira lateral de acento de proyecto */}
+      {/* Tira lateral de acento de proyecto / estado */}
       <div
         style={{
           position: 'absolute',
@@ -101,29 +130,34 @@ export function TaskCard({
           top: 0,
           bottom: 0,
           width: '3px',
-          background: task.completed ? 'transparent' : isBlocked ? 'var(--danger)' : theme.color,
-          opacity: task.completed ? 0.3 : 0.85
+          background: isDone
+            ? 'transparent'
+            : isBlocked
+            ? 'var(--danger)'
+            : isInProgress
+            ? 'var(--accent)'
+            : theme.color,
+          opacity: isDone ? 0.3 : 0.95
         }}
       />
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0, paddingLeft: '4px' }}>
-        {/* Checkbox táctico interactivo con cerrojo si está bloqueada */}
+        {/* Checkbox táctico interactivo */}
         <div
           onClick={handleCheckboxClick}
           className="task-checkbox-wrapper"
           style={{
             marginTop: '2px',
-            color: task.completed ? 'var(--primary)' : 'var(--text-muted)',
+            color: isDone ? 'var(--primary)' : isInProgress ? 'var(--accent)' : 'var(--text-muted)',
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: isBlocked ? 'not-allowed' : 'pointer',
-            transition: 'color 0.15s ease'
+            cursor: isBlocked ? 'not-allowed' : 'pointer'
           }}
           title={isBlocked ? `Bloqueada por: ${task.blockingTask?.cleanText || task.dependsOn}` : 'Conmutar estado'}
         >
-          {task.completed ? (
+          {isDone ? (
             <div
               style={{
                 width: '16px',
@@ -154,6 +188,22 @@ export function TaskCard({
             >
               <Lock size={10} color="var(--danger)" />
             </div>
+          ) : isInProgress ? (
+            <div
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '4px',
+                background: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+                border: '1.5px solid var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 6px color-mix(in srgb, var(--accent) 30%, transparent)'
+              }}
+            >
+              <Zap size={10} color="var(--accent)" />
+            </div>
           ) : (
             <div
               style={{
@@ -174,13 +224,12 @@ export function TaskCard({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0, flex: 1 }}>
           <TaskCardBadges task={task} theme={theme} isBlocked={isBlocked} />
 
-          {/* Texto de la tarea */}
           <span
             style={{
               fontSize: compact ? '0.76rem' : '0.82rem',
-              color: task.completed ? 'var(--text-muted)' : 'var(--text-high)',
-              textDecoration: task.completed ? 'line-through' : 'none',
-              fontWeight: task.completed ? 400 : 500,
+              color: isDone ? 'var(--text-muted)' : 'var(--text-high)',
+              textDecoration: isDone ? 'line-through' : 'none',
+              fontWeight: isDone ? 400 : isInProgress ? 600 : 500,
               lineHeight: '1.4',
               wordBreak: 'break-word',
               letterSpacing: '0.01em'
@@ -189,7 +238,6 @@ export function TaskCard({
             {task.cleanText}
           </span>
 
-          {/* Archivo y Línea de origen */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '1px' }}>
             <FileText size={10} color="var(--text-muted)" />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -200,6 +248,17 @@ export function TaskCard({
           </div>
         </div>
       </div>
+
+      {/* Micro-Acciones Tácticas de Flujo */}
+      {!isBlocked && (
+        <TaskCardActions
+          task={task}
+          isDone={isDone}
+          isInProgress={isInProgress}
+          isHovered={isHovered}
+          onQuickAction={handleQuickAction}
+        />
+      )}
     </div>
   );
 }

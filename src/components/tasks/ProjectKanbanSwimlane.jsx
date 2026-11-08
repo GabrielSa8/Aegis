@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Flame, Maximize2, Minimize2 } from 'lucide-react';
-import { TaskCard } from './TaskCard';
+import { ChevronDown, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { SwimlaneColumn } from './SwimlaneColumn';
 
 export function ProjectKanbanSwimlane({
   projectName,
@@ -10,16 +10,22 @@ export function ProjectKanbanSwimlane({
   pPercent,
   isCollapsed,
   onToggleCollapse,
-  todoTasks,
-  focusTasks,
-  doneTasks,
+  todoTasks = [],
+  inProgressTasks = [],
+  doneTasks = [],
   onToggleTask,
+  onSetStatus,
   onSelectTask,
+  onAddTask,
   isMaximized = false,
   onToggleMaximize
 }) {
-  const [expandedColumn, setExpandedColumn] = useState(null); // null | 'todo' | 'focus' | 'done'
-  const columnHeight = isMaximized ? 'calc(100vh - 270px)' : '220px';
+  const [expandedColumn, setExpandedColumn] = useState(null); // null | 'todo' | 'in_progress' | 'done'
+  const columnHeight = isMaximized ? 'calc(100vh - 270px)' : '320px';
+
+  // Obtener ruta del archivo del proyecto para creación rápida de tareas
+  const sampleTask = todoTasks[0] || inProgressTasks[0] || doneTasks[0];
+  const filePath = sampleTask?.file_path;
 
   return (
     <div
@@ -96,7 +102,7 @@ export function ProjectKanbanSwimlane({
         </div>
       </div>
 
-      {/* Columnas del Swimlane */}
+      {/* Columnas del Swimlane: Triada Oficial Kanban */}
       {!isCollapsed && (
         <div
           style={{
@@ -107,160 +113,61 @@ export function ProjectKanbanSwimlane({
             background: 'color-mix(in srgb, var(--bg-main) 40%, transparent)'
           }}
         >
-          {/* Por Hacer */}
+          {/* Columna 1: 📥 Por Hacer */}
           {(!expandedColumn || expandedColumn === 'todo') && (
-            <div
-              style={{
-                background: 'color-mix(in srgb, var(--bg-card) 60%, transparent)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '5px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <div
-                style={{
-                  padding: '5px 8px',
-                  background: 'color-mix(in srgb, var(--text-high) 2%, transparent)',
-                  borderBottom: '1px solid var(--border-color)',
-                  fontSize: '0.66rem',
-                  fontWeight: 700,
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexShrink: 0
-                }}
-              >
-                <span>📥 Por Hacer</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{todoTasks.length}</span>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedColumn(expandedColumn === 'todo' ? null : 'todo')}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '1px', display: 'flex' }}
-                    title={expandedColumn === 'todo' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
-                  >
-                    {expandedColumn === 'todo' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
-                  </button>
-                </div>
-              </div>
-              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
-                {todoTasks.length === 0 ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
-                    Sin tareas en cola
-                  </div>
-                ) : (
-                  todoTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
-                )}
-              </div>
-            </div>
+            <SwimlaneColumn
+              title="📥 Por Hacer"
+              statusKey="todo"
+              tasks={todoTasks}
+              onToggleTask={onToggleTask}
+              onSetStatus={onSetStatus}
+              onSelectTask={onSelectTask}
+              accentColor="var(--border-color)"
+              headerBg="color-mix(in srgb, var(--text-high) 2%, transparent)"
+              isExpanded={expandedColumn === 'todo'}
+              onToggleExpand={() => setExpandedColumn(expandedColumn === 'todo' ? null : 'todo')}
+              emptyMessage="Sin tareas en cola"
+              columnHeight={columnHeight}
+              onAddTask={onAddTask}
+              filePath={filePath}
+            />
           )}
 
-          {/* En Foco */}
-          {(!expandedColumn || expandedColumn === 'focus') && (
-            <div
-              style={{
-                background: 'color-mix(in srgb, var(--warning) 6%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
-                borderRadius: '5px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <div
-                style={{
-                  padding: '5px 8px',
-                  background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
-                  borderBottom: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
-                  fontSize: '0.66rem',
-                  fontWeight: 700,
-                  color: 'var(--warning)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexShrink: 0
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Flame size={11} color="var(--warning)" />
-                  🔥 En Foco
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{focusTasks.length}</span>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedColumn(expandedColumn === 'focus' ? null : 'focus')}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--warning)', cursor: 'pointer', padding: '1px', display: 'flex' }}
-                    title={expandedColumn === 'focus' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
-                  >
-                    {expandedColumn === 'focus' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
-                  </button>
-                </div>
-              </div>
-              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
-                {focusTasks.length === 0 ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
-                    Sin tareas urgentes
-                  </div>
-                ) : (
-                  focusTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact highlight />)
-                )}
-              </div>
-            </div>
+          {/* Columna 2: ⚡ En Proceso (Con Límite WIP de 4 tareas) */}
+          {(!expandedColumn || expandedColumn === 'in_progress') && (
+            <SwimlaneColumn
+              title="⚡ En Proceso"
+              statusKey="in_progress"
+              tasks={inProgressTasks}
+              onToggleTask={onToggleTask}
+              onSetStatus={onSetStatus}
+              onSelectTask={onSelectTask}
+              accentColor="color-mix(in srgb, var(--accent) 35%, transparent)"
+              headerBg="color-mix(in srgb, var(--accent) 12%, transparent)"
+              isExpanded={expandedColumn === 'in_progress'}
+              onToggleExpand={() => setExpandedColumn(expandedColumn === 'in_progress' ? null : 'in_progress')}
+              emptyMessage="Sin tareas en proceso. Arrastra una aquí."
+              columnHeight={columnHeight}
+              wipLimit={4}
+            />
           )}
 
-          {/* Completadas */}
+          {/* Columna 3: ✅ Completadas */}
           {(!expandedColumn || expandedColumn === 'done') && (
-            <div
-              style={{
-                background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-                borderRadius: '5px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <div
-                style={{
-                  padding: '5px 8px',
-                  background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-                  borderBottom: '1px solid color-mix(in srgb, var(--primary) 20%, transparent)',
-                  fontSize: '0.66rem',
-                  fontWeight: 700,
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexShrink: 0
-                }}
-              >
-                <span>✅ Completadas</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem' }}>{doneTasks.length}</span>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedColumn(expandedColumn === 'done' ? null : 'done')}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '1px', display: 'flex' }}
-                    title={expandedColumn === 'done' ? 'Ver 3 columnas' : 'Expandir columna al 100%'}
-                  >
-                    {expandedColumn === 'done' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
-                  </button>
-                </div>
-              </div>
-              <div style={{ padding: '5px', display: 'flex', flexDirection: 'column', gap: '4px', height: columnHeight, overflowY: 'auto' }}>
-                {doneTasks.length === 0 ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', opacity: 0.6 }}>
-                    Sin completadas
-                  </div>
-                ) : (
-                  doneTasks.map((t) => <TaskCard key={t.id} task={t} onToggle={onToggleTask} onSelectTask={onSelectTask} compact />)
-                )}
-              </div>
-            </div>
+            <SwimlaneColumn
+              title="✅ Completadas"
+              statusKey="done"
+              tasks={doneTasks}
+              onToggleTask={onToggleTask}
+              onSetStatus={onSetStatus}
+              onSelectTask={onSelectTask}
+              accentColor="color-mix(in srgb, var(--primary) 25%, transparent)"
+              headerBg="color-mix(in srgb, var(--primary) 10%, transparent)"
+              isExpanded={expandedColumn === 'done'}
+              onToggleExpand={() => setExpandedColumn(expandedColumn === 'done' ? null : 'done')}
+              emptyMessage="Sin tareas completadas aún"
+              columnHeight={columnHeight}
+            />
           )}
         </div>
       )}

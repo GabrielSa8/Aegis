@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Clock, Flame, Layers } from 'lucide-react';
+import { CheckCircle2, Clock, Flame, Layers, Zap } from 'lucide-react';
 
 export function TasksHudStats({ stats, statusFilter = 'all', onStatusFilterChange }) {
   const handleClick = (key) => {
@@ -51,13 +51,26 @@ export function TasksHudStats({ stats, statusFilter = 'all', onStatusFilterChang
 
       <div
         className="tasks-hud-item"
-        style={getStyle('pending', 'var(--accent)')}
+        style={getStyle('pending', 'var(--text-high)')}
         onClick={() => handleClick('pending')}
         title="Filtrar tareas pendientes en cola"
       >
-        <Clock size={12} color={statusFilter === 'pending' ? 'var(--accent)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+        <Clock size={12} color={statusFilter === 'pending' ? 'var(--text-high)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
         <span className="tasks-hud-label">En Cola:</span>
-        <strong style={{ color: statusFilter === 'pending' ? 'var(--accent)' : 'inherit', fontFamily: 'var(--font-mono)' }}>{stats.pending}</strong>
+        <strong style={{ color: statusFilter === 'pending' ? 'var(--text-high)' : 'inherit', fontFamily: 'var(--font-mono)' }}>{stats.pending}</strong>
+      </div>
+
+      <span className="tasks-hud-divider" style={{ color: 'var(--border-color)', opacity: 0.5 }}>|</span>
+
+      <div
+        className="tasks-hud-item"
+        style={getStyle('in_progress', 'var(--accent)')}
+        onClick={() => handleClick('in_progress')}
+        title="Filtrar tareas actualmente en proceso"
+      >
+        <Zap size={12} color={statusFilter === 'in_progress' ? 'var(--accent)' : 'var(--accent)'} style={{ flexShrink: 0 }} />
+        <span className="tasks-hud-label">En Proceso:</span>
+        <strong style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{stats.inProgress || 0}</strong>
       </div>
 
       <span className="tasks-hud-divider" style={{ color: 'var(--border-color)', opacity: 0.5 }}>|</span>

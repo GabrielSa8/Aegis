@@ -54,6 +54,8 @@ pub fn run() {
             vault::save_vault_note,
             vault::get_vault_tasks,
             vault::toggle_vault_task,
+            vault::set_vault_task_status,
+            vault::add_vault_task,
             vault::get_vault_stats,
             vault::search_vault_content,
             vault::create_vault_note,

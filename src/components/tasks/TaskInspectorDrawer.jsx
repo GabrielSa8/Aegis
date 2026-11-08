@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Calendar, Flame, CheckSquare, Square, Lock } from 'lucide-react';
+import { X, Calendar, Flame, CheckSquare, Square, Lock, Zap, Clock, Play } from 'lucide-react';
 import { TacticalBadge } from '../ui/TacticalBadge';
 import { TaskInspectorActions } from './TaskInspectorActions';
 
@@ -7,7 +7,7 @@ import { TaskInspectorActions } from './TaskInspectorActions';
  * TaskInspectorDrawer — Inspector táctico lateral (Drawer) de contexto y acciones para tareas.
  * Muestra metadatos, estado de dependencias dependsOn, acceso en 1-clic a notas de Obsidian y puente al Agente IA.
  */
-export function TaskInspectorDrawer({ task, onClose, onToggle }) {
+export function TaskInspectorDrawer({ task, onClose, onToggle, onSetStatus }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -23,6 +23,17 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
     color: 'var(--primary)',
     border: 'var(--border-color)',
     bg: 'var(--bg-card)'
+  };
+
+  const currentStatus = task.status || (task.completed ? 'done' : 'todo');
+
+  const handleStatusClick = (targetStatus) => {
+    if (task.isBlocked && targetStatus !== 'todo') return;
+    if (onSetStatus) {
+      onSetStatus(task, targetStatus);
+    } else if (onToggle) {
+      onToggle(task);
+    }
   };
 
   return (
@@ -96,6 +107,77 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
           gap: '1rem'
         }}
       >
+        {/* Selector de Estado Triada Kanban Oficial */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Estado de Flujo
+          </label>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '4px',
+              padding: '3px',
+              background: 'color-mix(in srgb, var(--text-high) 4%, transparent)',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color)'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => handleStatusClick('todo')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                padding: '6px 8px', fontSize: '0.7rem',
+                fontWeight: currentStatus === 'todo' ? 700 : 500,
+                color: currentStatus === 'todo' ? 'var(--text-high)' : 'var(--text-muted)',
+                background: currentStatus === 'todo' ? 'var(--bg-card)' : 'transparent',
+                border: currentStatus === 'todo' ? '1px solid var(--border-color)' : '1px solid transparent',
+                borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s ease'
+              }}
+            >
+              <Clock size={11} />
+              <span>Por Hacer</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleStatusClick('in_progress')}
+              disabled={task.isBlocked && !task.completed}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                padding: '6px 8px', fontSize: '0.7rem',
+                fontWeight: currentStatus === 'in_progress' ? 700 : 500,
+                color: currentStatus === 'in_progress' ? 'var(--accent)' : 'var(--text-muted)',
+                background: currentStatus === 'in_progress' ? 'color-mix(in srgb, var(--accent) 18%, transparent)' : 'transparent',
+                border: currentStatus === 'in_progress' ? '1px solid color-mix(in srgb, var(--accent) 50%, transparent)' : '1px solid transparent',
+                borderRadius: '4px', cursor: task.isBlocked && !task.completed ? 'not-allowed' : 'pointer', transition: 'all 0.15s ease'
+              }}
+            >
+              <Zap size={11} color={currentStatus === 'in_progress' ? 'var(--accent)' : 'currentColor'} />
+              <span>En Proceso</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleStatusClick('done')}
+              disabled={task.isBlocked && !task.completed}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                padding: '6px 8px', fontSize: '0.7rem',
+                fontWeight: currentStatus === 'done' ? 700 : 500,
+                color: currentStatus === 'done' ? 'var(--primary)' : 'var(--text-muted)',
+                background: currentStatus === 'done' ? 'color-mix(in srgb, var(--primary) 18%, transparent)' : 'transparent',
+                border: currentStatus === 'done' ? '1px solid color-mix(in srgb, var(--primary) 50%, transparent)' : '1px solid transparent',
+                borderRadius: '4px', cursor: task.isBlocked && !task.completed ? 'not-allowed' : 'pointer', transition: 'all 0.15s ease'
+              }}
+            >
+              <CheckSquare size={11} color={currentStatus === 'done' ? 'var(--primary)' : 'currentColor'} />
+              <span>Hecho</span>
+            </button>
+          </div>
+        </div>
+
         {/* Banner de Estado de Bloqueo */}
         {task.isBlocked && (
           <div
@@ -136,7 +218,7 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
             <button
-              onClick={() => onToggle(task)}
+              onClick={() => (onToggle ? onToggle(task) : handleStatusClick(currentStatus === 'done' ? 'todo' : 'done'))}
               disabled={task.isBlocked && !task.completed}
               style={{
                 background: 'transparent',
@@ -144,12 +226,12 @@ export function TaskInspectorDrawer({ task, onClose, onToggle }) {
                 padding: 0,
                 cursor: task.isBlocked && !task.completed ? 'not-allowed' : 'pointer',
                 opacity: task.isBlocked && !task.completed ? 0.4 : 1,
-                color: task.completed ? 'var(--primary)' : 'var(--text-muted)',
+                color: task.completed ? 'var(--primary)' : currentStatus === 'in_progress' ? 'var(--accent)' : 'var(--text-muted)',
                 marginTop: '2px'
               }}
               title={task.isBlocked ? 'Tarea bloqueada por prerrequisito' : 'Conmutar estado'}
             >
-              {task.completed ? <CheckSquare size={18} /> : <Square size={18} />}
+              {task.completed ? <CheckSquare size={18} /> : currentStatus === 'in_progress' ? <Zap size={18} color="var(--accent)" /> : <Square size={18} />}
             </button>
             <span
               style={{

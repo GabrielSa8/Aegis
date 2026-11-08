@@ -35,6 +35,8 @@ export default function TasksView() {
     fetchTasks,
     handleSaveCustomizations,
     handleToggle,
+    handleSetStatus,
+    handleAddTask,
     toggleHubCollapse,
     toggleProjectCollapse,
     hubs,
@@ -115,7 +117,9 @@ export default function TasksView() {
           kanbanColumns={kanbanColumns}
           customizations={customizations}
           onToggle={handleToggle}
+          onSetStatus={handleSetStatus}
           onSelectTask={setSelectedTask}
+          onAddTask={handleAddTask}
         />
       ) : (
         <TasksListView
@@ -129,6 +133,7 @@ export default function TasksView() {
           toggleProjectCollapse={toggleProjectCollapse}
           customizations={customizations}
           onToggle={handleToggle}
+          onSetStatus={handleSetStatus}
           onSelectTask={setSelectedTask}
         />
       )}
@@ -139,6 +144,7 @@ export default function TasksView() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onToggle={handleToggle}
+          onSetStatus={handleSetStatus}
         />
       )}
 

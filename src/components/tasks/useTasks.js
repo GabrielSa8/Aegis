@@ -69,24 +69,51 @@ export function useTasks() {
     } catch (_) {}
   };
 
-  const handleToggle = async (task) => {
-    const targetState = !task.completed;
+  const handleSetStatus = async (task, newStatus) => {
+    const isCompleted = newStatus === 'done';
+    const oldStatus = task.status;
+    const oldCompleted = task.completed;
+    const filePath = task.file_path || task.filePath;
+    const lineNumber = task.line_number || task.lineNumber;
+
+    if (!filePath || !lineNumber) {
+      console.warn('handleSetStatus: filePath o lineNumber no encontrados en la tarea', task);
+      return;
+    }
 
     setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, completed: targetState } : t))
+      prev.map((t) => (t.id === task.id ? { ...t, status: newStatus, completed: isCompleted } : t))
+    );
+
+    setSelectedTask((prev) =>
+      prev && prev.id === task.id ? { ...prev, status: newStatus, completed: isCompleted } : prev
     );
 
     try {
-      await invoke('toggle_vault_task', {
-        filePath: task.file_path,
-        lineNumber: task.line_number,
-        completed: targetState
+      await invoke('set_vault_task_status', {
+        filePath,
+        lineNumber,
+        status: newStatus
       });
     } catch (err) {
-      console.error('Error al conmutar tarea en Obsidian:', err);
+      console.error('Error al actualizar estado de tarea:', err);
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, completed: !targetState } : t))
+        prev.map((t) => (t.id === task.id ? { ...t, status: oldStatus, completed: oldCompleted } : t))
       );
+    }
+  };
+
+  const handleToggle = async (task) => {
+    const targetStatus = task.completed || task.status === 'done' ? 'todo' : 'done';
+    await handleSetStatus(task, targetStatus);
+  };
+
+  const handleAddTask = async (filePath, text) => {
+    try {
+      await invoke('add_vault_task', { filePath, text });
+      await fetchTasks();
+    } catch (err) {
+      console.error('Error al agregar nueva tarea:', err);
     }
   };
 
@@ -170,9 +197,10 @@ export function useTasks() {
     return parsedTasks.filter((t) => {
       if (selectedHub !== 'Todos' && t.hub !== selectedHub) return false;
       if (selectedProject !== 'Todos' && t.project !== selectedProject) return false;
-      if (statusFilter === 'pending' && t.completed) return false;
-      if (statusFilter === 'completed' && !t.completed) return false;
-      if (statusFilter === 'focus' && (t.completed || (!t.priority === 'high' && !t.dueDate))) return false;
+      if (statusFilter === 'pending' && (t.status !== 'todo' || t.completed)) return false;
+      if (statusFilter === 'in_progress' && t.status !== 'in_progress') return false;
+      if (statusFilter === 'completed' && (!t.completed && t.status !== 'done')) return false;
+      if (statusFilter === 'focus' && (t.completed || (t.priority !== 'high' && !t.dueDate))) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -230,6 +258,8 @@ export function useTasks() {
     fetchTasks,
     handleSaveCustomizations,
     handleToggle,
+    handleSetStatus,
+    handleAddTask,
     toggleHubCollapse,
     toggleProjectCollapse,
     parsedTasks,

@@ -16,7 +16,9 @@ export function KanbanBoard({
   kanbanColumns,
   customizations,
   onToggle,
-  onSelectTask
+  onSetStatus,
+  onSelectTask,
+  onAddTask
 }) {
   const [maximizedProject, setMaximizedProject] = useState(null);
 
@@ -73,7 +75,7 @@ export function KanbanBoard({
             const isHubCollapsed = collapsedHubs.has(hubName);
             const allHubTasks = Object.values(projectsMap).flat();
             const hubTotal = allHubTasks.length;
-            const hubDone = allHubTasks.filter((t) => t.completed).length;
+            const hubDone = allHubTasks.filter((t) => t.completed || t.status === 'done').length;
             const hubPercent = hubTotal > 0 ? Math.round((hubDone / hubTotal) * 100) : 0;
 
             const visibleProjects = Object.entries(projectsMap).filter(
@@ -134,16 +136,16 @@ export function KanbanBoard({
                       const projKey = `${hubName}::${projectName}`;
                       const isProjCollapsed = collapsedProjects.has(projKey);
                       const pTotal = projTasks.length;
-                      const pDone = projTasks.filter((t) => t.completed).length;
+                      const pDone = projTasks.filter((t) => t.completed || t.status === 'done').length;
                       const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
                       const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
                       const pTodo = [];
-                      const pFocus = [];
+                      const pInProgress = [];
                       const pCompleted = [];
                       projTasks.forEach((t) => {
-                        if (t.completed) pCompleted.push(t);
-                        else if (t.priority === 'high' || t.dueDate) pFocus.push(t);
+                        if (t.status === 'done' || t.completed) pCompleted.push(t);
+                        else if (t.status === 'in_progress') pInProgress.push(t);
                         else pTodo.push(t);
                       });
 
@@ -158,10 +160,12 @@ export function KanbanBoard({
                           isCollapsed={isProjCollapsed}
                           onToggleCollapse={() => toggleProjectCollapse(projKey)}
                           todoTasks={pTodo}
-                          focusTasks={pFocus}
+                          inProgressTasks={pInProgress}
                           doneTasks={pCompleted}
                           onToggleTask={onToggle}
+                          onSetStatus={onSetStatus}
                           onSelectTask={onSelectTask}
+                          onAddTask={onAddTask}
                           isMaximized={maximizedProject === projectName}
                           onToggleMaximize={() => setMaximizedProject(maximizedProject === projectName ? null : projectName)}
                         />
@@ -179,16 +183,16 @@ export function KanbanBoard({
             .map(([projectName, projTasks]) => {
             const isProjCollapsed = collapsedProjects.has(projectName);
             const pTotal = projTasks.length;
-            const pDone = projTasks.filter((t) => t.completed).length;
+            const pDone = projTasks.filter((t) => t.completed || t.status === 'done').length;
             const pPercent = pTotal > 0 ? Math.round((pDone / pTotal) * 100) : 0;
             const theme = projTasks[0]?.theme || resolveProjectTheme(projectName, customizations);
 
             const pTodo = [];
-            const pFocus = [];
+            const pInProgress = [];
             const pCompleted = [];
             projTasks.forEach((t) => {
-              if (t.completed) pCompleted.push(t);
-              else if (t.priority === 'high' || t.dueDate) pFocus.push(t);
+              if (t.status === 'done' || t.completed) pCompleted.push(t);
+              else if (t.status === 'in_progress') pInProgress.push(t);
               else pTodo.push(t);
             });
 
@@ -203,10 +207,12 @@ export function KanbanBoard({
                 isCollapsed={isProjCollapsed}
                 onToggleCollapse={() => toggleProjectCollapse(projectName)}
                 todoTasks={pTodo}
-                focusTasks={pFocus}
+                inProgressTasks={pInProgress}
                 doneTasks={pCompleted}
                 onToggleTask={onToggle}
+                onSetStatus={onSetStatus}
                 onSelectTask={onSelectTask}
+                onAddTask={onAddTask}
                 isMaximized={maximizedProject === projectName}
                 onToggleMaximize={() => setMaximizedProject(maximizedProject === projectName ? null : projectName)}
               />
@@ -217,7 +223,7 @@ export function KanbanBoard({
     );
   }
 
-  /* Sub-modo B: 3 Columnas Globales (agrupadas con badges por Proyecto) */
+  /* Sub-modo B: 3 Columnas Globales Oficiales Kanban (Por Hacer, En Proceso, Completadas) */
   return (
     <div
       style={{
@@ -229,9 +235,11 @@ export function KanbanBoard({
     >
       <KanbanColumn
         title="📥 Por Hacer"
+        statusKey="todo"
         count={kanbanColumns.todo.length}
         tasks={kanbanColumns.todo}
         onToggle={onToggle}
+        onSetStatus={onSetStatus}
         onSelectTask={onSelectTask}
         headerColor="var(--text-high)"
         accentColor="var(--border-color)"
@@ -239,22 +247,27 @@ export function KanbanBoard({
       />
 
       <KanbanColumn
-        title="🔥 En Foco / Urgente"
-        count={kanbanColumns.focus.length}
-        tasks={kanbanColumns.focus}
+        title="⚡ En Proceso"
+        statusKey="in_progress"
+        count={kanbanColumns.inProgress.length}
+        tasks={kanbanColumns.inProgress}
         onToggle={onToggle}
+        onSetStatus={onSetStatus}
         onSelectTask={onSelectTask}
-        headerColor="var(--warning)"
-        accentColor="color-mix(in srgb, var(--warning) 35%, transparent)"
+        headerColor="var(--accent)"
+        accentColor="color-mix(in srgb, var(--accent) 45%, transparent)"
         highlight
-        emptyMessage="Sin tareas urgentes en foco"
+        wipLimit={5}
+        emptyMessage="Sin tareas en proceso. Arrastra o inicia una aquí."
       />
 
       <KanbanColumn
         title="✅ Completadas"
+        statusKey="done"
         count={kanbanColumns.done.length}
         tasks={kanbanColumns.done}
         onToggle={onToggle}
+        onSetStatus={onSetStatus}
         onSelectTask={onSelectTask}
         headerColor="var(--primary)"
         accentColor="color-mix(in srgb, var(--primary) 35%, transparent)"

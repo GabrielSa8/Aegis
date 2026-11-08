@@ -1,17 +1,25 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { TaskCard } from './TaskCard';
 
 export function KanbanColumn({
   title,
+  statusKey,
   count,
-  tasks,
+  tasks = [],
   onToggle,
+  onSetStatus,
   onSelectTask,
   headerColor,
   accentColor,
   highlight = false,
-  emptyMessage
+  emptyMessage,
+  wipLimit
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const isWipExceeded = wipLimit && count > wipLimit;
+
   const grouped = useMemo(() => {
     const map = {};
     tasks.forEach((t) => {
@@ -21,23 +29,69 @@ export function KanbanColumn({
     return map;
   }, [tasks]);
 
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const raw = e.dataTransfer.getData('application/json');
+      if (raw) {
+        const item = JSON.parse(raw);
+        if (item && onSetStatus) {
+          onSetStatus(item, statusKey);
+        }
+      }
+    } catch (_) {}
+  };
+
   return (
     <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       style={{
-        background: 'var(--bg-card)',
-        border: `1px solid ${accentColor}`,
+        background: isDragOver
+          ? 'color-mix(in srgb, var(--primary) 10%, var(--bg-card))'
+          : 'var(--bg-card)',
+        border: isDragOver
+          ? '1.5px dashed var(--primary)'
+          : `1px solid ${accentColor}`,
         borderRadius: '8px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         maxHeight: 'calc(100vh - 180px)',
-        boxShadow: highlight ? '0 0 16px color-mix(in srgb, var(--warning) 12%, transparent)' : 'var(--shadow-lg)'
+        boxShadow: isDragOver
+          ? '0 0 20px color-mix(in srgb, var(--primary) 25%, transparent)'
+          : highlight
+          ? '0 0 16px color-mix(in srgb, var(--accent) 15%, transparent)'
+          : 'var(--shadow-lg)',
+        transition: 'all 0.15s ease'
       }}
     >
       <div
         style={{
           padding: '0.55rem 0.85rem',
-          background: highlight ? 'color-mix(in srgb, var(--warning) 12%, transparent)' : 'color-mix(in srgb, var(--text-high) 2%, transparent)',
+          background: highlight
+            ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
+            : 'color-mix(in srgb, var(--text-high) 2%, transparent)',
           borderBottom: `1px solid ${accentColor}`,
           display: 'flex',
           alignItems: 'center',
@@ -47,6 +101,23 @@ export function KanbanColumn({
         <span style={{ fontSize: '0.78rem', fontWeight: 800, color: headerColor }}>
           {title} ({count})
         </span>
+
+        {isWipExceeded && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '3px',
+              fontSize: '0.62rem',
+              color: 'var(--warning)',
+              fontWeight: 700
+            }}
+            title={`Atención: Límite WIP sugerido superado (${count}/${wipLimit})`}
+          >
+            <AlertCircle size={11} color="var(--warning)" />
+            WIP!
+          </span>
+        )}
       </div>
 
       <div style={{ padding: '0.55rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -84,7 +155,15 @@ export function KanbanColumn({
                   <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>({projTasks.length})</span>
                 </div>
                 {projTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onToggle={onToggle} onSelectTask={onSelectTask} compact highlight={highlight} />
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onToggle={onToggle}
+                    onSetStatus={onSetStatus}
+                    onSelectTask={onSelectTask}
+                    compact
+                    highlight={highlight}
+                  />
                 ))}
               </div>
             );

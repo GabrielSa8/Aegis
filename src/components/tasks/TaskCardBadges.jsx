@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Calendar, Lock } from 'lucide-react';
+import { Flame, Calendar, Lock, Zap } from 'lucide-react';
 
 export function TaskCardBadges({ task, theme, isBlocked }) {
   return (
@@ -24,6 +24,28 @@ export function TaskCardBadges({ task, theme, isBlocked }) {
         <span>{theme.icon}</span>
         <span>{task.project}</span>
       </span>
+
+      {/* Badge de En Proceso */}
+      {task.status === 'in_progress' && !task.completed && (
+        <span
+          style={{
+            fontSize: '0.6rem',
+            fontWeight: 800,
+            color: 'var(--accent)',
+            background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent) 40%, transparent)',
+            padding: '1px 5px',
+            borderRadius: '4px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '2px',
+            boxShadow: '0 0 6px color-mix(in srgb, var(--accent) 25%, transparent)'
+          }}
+        >
+          <Zap size={10} color="var(--accent)" />
+          EN PROCESO
+        </span>
+      )}
 
       {/* Badge de Bloqueada dependsOn */}
       {isBlocked && (

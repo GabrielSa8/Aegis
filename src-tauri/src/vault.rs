@@ -37,6 +37,7 @@ pub struct VaultTask {
     pub line_number: usize,
     pub text: String,
     pub completed: bool,
+    pub status: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -239,13 +240,16 @@ fn collect_tasks(dir: &Path, root: &Path, tasks: &mut Vec<VaultTask>) -> Result<
                     if let Ok(line) = line_res {
                         let trimmed = line.trim();
                         let is_pending = trimmed.starts_with("- [ ]");
+                        let is_in_progress = trimmed.starts_with("- [/]");
                         let is_completed = trimmed.starts_with("- [x]") || trimmed.starts_with("- [X]");
 
-                        if is_pending || is_completed {
-                            let text = if is_pending {
-                                trimmed.trim_start_matches("- [ ]").trim()
+                        if is_pending || is_in_progress || is_completed {
+                            let (text, status, completed) = if is_pending {
+                                (trimmed.trim_start_matches("- [ ]").trim(), "todo", false)
+                            } else if is_in_progress {
+                                (trimmed.trim_start_matches("- [/]").trim(), "in_progress", false)
                             } else {
-                                trimmed.trim_start_matches("- [x]").trim_start_matches("- [X]").trim()
+                                (trimmed.trim_start_matches("- [x]").trim_start_matches("- [X]").trim(), "done", true)
                             };
 
                             if !text.is_empty() {
@@ -259,7 +263,8 @@ fn collect_tasks(dir: &Path, root: &Path, tasks: &mut Vec<VaultTask>) -> Result<
                                     hub: hub.clone(),
                                     line_number,
                                     text: text.to_string(),
-                                    completed: is_completed,
+                                    completed,
+                                    status: status.to_string(),
                                 });
                             }
                         }
@@ -273,6 +278,12 @@ fn collect_tasks(dir: &Path, root: &Path, tasks: &mut Vec<VaultTask>) -> Result<
 
 #[tauri::command]
 pub fn toggle_vault_task(file_path: String, line_number: usize, completed: bool) -> Result<(), String> {
+    let target_status = if completed { "done" } else { "todo" };
+    set_vault_task_status(file_path, line_number, target_status.to_string())
+}
+
+#[tauri::command]
+pub fn set_vault_task_status(file_path: String, line_number: usize, status: String) -> Result<(), String> {
     let path = Path::new(&file_path);
     if !path.exists() {
         return Err(format!("Archivo no encontrado: {}", file_path));
@@ -291,22 +302,22 @@ pub fn toggle_vault_task(file_path: String, line_number: usize, completed: bool)
     let target_idx = line_number - 1;
     let old_line = lines[target_idx];
 
-    let new_line = if completed {
-        // Pasar a completada: cambiar "- [ ]" por "- [x]"
-        if let Some(pos) = old_line.find("- [ ]") {
-            format!("{}- [x]{}", &old_line[..pos], &old_line[pos + 5..])
-        } else {
-            old_line.to_string()
-        }
+    let target_prefix = match status.as_str() {
+        "in_progress" => "- [/]",
+        "done" => "- [x]",
+        _ => "- [ ]",
+    };
+
+    let new_line = if let Some(pos) = old_line.find("- [ ]") {
+        format!("{}{}{}", &old_line[..pos], target_prefix, &old_line[pos + 5..])
+    } else if let Some(pos) = old_line.find("- [/]") {
+        format!("{}{}{}", &old_line[..pos], target_prefix, &old_line[pos + 5..])
+    } else if let Some(pos) = old_line.find("- [x]") {
+        format!("{}{}{}", &old_line[..pos], target_prefix, &old_line[pos + 5..])
+    } else if let Some(pos) = old_line.find("- [X]") {
+        format!("{}{}{}", &old_line[..pos], target_prefix, &old_line[pos + 5..])
     } else {
-        // Pasar a pendiente: cambiar "- [x]" o "- [X]" por "- [ ]"
-        if let Some(pos) = old_line.find("- [x]") {
-            format!("{}- [ ]{}", &old_line[..pos], &old_line[pos + 5..])
-        } else if let Some(pos) = old_line.find("- [X]") {
-            format!("{}- [ ]{}", &old_line[..pos], &old_line[pos + 5..])
-        } else {
-            old_line.to_string()
-        }
+        old_line.to_string()
     };
 
     let mut new_lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
@@ -320,6 +331,34 @@ pub fn toggle_vault_task(file_path: String, line_number: usize, completed: bool)
 
     let mut file = File::create(path).map_err(|e| e.to_string())?;
     file.write_all(final_content.as_bytes()).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn add_vault_task(file_path: String, text: String) -> Result<(), String> {
+    let path = Path::new(&file_path);
+    if !path.exists() {
+        return Err(format!("Archivo no encontrado: {}", file_path));
+    }
+    if !is_vault_path_safe(path) {
+        return Err("Ruta de archivo fuera de los límites de la Bóveda".into());
+    }
+
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return Err("El texto de la tarea no puede estar vacío".into());
+    }
+
+    let mut content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    if !content.ends_with('\n') && !content.is_empty() {
+        content.push('\n');
+    }
+
+    content.push_str(&format!("- [ ] {}\n", trimmed));
+
+    let mut file = File::create(path).map_err(|e| e.to_string())?;
+    file.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
 
     Ok(())
 }

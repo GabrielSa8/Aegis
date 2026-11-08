@@ -200,12 +200,14 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
         continue;
       }
 
-      // Checkboxes de Obsidian interactivos
-      const taskMatch = line.match(/^(\s*)-\s*\[([ xX])\](?:\s+(.*)|\s*)$/);
+      // Checkboxes de Obsidian interactivos (Pendiente [ ], En Proceso [/], Completada [x])
+      const taskMatch = line.match(/^(\s*)-\s*\[([ xX/])\](?:\s+(.*)|\s*)$/);
       if (taskMatch) {
         const indentSpaces = taskMatch[1].length;
         const indentLevel = Math.floor(indentSpaces / 2);
-        const isDone = taskMatch[2].toLowerCase() === 'x';
+        const char = taskMatch[2];
+        const isDone = char.toLowerCase() === 'x';
+        const isInProgress = char === '/';
         const taskText = taskMatch[3] || '';
         const lineNum = segStartLine + i;
 
@@ -214,6 +216,7 @@ export default function MarkdownViewer({ content, onNavigateNote, onToggleTask, 
             key={`task-${blockIdx}-${i}`}
             taskText={taskText}
             isDone={isDone}
+            isInProgress={isInProgress}
             indentLevel={indentLevel}
             lineNum={lineNum}
             onToggleTask={onToggleTask}
