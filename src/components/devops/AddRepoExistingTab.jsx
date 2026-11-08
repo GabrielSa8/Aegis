@@ -45,7 +45,7 @@ export function AddRepoExistingTab({ onAddExisting, onClose, isLoading, setFormE
           type="text"
           value={existingPath}
           onChange={(e) => setExistingPath(e.target.value)}
-          placeholder="/home/zabrielsa/Proyects/mi-proyecto o ~/Proyects/..."
+          placeholder="/home/usuario/proyectos/mi-proyecto o ~/proyectos/..."
           style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xs)', color: 'var(--text-high)', fontSize: '0.76rem', fontFamily: 'var(--font-mono)' }}
           required
         />

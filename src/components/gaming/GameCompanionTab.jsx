@@ -75,7 +75,7 @@ export default function GameCompanionTab({ gameId, gameTitle, isSteam }) {
             <span>Sin nota previa</span>
           )}
           <span>•</span>
-          <span>N150 (UHD)</span>
+          <span>GPU Host</span>
           {context?.gamemode_active && (
             <TacticalBadge variant="success" size="xs">GameMode ON</TacticalBadge>
           )}
@@ -135,7 +135,7 @@ export default function GameCompanionTab({ gameId, gameTitle, isSteam }) {
               Game Companion
             </div>
             <p style={{ fontSize: '0.70rem', maxWidth: '380px', margin: 0 }}>
-              Consulta builds óptimas, guías directas para tus logros pendientes o ajustes gráficos optimizados para Intel N150 sin salir del juego.
+              Consulta builds óptimas, guías directas para tus logros pendientes o ajustes gráficos optimizados para tu hardware sin salir del juego.
             </p>
           </div>
         ) : (

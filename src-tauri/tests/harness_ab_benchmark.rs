@@ -12,7 +12,7 @@ struct RunMetrics {
 }
 
 fn execute_agy_run(prompt: &str, effort: &str) -> RunMetrics {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let agy_bin = format!("{}/.local/bin/agy", home);
 
     // Ejecutar en un directorio limpio temporal sin herramientas innecesarias para medir inferencia pura
@@ -125,9 +125,10 @@ fn benchmark_ab_aegis_harness_vs_raw() {
 
     // 1. Generar plan con Aegis Harness Activo
     let harness_cfg = HarnessConfig::default();
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let plan = build_harness_plan(
         &raw_multi_level_prompt,
-        Some("/home/zabrielsa/Proyects/projects/Aegis"),
+        current_dir.to_str(),
         "caveman",
         &harness_cfg,
     );

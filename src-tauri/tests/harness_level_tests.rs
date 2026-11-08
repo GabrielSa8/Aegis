@@ -152,7 +152,7 @@ fn test_08_auto_heal_escalation_chain() {
 #[test]
 #[ignore]
 fn test_09_live_micro_executions_across_levels() {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let agy_bin = format!("{}/.local/bin/agy", home);
     let temp_dir = std::env::temp_dir().join("aegis_harness_micro");
     let _ = std::fs::create_dir_all(&temp_dir);
@@ -294,7 +294,7 @@ fn test_11_runtime_process_escalator_on_vague_prompt() {
 #[test]
 #[ignore]
 fn test_12_live_vague_prompt_process_escalation() {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let agy_bin = format!("{}/.local/bin/agy", home);
     let temp_dir = std::env::temp_dir().join("aegis_vague_process_test");
     let _ = std::fs::create_dir_all(&temp_dir);

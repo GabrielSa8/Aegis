@@ -17,10 +17,10 @@ export default function GameCompanionQuickActions({ onSelectAction, disabled }) 
       prompt: 'Analiza mis logros bloqueados pendientes del contexto y dame la estrategia exacta paso a paso para desbloquear el más accesible.'
     },
     {
-      id: 'n150',
-      label: 'Config N150 & FPS',
+      id: 'perf',
+      label: 'Config FPS & Gráficos',
       icon: Zap,
-      prompt: 'Dame la configuración gráfica óptima para mi procesador Intel N150 (FSR/Gamescope, target 30/60 FPS, parámetros Proton/Wine) para balancear fluidez y nitidez.'
+      prompt: 'Dame la configuración gráfica óptima para mi procesador y GPU (FSR/Gamescope, target FPS, parámetros Proton/Wine) para balancear fluidez y nitidez.'
     },
     {
       id: 'secrets',

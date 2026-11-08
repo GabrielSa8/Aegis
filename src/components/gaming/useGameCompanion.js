@@ -133,9 +133,9 @@ export function useGameCompanion({ gameId, gameTitle, isSteam }) {
     setInput('');
     setLoading(true);
 
-    // Si es la primera interacción o acción rápida, enriquecemos con el sistema táctico
+    // Si es la primera interacción o acción rápida, enriquecemos con el sistema
     const contextHeader = context?.system_prompt
-      ? `${context.system_prompt}\n\n---\nInstrucción de Gabriel:\n${text}`
+      ? `${context.system_prompt}\n\n---\nInstrucción del Operador:\n${text}`
       : text;
 
     try {

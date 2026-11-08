@@ -26,3 +26,21 @@ dist-ssr
 # Backup & local data
 data.json
 storage_size_test.js
+*.db
+*.db-journal
+*.db.enc
+*.aegisbackup
+*.aegispkg
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Tauri build artifacts
+src-tauri/target/
+target/
+src-tauri/gen/
+

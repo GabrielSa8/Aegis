@@ -1077,7 +1077,7 @@ fn get_steam_achievement_progress_map() -> HashMap<String, (usize, usize)> {
 
 fn parse_steam_stats_schema(app_id: &str) -> Vec<AchievementItem> {
     let mut items = Vec::new();
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/home/zabrielsa".to_string());
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let possible_paths = [
         format!("{}/.local/share/Steam/appcache/stats/UserGameStatsSchema_{}.bin", home, app_id),
         format!("{}/.steam/steam/appcache/stats/UserGameStatsSchema_{}.bin", home, app_id),
@@ -1952,12 +1952,27 @@ pub fn get_game_agent_context(
         (false, None)
     };
 
-    // 5. Prompt del Sistema Táctico
+    // 5. Prompt del Sistema
+    let cfg = crate::config::get_aegis_config().ok();
+    let operator_name = cfg
+        .as_ref()
+        .map(|c| c.profile.name.clone())
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| "Operador".to_string());
+
+    let sys_telemetry = crate::sentinel::get_system_telemetry().ok();
+    let (cpu_info, os_info, ram_gb) = if let Some(ref t) = sys_telemetry {
+        let ram = (t.ram_total_mb as f64 / 1024.0).round() as u64;
+        (t.cpu_model.clone(), format!("{} ({})", t.os_name, t.kernel_version), ram)
+    } else {
+        ("Host CPU".to_string(), "Linux".to_string(), 16)
+    };
+
     let mut system_prompt = format!(
-        "Eres el Game Companion Táctico de Aegis, asistente experto de gaming y optimización para el usuario Gabriel en su equipo Intel N150 (4 Cores Alder Lake-N, Intel UHD Graphics 24 EUs, 16GB RAM, Fedora Linux).
+        "Eres el Game Companion de Aegis, asistente experto de gaming y optimización para el usuario {} en su equipo con procesador {} y {}GB RAM (SO: {}).
 Directrices:
-- Respuestas directas, concisas y tácticas en formato Markdown.
-- Considera las capacidades del Intel N150: gráficos integrados UHD, 720p/540p con FSR/Gamescope recomendados para juegos 3D, 60 FPS estables para 2D/Pixel Art/Indies, 30 FPS para juegos 3D más exigentes, variables de entorno Proton/Wine.
+- Respuestas directas, concisas y orientadas al rendimiento en formato Markdown.
+- Considera la capacidad del hardware del host para adaptar recomendaciones (resolución, escalado FSR/Gamescope, perfiles de FPS y ajustes Proton/Wine).
 - Si el usuario pide builds o estrategias, proporciona tablas o listas con pros y contras específicos.
 - Si el usuario pide guías para logros, proporciona requisitos exactos, rutas óptimas y secretos conocidos.
 
@@ -1967,7 +1982,11 @@ Directrices:
 - Tiempo jugado acumulado: {:.1} horas ({} partidas registradas)
 - Valoración del usuario: {}
 - Logros: {}/{} completados ({:.0}%)
-- Entorno de Hardware: Intel N150 (4T), Intel UHD, 16GB RAM | GameMode: {} | MangoHud: {}",
+- Entorno de Hardware: {} ({}GB RAM) | GameMode: {} | MangoHud: {}",
+        operator_name,
+        cpu_info,
+        ram_gb,
+        os_info,
         game_title,
         platform_str,
         game_id,
@@ -1981,6 +2000,8 @@ Directrices:
         } else {
             0.0
         },
+        cpu_info,
+        ram_gb,
         if gaming_status.gamemode_active { "Activo" } else { "Inactivo" },
         if gaming_status.mangohud_installed { "Disponible" } else { "No instalado" }
     );
