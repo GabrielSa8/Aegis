@@ -348,7 +348,25 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
     let budgets = crate::finances::sqlite_get_budgets().unwrap_or_default();
     let categories = crate::finances::sqlite_get_categories().unwrap_or_default();
     let custom_games = crate::leisure::sqlite_get_custom_games().unwrap_or_default();
+    let game_catalog = crate::leisure::sqlite_export_game_catalog().unwrap_or_default();
+    let game_stats = crate::leisure::sqlite_export_game_stats().unwrap_or_default();
+    let game_sessions = crate::leisure::sqlite_export_game_sessions().unwrap_or_default();
     let timeline = crate::finances::sqlite_get_timeline_events().unwrap_or_default();
+
+    // Preferencias sincronizables de Ajustes (perfil, tema, límites de tokens, alertas, módulos)
+    let syncable_settings = crate::config::get_aegis_config().ok().map(|cfg| {
+        serde_json::json!({
+            "profile": cfg.profile,
+            "theme": cfg.theme,
+            "uiScale": cfg.ui_scale,
+            "tokenBudget": cfg.token_budget,
+            "notifications": cfg.notifications,
+            "enabledModules": cfg.enabled_modules,
+            "agentType": cfg.agent_type,
+            "closeToTray": cfg.close_to_tray,
+            "minimizeToTray": cfg.minimize_to_tray
+        })
+    });
 
     Ok(serde_json::json!({
         "deviceId": get_unique_device_id(),
@@ -357,7 +375,11 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
         "budgets": budgets,
         "categories": categories,
         "customGames": custom_games,
-        "timelineEvents": timeline
+        "gameCatalog": game_catalog,
+        "gameStats": game_stats,
+        "gameSessions": game_sessions,
+        "timelineEvents": timeline,
+        "settings": syncable_settings
     }))
 }
 
@@ -404,12 +426,87 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
         }
     }
 
+    // Catálogo Unificado Gaming
+    if let Some(arr) = payload.get("gameCatalog").and_then(|v| v.as_array()) {
+        if let Ok(c) = crate::leisure::sqlite_import_game_catalog(arr.clone()) {
+            total_imported += c;
+        }
+    }
+
+    // Estadísticas y Reseñas Gaming
+    if let Some(arr) = payload.get("gameStats").and_then(|v| v.as_array()) {
+        if let Ok(c) = crate::leisure::sqlite_import_game_stats(arr.clone()) {
+            total_imported += c;
+        }
+    }
+
+    // Sesiones de Juego
+    if let Some(arr) = payload.get("gameSessions").and_then(|v| v.as_array()) {
+        if let Ok(c) = crate::leisure::sqlite_import_game_sessions(arr.clone()) {
+            total_imported += c;
+        }
+    }
+
     // Hitos Timeline
     if let Some(arr) = payload.get("timelineEvents").and_then(|v| v.as_array()) {
         for ev in arr {
             if let Ok(item) = serde_json::from_value::<crate::finances::TimelineEvent>(ev.clone()) {
                 let _ = crate::finances::sqlite_save_timeline_event(item);
                 total_imported += 1;
+            }
+        }
+    }
+
+    // Preferencias sincronizables de Ajustes (Perfil, Tema, Alertas, Módulos, Tokens)
+    if let Some(st) = payload.get("settings").and_then(|v| v.as_object()) {
+        if let Ok(mut current_cfg) = crate::config::get_aegis_config() {
+            let mut cfg_modified = false;
+
+            if let Some(p) = st.get("profile") {
+                if let Ok(prof) = serde_json::from_value::<crate::config::UserProfile>(p.clone()) {
+                    current_cfg.profile = prof;
+                    cfg_modified = true;
+                }
+            }
+            if let Some(t) = st.get("theme").and_then(|v| v.as_str()) {
+                if !t.is_empty() {
+                    current_cfg.theme = t.to_string();
+                    cfg_modified = true;
+                }
+            }
+            if let Some(s) = st.get("uiScale").and_then(|v| v.as_f64()) {
+                current_cfg.ui_scale = s as f32;
+                cfg_modified = true;
+            }
+            if let Some(tb) = st.get("tokenBudget") {
+                if let Ok(budget) = serde_json::from_value::<crate::config::TokenBudgetConfig>(tb.clone()) {
+                    current_cfg.token_budget = budget;
+                    cfg_modified = true;
+                }
+            }
+            if let Some(n) = st.get("notifications") {
+                if let Ok(notifs) = serde_json::from_value::<crate::config::NotificationsConfig>(n.clone()) {
+                    current_cfg.notifications = notifs;
+                    cfg_modified = true;
+                }
+            }
+            if let Some(em) = st.get("enabledModules") {
+                if let Ok(modules) = serde_json::from_value::<crate::config::EnabledModulesConfig>(em.clone()) {
+                    current_cfg.enabled_modules = modules;
+                    cfg_modified = true;
+                }
+            }
+            if let Some(at) = st.get("agentType").and_then(|v| v.as_str()) {
+                if !at.is_empty() {
+                    current_cfg.agent_type = at.to_string();
+                    cfg_modified = true;
+                }
+            }
+
+            if cfg_modified {
+                if let Ok(_) = crate::config::save_aegis_config(current_cfg) {
+                    total_imported += 1;
+                }
             }
         }
     }

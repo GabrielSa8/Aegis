@@ -137,6 +137,8 @@ pub fn run() {
             sentinel::toggle_autostart_item,
             leisure::get_gaming_status,
             leisure::get_installed_steam_games,
+            leisure::get_unified_game_catalog,
+            leisure::install_steam_game,
             leisure::launch_game,
             leisure::cancel_game_session,
             leisure::sqlite_get_custom_games,

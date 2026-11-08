@@ -42,6 +42,7 @@ export default function LeisureView() {
     handleCancelSession,
     handleSaveCustomGame,
     handleDeleteCustomGame,
+    handleInstallSteamGame,
     filteredSteam,
     filteredCustom,
     totalTitles,
@@ -141,6 +142,7 @@ export default function LeisureView() {
             isSteam={true}
             gameStats={gameStatsMap[game.appId]}
             onLaunch={handleLaunchGame}
+            onInstall={handleInstallSteamGame}
             onOpenDetails={openGameDetail}
           />
         ))}

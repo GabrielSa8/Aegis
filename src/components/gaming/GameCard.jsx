@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Gamepad2, Play } from 'lucide-react';
+import { Gamepad2, Play, Download, HardDriveDownload } from 'lucide-react';
 import { formatPlayDuration } from './gameHelpers';
 import GameCardHeaderBadges from './GameCardHeaderBadges';
 import GameCardFooterMeta from './GameCardFooterMeta';
@@ -9,12 +9,14 @@ const GameCard = memo(function GameCard({
   isSteam,
   gameStats,
   onLaunch,
+  onInstall,
   onDelete,
   onOpenDetails
 }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const coverSrc = isSteam ? game.coverImage : game.bannerUrl;
+  const coverSrc = isSteam ? (game.coverImage || game.coverUrl) : game.bannerUrl;
   const hasCover = Boolean(coverSrc) && !imgFailed;
+  const isInstalled = game.isInstalled ?? true;
 
   const totalSecs = gameStats?.totalPlayTimeSeconds || 0;
   const rating = gameStats?.rating || 0;
@@ -122,38 +124,71 @@ const GameCard = memo(function GameCard({
           marginTop: '2px'
         }}>
           <span style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
-            {isSteam
-              ? (game.sizeMb > 1024 ? `${(game.sizeMb / 1024).toFixed(1)} GB` : `${game.sizeMb} MB`)
+            {!isInstalled
+              ? 'No instalado'
+              : isSteam
+              ? (game.sizeMb > 1024 ? `${(game.sizeMb / 1024).toFixed(1)} GB` : game.sizeMb ? `${game.sizeMb} MB` : 'Steam')
               : (game.launchType ? game.launchType.toUpperCase() : 'URL')}
           </span>
 
-          <button
-            onClick={() => onLaunch(
-              isSteam ? `steam:${game.appId}` : game.id,
-              isSteam ? null : game.launchType,
-              isSteam ? null : game.launchTarget,
-              game.name || game.title,
-              isSteam
-            )}
-            className="gaming-play-btn"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              background: 'var(--primary)',
-              color: 'var(--bg-card)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.66rem',
-              fontWeight: 800,
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            title={`Lanzar ${game.name || game.title}`}
-          >
-            <Play size={10} fill="currentColor" />
-            JUGAR
-          </button>
+          {isInstalled ? (
+            <button
+              onClick={() => onLaunch(
+                isSteam ? `steam:${game.appId}` : game.id,
+                isSteam ? null : game.launchType,
+                isSteam ? null : game.launchTarget,
+                game.name || game.title,
+                isSteam
+              )}
+              className="gaming-play-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'var(--primary)',
+                color: 'var(--bg-card)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.66rem',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              title={`Lanzar ${game.name || game.title}`}
+            >
+              <Play size={10} fill="currentColor" />
+              JUGAR
+            </button>
+          ) : isSteam && onInstall ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInstall(game.appId);
+              }}
+              className="gaming-install-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--accent) 45%, transparent)',
+                color: 'var(--accent)',
+                padding: '2px 7px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.64rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+              title={`Instalar ${game.name || game.title} en este equipo vía Steam`}
+            >
+              <Download size={10} />
+              INSTALAR
+            </button>
+          ) : (
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
+              Remoto
+            </span>
+          )}
         </div>
       </div>
     </div>

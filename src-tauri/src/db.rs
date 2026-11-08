@@ -206,6 +206,24 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
         );
         CREATE INDEX IF NOT EXISTS idx_game_achievement_unlocks ON game_achievement_unlocks(game_id);
 
+        -- Tabla v2.13.5: Catálogo Unificado Multi-Dispositivo & Sincronización P2P
+        CREATE TABLE IF NOT EXISTS game_catalog (
+            game_id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            app_id TEXT,
+            is_steam INTEGER NOT NULL DEFAULT 1,
+            cover_url TEXT,
+            banner_url TEXT,
+            total_play_time_seconds INTEGER NOT NULL DEFAULT 0,
+            achievements_unlocked INTEGER NOT NULL DEFAULT 0,
+            achievements_total INTEGER NOT NULL DEFAULT 0,
+            achievements_json TEXT,
+            last_played_device TEXT,
+            last_played TEXT,
+            updated_at INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_game_catalog_updated ON game_catalog(updated_at DESC);
+
         -- Tablas v2.1.6: Hermes Cortex (Logger de Hábitos y Auto-Evolución)
         CREATE TABLE IF NOT EXISTS cortex_habits (
             topic TEXT PRIMARY KEY,

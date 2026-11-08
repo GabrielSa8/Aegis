@@ -79,14 +79,50 @@ export function useGaming() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [status, sGames, cGames] = await Promise.all([
+      const [status, unifiedCatalog, cGames] = await Promise.all([
         invoke('get_gaming_status').catch(() => null),
-        invoke('get_installed_steam_games').catch(() => []),
+        invoke('get_unified_game_catalog').catch(async () => {
+          // Fallback legacy si get_unified_game_catalog falla
+          const fallbackSteam = await invoke('get_installed_steam_games').catch(() => []);
+          return fallbackSteam.map(s => ({
+            gameId: `steam_${s.appId}`,
+            title: s.name,
+            appId: String(s.appId),
+            isSteam: true,
+            coverUrl: s.coverImage,
+            isInstalled: true,
+            achievementsUnlocked: s.achievementsUnlocked || 0,
+            achievementsTotal: s.achievementsTotal || 0,
+            totalPlayTimeSeconds: 0,
+            lastPlayedDevice: 'Local'
+          }));
+        }),
         invoke('sqlite_get_custom_games').catch(() => [])
       ]);
 
       setGamingStatus(status);
-      setSteamGames(Array.isArray(sGames) ? sGames : []);
+
+      // Normalizar catálogo unificado para la cuadrícula de Steam
+      const steamItems = Array.isArray(unifiedCatalog)
+        ? unifiedCatalog
+            .filter((g) => g.isSteam || Boolean(g.appId))
+            .map((g) => ({
+              appId: g.appId,
+              name: g.title,
+              title: g.title,
+              coverImage: g.coverUrl,
+              coverUrl: g.coverUrl,
+              bannerUrl: g.bannerUrl,
+              isInstalled: g.isInstalled,
+              lastPlayedDevice: g.lastPlayedDevice,
+              achievementsUnlocked: g.achievementsUnlocked,
+              achievementsTotal: g.achievementsTotal,
+              totalPlayTimeSeconds: g.totalPlayTimeSeconds,
+              isSteam: true
+            }))
+        : [];
+
+      setSteamGames(steamItems);
       setCustomGames(Array.isArray(cGames) ? cGames : []);
       await refreshStats();
     } catch (e) {
@@ -145,6 +181,15 @@ export function useGaming() {
       alert(`Error eliminando juego: ${e}`);
     }
   };
+
+  const handleInstallSteamGame = useCallback(async (appId) => {
+    try {
+      await invoke('install_steam_game', { appId: String(appId) });
+    } catch (err) {
+      console.error('Error al solicitar instalación vía Steam:', err);
+      alert(`No se pudo abrir Steam para instalar: ${err}`);
+    }
+  }, []);
 
   const handleOpenEditModal = (game) => {
     setGameFormData({
@@ -234,6 +279,7 @@ export function useGaming() {
     handleCloseDetailModal,
     handleSaveCustomGame,
     handleDeleteCustomGame,
+    handleInstallSteamGame,
     fetchData,
     refreshStats,
     gamepadConnected

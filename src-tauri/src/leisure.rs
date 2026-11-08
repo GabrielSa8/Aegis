@@ -2109,3 +2109,459 @@ tags:
 
     Ok(format!("Guía guardada en Obsidian: {}", note_filename))
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnifiedGameItem {
+    pub id: String,
+    pub app_id: Option<String>,
+    pub title: String,
+    pub is_steam: bool,
+    pub is_installed: bool,
+    pub cover_image: Option<String>,
+    pub banner_url: Option<String>,
+    pub total_play_time_seconds: i64,
+    pub sessions_count: i64,
+    pub achievements_unlocked: usize,
+    pub achievements_total: usize,
+    pub achievements_percentage: f32,
+    pub last_played_device: Option<String>,
+    pub last_played: Option<String>,
+    pub rating: i32,
+    pub review: Option<String>,
+    pub obsidian_note_path: Option<String>,
+    pub launch_type: Option<String>,
+    pub launch_target: Option<String>,
+}
+
+#[tauri::command]
+pub fn install_steam_game(app_id: String) -> Result<(), String> {
+    let clean_appid = app_id.trim_start_matches("steam:");
+    let url = format!("steam://install/{}", clean_appid);
+    Command::new("xdg-open")
+        .arg(&url)
+        .spawn()
+        .map_err(|e| format!("Error invocando instalación en Steam: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_unified_game_catalog() -> Result<Vec<UnifiedGameItem>, String> {
+    let conn = get_db_connection()?;
+    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "host".to_string());
+    let now_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    // 1. Obtener juegos instalados localmente en Steam
+    let local_steam_games = get_installed_steam_games().unwrap_or_default();
+    let mut local_installed_appids = HashSet::new();
+
+    for sg in &local_steam_games {
+        local_installed_appids.insert(sg.app_id.clone());
+        let game_id = format!("steam:{}", sg.app_id);
+        let ach_unlocked = sg.achievements_unlocked.unwrap_or(0) as i64;
+        let ach_total = sg.achievements_total.unwrap_or(0) as i64;
+        let last_played_str = if sg.last_played > 0 {
+            Some(sg.last_played.to_string())
+        } else {
+            None
+        };
+
+        let _ = conn.execute(
+            "INSERT INTO game_catalog (game_id, title, app_id, is_steam, cover_url, achievements_unlocked, achievements_total, last_played_device, last_played, updated_at)
+             VALUES (?1, ?2, ?3, 1, ?4, ?5, ?6, ?7, ?8, ?9)
+             ON CONFLICT(game_id) DO UPDATE SET
+                title = excluded.title,
+                cover_url = COALESCE(excluded.cover_url, game_catalog.cover_url),
+                achievements_unlocked = MAX(game_catalog.achievements_unlocked, excluded.achievements_unlocked),
+                achievements_total = MAX(game_catalog.achievements_total, excluded.achievements_total),
+                last_played_device = excluded.last_played_device,
+                last_played = COALESCE(excluded.last_played, game_catalog.last_played),
+                updated_at = excluded.updated_at",
+            params![
+                game_id,
+                sg.name,
+                sg.app_id,
+                sg.cover_image,
+                ach_unlocked,
+                ach_total,
+                hostname,
+                last_played_str,
+                now_ts
+            ],
+        );
+    }
+
+    // 2. Sincronizar juegos personalizados locales en game_catalog
+    let custom_games = sqlite_get_custom_games().unwrap_or_default();
+    for cg in &custom_games {
+        let _ = conn.execute(
+            "INSERT INTO game_catalog (game_id, title, app_id, is_steam, cover_url, banner_url, last_played_device, last_played, updated_at)
+             VALUES (?1, ?2, NULL, 0, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(game_id) DO UPDATE SET
+                title = excluded.title,
+                cover_url = COALESCE(excluded.cover_url, game_catalog.cover_url),
+                banner_url = COALESCE(excluded.banner_url, game_catalog.banner_url),
+                updated_at = excluded.updated_at",
+            params![
+                cg.id,
+                cg.title,
+                cg.banner_url,
+                cg.banner_url,
+                hostname,
+                cg.last_played,
+                now_ts
+            ],
+        );
+    }
+
+    // 3. Consultar todos los juegos consolidados en game_catalog uniéndolos con game_stats
+    let mut stmt = conn
+        .prepare(
+            "SELECT c.game_id, c.title, c.app_id, c.is_steam, c.cover_url, c.banner_url,
+                    COALESCE(s.total_play_time_seconds, c.total_play_time_seconds),
+                    COALESCE(s.sessions_count, 0),
+                    c.achievements_unlocked, c.achievements_total,
+                    c.last_played_device,
+                    COALESCE(s.last_played, c.last_played),
+                    COALESCE(s.rating, 0),
+                    s.review, s.obsidian_note_path
+             FROM game_catalog c
+             LEFT JOIN game_stats s ON c.game_id = s.game_id
+             ORDER BY c.updated_at DESC, c.title ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let is_steam_int: i64 = row.get(3)?;
+            let is_steam = is_steam_int == 1;
+            let app_id: Option<String> = row.get(2)?;
+            let unlocked: i64 = row.get(8)?;
+            let total: i64 = row.get(9)?;
+
+            let percentage = if total > 0 {
+                (unlocked as f32 / total as f32) * 100.0
+            } else {
+                0.0
+            };
+
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                app_id,
+                is_steam,
+                row.get::<_, Option<String>>(4)?,
+                row.get::<_, Option<String>>(5)?,
+                row.get::<_, i64>(6)?,
+                row.get::<_, i64>(7)?,
+                unlocked as usize,
+                total as usize,
+                percentage,
+                row.get::<_, Option<String>>(10)?,
+                row.get::<_, Option<String>>(11)?,
+                row.get::<_, i32>(12)?,
+                row.get::<_, Option<String>>(13)?,
+                row.get::<_, Option<String>>(14)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+    let custom_map: HashMap<String, CustomGame> =
+        custom_games.into_iter().map(|g| (g.id.clone(), g)).collect();
+
+    for r in rows.flatten() {
+        let (
+            id,
+            title,
+            app_id,
+            is_steam,
+            cover_image,
+            banner_url,
+            total_play_time_seconds,
+            sessions_count,
+            ach_unlocked,
+            ach_total,
+            ach_pct,
+            last_played_device,
+            last_played,
+            rating,
+            review,
+            obsidian_note_path,
+        ) = r;
+
+        let is_installed = if is_steam {
+            if let Some(ref aid) = app_id {
+                local_installed_appids.contains(aid)
+            } else {
+                false
+            }
+        } else {
+            custom_map.contains_key(&id)
+        };
+
+        let (launch_type, launch_target) = if let Some(cg) = custom_map.get(&id) {
+            (Some(cg.launch_type.clone()), Some(cg.launch_target.clone()))
+        } else if is_steam {
+            (Some("steam".to_string()), app_id.clone())
+        } else {
+            (None, None)
+        };
+
+        result.push(UnifiedGameItem {
+            id,
+            app_id,
+            title,
+            is_steam,
+            is_installed,
+            cover_image,
+            banner_url,
+            total_play_time_seconds,
+            sessions_count,
+            achievements_unlocked: ach_unlocked,
+            achievements_total: ach_total,
+            achievements_percentage: ach_pct,
+            last_played_device,
+            last_played,
+            rating,
+            review,
+            obsidian_note_path,
+            launch_type,
+            launch_target,
+        });
+    }
+
+    Ok(result)
+}
+
+pub fn sqlite_export_game_catalog() -> Result<Vec<serde_json::Value>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT game_id, title, app_id, is_steam, cover_url, banner_url,
+                    total_play_time_seconds, achievements_unlocked, achievements_total,
+                    achievements_json, last_played_device, last_played, updated_at
+             FROM game_catalog",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let is_steam_int: i64 = row.get(3)?;
+            Ok(serde_json::json!({
+                "gameId": row.get::<_, String>(0)?,
+                "title": row.get::<_, String>(1)?,
+                "appId": row.get::<_, Option<String>>(2)?,
+                "isSteam": is_steam_int == 1,
+                "coverUrl": row.get::<_, Option<String>>(4)?,
+                "bannerUrl": row.get::<_, Option<String>>(5)?,
+                "totalPlayTimeSeconds": row.get::<_, i64>(6)?,
+                "achievementsUnlocked": row.get::<_, i64>(7)?,
+                "achievementsTotal": row.get::<_, i64>(8)?,
+                "achievementsJson": row.get::<_, Option<String>>(9)?,
+                "lastPlayedDevice": row.get::<_, Option<String>>(10)?,
+                "lastPlayed": row.get::<_, Option<String>>(11)?,
+                "updatedAt": row.get::<_, i64>(12)?,
+            }))
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(rows.flatten().collect())
+}
+
+pub fn sqlite_import_game_catalog(items: Vec<serde_json::Value>) -> Result<usize, String> {
+    let conn = get_db_connection()?;
+    let mut imported = 0;
+    for val in items {
+        if let Some(game_id) = val.get("gameId").and_then(|v| v.as_str()) {
+            let title = val.get("title").and_then(|v| v.as_str()).unwrap_or("Juego");
+            let app_id = val.get("appId").and_then(|v| v.as_str());
+            let is_steam = val.get("isSteam").and_then(|v| v.as_bool()).unwrap_or(true);
+            let cover_url = val.get("coverUrl").and_then(|v| v.as_str());
+            let banner_url = val.get("bannerUrl").and_then(|v| v.as_str());
+            let play_time = val.get("totalPlayTimeSeconds").and_then(|v| v.as_i64()).unwrap_or(0);
+            let ach_unlocked = val.get("achievementsUnlocked").and_then(|v| v.as_i64()).unwrap_or(0);
+            let ach_total = val.get("achievementsTotal").and_then(|v| v.as_i64()).unwrap_or(0);
+            let ach_json = val.get("achievementsJson").and_then(|v| v.as_str());
+            let last_dev = val.get("lastPlayedDevice").and_then(|v| v.as_str());
+            let last_played = val.get("lastPlayed").and_then(|v| v.as_str());
+            let updated_at = val.get("updatedAt").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let res = conn.execute(
+                "INSERT INTO game_catalog (game_id, title, app_id, is_steam, cover_url, banner_url,
+                                          total_play_time_seconds, achievements_unlocked, achievements_total,
+                                          achievements_json, last_played_device, last_played, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+                 ON CONFLICT(game_id) DO UPDATE SET
+                    title = excluded.title,
+                    cover_url = COALESCE(excluded.cover_url, game_catalog.cover_url),
+                    banner_url = COALESCE(excluded.banner_url, game_catalog.banner_url),
+                    total_play_time_seconds = MAX(game_catalog.total_play_time_seconds, excluded.total_play_time_seconds),
+                    achievements_unlocked = MAX(game_catalog.achievements_unlocked, excluded.achievements_unlocked),
+                    achievements_total = MAX(game_catalog.achievements_total, excluded.achievements_total),
+                    last_played_device = COALESCE(excluded.last_played_device, game_catalog.last_played_device),
+                    last_played = COALESCE(excluded.last_played, game_catalog.last_played),
+                    updated_at = MAX(game_catalog.updated_at, excluded.updated_at)",
+                params![
+                    game_id,
+                    title,
+                    app_id,
+                    if is_steam { 1 } else { 0 },
+                    cover_url,
+                    banner_url,
+                    play_time,
+                    ach_unlocked,
+                    ach_total,
+                    ach_json,
+                    last_dev,
+                    last_played,
+                    updated_at
+                ],
+            );
+            if res.is_ok() {
+                imported += 1;
+            }
+        }
+    }
+    Ok(imported)
+}
+
+pub fn sqlite_export_game_stats() -> Result<Vec<serde_json::Value>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT game_id, game_title, is_steam, total_play_time_seconds, sessions_count,
+                    rating, review, obsidian_note_path, last_played
+             FROM game_stats",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let is_steam_int: i64 = row.get(2)?;
+            Ok(serde_json::json!({
+                "gameId": row.get::<_, String>(0)?,
+                "gameTitle": row.get::<_, String>(1)?,
+                "isSteam": is_steam_int == 1,
+                "totalPlayTimeSeconds": row.get::<_, i64>(3)?,
+                "sessionsCount": row.get::<_, i64>(4)?,
+                "rating": row.get::<_, i32>(5)?,
+                "review": row.get::<_, Option<String>>(6)?,
+                "obsidianNotePath": row.get::<_, Option<String>>(7)?,
+                "lastPlayed": row.get::<_, Option<String>>(8)?,
+            }))
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(rows.flatten().collect())
+}
+
+pub fn sqlite_import_game_stats(items: Vec<serde_json::Value>) -> Result<usize, String> {
+    let conn = get_db_connection()?;
+    let mut imported = 0;
+    for val in items {
+        if let Some(game_id) = val.get("gameId").and_then(|v| v.as_str()) {
+            let title = val.get("gameTitle").and_then(|v| v.as_str()).unwrap_or("Juego");
+            let is_steam = val.get("isSteam").and_then(|v| v.as_bool()).unwrap_or(true);
+            let play_time = val.get("totalPlayTimeSeconds").and_then(|v| v.as_i64()).unwrap_or(0);
+            let sessions = val.get("sessionsCount").and_then(|v| v.as_i64()).unwrap_or(0);
+            let rating = val.get("rating").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let review = val.get("review").and_then(|v| v.as_str());
+            let obsidian_path = val.get("obsidianNotePath").and_then(|v| v.as_str());
+            let last_played = val.get("lastPlayed").and_then(|v| v.as_str());
+
+            let res = conn.execute(
+                "INSERT INTO game_stats (game_id, game_title, is_steam, total_play_time_seconds,
+                                        sessions_count, rating, review, obsidian_note_path, last_played)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT(game_id) DO UPDATE SET
+                    game_title = excluded.game_title,
+                    total_play_time_seconds = MAX(game_stats.total_play_time_seconds, excluded.total_play_time_seconds),
+                    sessions_count = MAX(game_stats.sessions_count, excluded.sessions_count),
+                    rating = CASE WHEN excluded.rating > 0 THEN excluded.rating ELSE game_stats.rating END,
+                    review = COALESCE(excluded.review, game_stats.review),
+                    obsidian_note_path = COALESCE(excluded.obsidian_note_path, game_stats.obsidian_note_path),
+                    last_played = COALESCE(excluded.last_played, game_stats.last_played)",
+                params![
+                    game_id,
+                    title,
+                    if is_steam { 1 } else { 0 },
+                    play_time,
+                    sessions,
+                    rating,
+                    review,
+                    obsidian_path,
+                    last_played
+                ],
+            );
+            if res.is_ok() {
+                imported += 1;
+            }
+        }
+    }
+    Ok(imported)
+}
+
+pub fn sqlite_export_game_sessions() -> Result<Vec<serde_json::Value>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, game_id, game_title, is_steam, duration_seconds, started_at, ended_at
+             FROM game_sessions ORDER BY started_at DESC LIMIT 500",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let is_steam_int: i64 = row.get(3)?;
+            Ok(serde_json::json!({
+                "id": row.get::<_, String>(0)?,
+                "gameId": row.get::<_, String>(1)?,
+                "gameTitle": row.get::<_, String>(2)?,
+                "isSteam": is_steam_int == 1,
+                "durationSeconds": row.get::<_, i64>(4)?,
+                "startedAt": row.get::<_, String>(5)?,
+                "endedAt": row.get::<_, String>(6)?,
+            }))
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(rows.flatten().collect())
+}
+
+pub fn sqlite_import_game_sessions(items: Vec<serde_json::Value>) -> Result<usize, String> {
+    let conn = get_db_connection()?;
+    let mut imported = 0;
+    for val in items {
+        if let Some(id) = val.get("id").and_then(|v| v.as_str()) {
+            let game_id = val.get("gameId").and_then(|v| v.as_str()).unwrap_or("");
+            let title = val.get("gameTitle").and_then(|v| v.as_str()).unwrap_or("Juego");
+            let is_steam = val.get("isSteam").and_then(|v| v.as_bool()).unwrap_or(true);
+            let duration = val.get("durationSeconds").and_then(|v| v.as_i64()).unwrap_or(0);
+            let started_at = val.get("startedAt").and_then(|v| v.as_str()).unwrap_or("");
+            let ended_at = val.get("endedAt").and_then(|v| v.as_str()).unwrap_or("");
+
+            let res = conn.execute(
+                "INSERT INTO game_sessions (id, game_id, game_title, is_steam, duration_seconds, started_at, ended_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(id) DO NOTHING",
+                params![
+                    id,
+                    game_id,
+                    title,
+                    if is_steam { 1 } else { 0 },
+                    duration,
+                    started_at,
+                    ended_at
+                ],
+            );
+            if res.is_ok() {
+                imported += 1;
+            }
+        }
+    }
+    Ok(imported)
+}

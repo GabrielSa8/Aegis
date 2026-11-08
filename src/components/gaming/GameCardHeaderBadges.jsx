@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Info, Trophy } from 'lucide-react';
+import { Trash2, Info, Trophy, Laptop, Package } from 'lucide-react';
 
 export default function GameCardHeaderBadges({
   game,
@@ -9,6 +9,7 @@ export default function GameCardHeaderBadges({
   onDelete,
   onOpenDetails
 }) {
+  const isInstalled = game.isInstalled ?? true;
   return (
     <div style={{
       position: 'absolute',
@@ -67,8 +68,29 @@ export default function GameCardHeaderBadges({
         </button>
       </div>
 
-      {/* Badges Superior Derecha: Logros y Plataforma */}
+      {/* Badges Superior Derecha: Logros, Estado Multi-Dispositivo y Plataforma */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {!isInstalled && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+              background: 'color-mix(in srgb, var(--warning) 18%, black)',
+              border: '1px solid color-mix(in srgb, var(--warning) 45%, transparent)',
+              padding: '2px 5px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.58rem',
+              fontWeight: 700,
+              color: 'var(--warning)'
+            }}
+            title={`Instalado en ${game.lastPlayedDevice || 'otro equipo de la flota Aegis'}`}
+          >
+            <Laptop size={9} />
+            <span>{game.lastPlayedDevice ? game.lastPlayedDevice.replace(/^aegis-/, '') : 'Remoto'}</span>
+          </div>
+        )}
+
         {achTotal > 0 && (
           <div
             style={{
