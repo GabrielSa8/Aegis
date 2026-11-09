@@ -10,9 +10,17 @@ export default function MsiModal({
   msiForm,
   setMsiForm,
   paymentMethods = [],
+  categories = [],
   onSubmit
 }) {
   const isEditing = Boolean(msiForm.id);
+
+  const categoryOptions = Array.from(
+    new Set(['Planes MSI', ...(categories || []).filter(Boolean)])
+  );
+
+  const creditCards = (paymentMethods || []).filter((pm) => pm.type === 'credit');
+  const availableMethods = creditCards.length > 0 ? creditCards : (paymentMethods || []);
 
   const selectedCard = (paymentMethods || []).find(
     (pm) => pm.name === msiForm.paymentMethod || String(pm.id) === String(msiForm.paymentMethod)
@@ -106,17 +114,31 @@ export default function MsiModal({
           </div>
         )}
 
-        <div>
-          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tarjeta Utilizada</label>
-          <select
-            value={msiForm.paymentMethod}
-            onChange={handleCardChange}
-            style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
-          >
-            {(paymentMethods || []).map((pm) => (
-              <option key={pm.id} value={pm.name}>{pm.name}</option>
-            ))}
-          </select>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tarjeta Utilizada</label>
+            <select
+              value={msiForm.paymentMethod}
+              onChange={handleCardChange}
+              style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
+            >
+              {availableMethods.map((pm) => (
+                <option key={pm.id} value={pm.name}>{pm.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Categoría de Gasto</label>
+            <select
+              value={msiForm.category || 'Planes MSI'}
+              onChange={(e) => setMsiForm({ ...msiForm, category: e.target.value })}
+              style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
+            >
+              {categoryOptions.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Banner de Automatización de Cobro Post-Corte */}

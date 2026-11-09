@@ -247,16 +247,65 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'dismissed'
             created_at TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS db_metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
         ",
     )
     .map_err(|e| format!("Error inicializando tablas SQLite: {}", e))?;
 
-    // Seed categorías si está vacía
-    let cat_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM categories", [], |r| r.get(0))
-        .unwrap_or(0);
+    // Asegurar siempre categorías semánticas dedicadas para compromisos y gastos fijos
+    let _ = conn.execute(
+        "INSERT OR IGNORE INTO categories (name, created_at) VALUES ('Planes MSI', datetime('now'))",
+        [],
+    );
+    let _ = conn.execute(
+        "INSERT OR IGNORE INTO categories (name, created_at) VALUES ('Gastos Fijos', datetime('now'))",
+        [],
+    );
 
-    if cat_count == 0 {
+    // Migración correctiva: planes MSI históricos que quedaron con categoría mock 'Educación & Certs'
+    let _ = conn.execute(
+        "UPDATE msi_plans SET category = 'Planes MSI' WHERE category = 'Educación & Certs'",
+        [],
+    );
+    let _ = conn.execute(
+        "UPDATE transactions SET category = 'Planes MSI' WHERE category = 'Educación & Certs' AND description LIKE 'Mensualidad MSI%'",
+        [],
+    );
+
+    // Control de siembra única: nunca re-sembrar mocks si el usuario vacía sus listas
+    let initial_seed_done: bool = conn
+        .query_row(
+            "SELECT 1 FROM db_metadata WHERE key = 'initial_seed_done' AND value = 'true'",
+            [],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
+    let has_existing_records: bool = conn
+        .query_row("SELECT 1 FROM payment_methods LIMIT 1", [], |_| Ok(true))
+        .unwrap_or(false)
+        || conn
+            .query_row("SELECT 1 FROM transactions LIMIT 1", [], |_| Ok(true))
+            .unwrap_or(false)
+        || conn
+            .query_row("SELECT 1 FROM msi_plans LIMIT 1", [], |_| Ok(true))
+            .unwrap_or(false);
+
+    if !initial_seed_done && has_existing_records {
+        // Base de datos preexistente en uso: marcar inicialización completada para evitar recrear mocks
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO db_metadata (key, value) VALUES ('initial_seed_done', 'true')",
+            [],
+        );
+    }
+
+    let should_seed = !initial_seed_done && !has_existing_records;
+
+    if should_seed {
         let defaults = [
             "Comida & Bebida",
             "Vivienda & Renta",
@@ -266,6 +315,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             "Entretenimiento & Ocio",
             "Suscripciones",
             "Educación & Certs",
+            "Planes MSI",
+            "Gastos Fijos",
             "Nómina & Sueldos",
             "Ingresos Profesionales",
             "Otros",
@@ -276,14 +327,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![cat],
             );
         }
-    }
 
-    // Seed timeline maestro si está vacía
-    let event_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM timeline_events", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if event_count == 0 {
+        // Seed timeline maestro
         let seed_events = [
             (
                 "evt_demo_cierre",
@@ -343,14 +388,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![ev.0, ev.1, ev.2, ev.3, ev.4, ev.5, ev.6, ev.7, ev.8, ev.9],
             );
         }
-    }
 
-    // Seed métodos de pago si está vacía
-    let pm_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM payment_methods", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if pm_count == 0 {
+        // Seed métodos de pago
         let default_methods = [
             ("debito_principal", "Tarjeta Débito Principal", "debit", "#004481", None, None, 0.0, 0.0),
             ("credito_principal", "Tarjeta Crédito Principal", "credit", "#10b981", Some(5), Some(25), 0.0, 20000.0),
@@ -366,18 +405,12 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![pm.0, pm.1, pm.2, pm.3, pm.4, pm.5, pm.6, pm.7],
             );
         }
-    }
 
-    // Seed gastos recurrentes si está vacía
-    let rec_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM recurring_expenses", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if rec_count == 0 {
+        // Seed gastos recurrentes
         let default_recurring = [
-            ("rec_internet", "Internet & Conectividad", 500.0, "Servicios (Luz, Internet, etc.)", "debito_principal", "monthly", 10, 0),
+            ("rec_internet", "Internet & Conectividad", 500.0, "Gastos Fijos", "debito_principal", "monthly", 10, 0),
             ("rec_servicios", "Suscripción Digital", 150.0, "Suscripciones", "credito_principal", "monthly", 15, 1),
-            ("rec_renta", "Vivienda / Renta", 3000.0, "Vivienda & Renta", "debito_principal", "monthly", 1, 0),
+            ("rec_renta", "Vivienda / Renta", 3000.0, "Gastos Fijos", "debito_principal", "monthly", 1, 0),
         ];
 
         for rec in default_recurring {
@@ -388,14 +421,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![rec.0, rec.1, rec.2, rec.3, rec.4, rec.5, rec.6, rec.7],
             );
         }
-    }
 
-    // Seed MSI si está vacía
-    let msi_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM msi_plans", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if msi_count == 0 {
+        // Seed MSI
         let _ = conn.execute(
             "INSERT OR IGNORE INTO msi_plans 
             (id, description, payment_method, total_amount, total_installments, remaining_installments, monthly_amount, start_date, next_due_date, status, category)
@@ -411,17 +438,11 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 "2026-08-15",
                 "2026-11-05",
                 "active",
-                "Educación & Certs"
+                "Planes MSI"
             ],
         );
-    }
 
-    // Seed custom_games si está vacía (Plantillas genéricas iniciales)
-    let cg_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM custom_games", [], |r| r.get(0))
-        .unwrap_or(0);
-
-    if cg_count == 0 {
+        // Seed custom_games
         let default_custom_games = [
             (
                 "cg_pokerogue",
@@ -460,6 +481,12 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
                 params![g.0, g.1, g.2, g.3, g.4, g.5, g.6],
             );
         }
+
+        // Marcar metadato de siembra única completada
+        let _ = conn.execute(
+            "INSERT OR REPLACE INTO db_metadata (key, value) VALUES ('initial_seed_done', 'true')",
+            [],
+        );
     }
 
     Ok(())

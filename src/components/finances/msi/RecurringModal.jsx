@@ -9,9 +9,14 @@ export default function RecurringModal({
   recurringForm,
   setRecurringForm,
   paymentMethods = [],
+  categories = [],
   onSubmit
 }) {
   const isEditing = Boolean(recurringForm.id);
+
+  const categoryOptions = Array.from(
+    new Set(['Gastos Fijos', ...(categories || []).filter(Boolean)])
+  );
 
   return (
     <ModalWrapper
@@ -61,18 +66,50 @@ export default function RecurringModal({
           </div>
         </div>
 
-        <div>
-          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Método de Pago Habitual</label>
-          <select
-            value={recurringForm.paymentMethod}
-            onChange={(e) => setRecurringForm({ ...recurringForm, paymentMethod: e.target.value })}
-            style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
-          >
-            {(paymentMethods || []).map((pm) => (
-              <option key={pm.id} value={pm.name}>{pm.name}</option>
-            ))}
-          </select>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Método de Pago</label>
+            <select
+              value={recurringForm.paymentMethod}
+              onChange={(e) => setRecurringForm({ ...recurringForm, paymentMethod: e.target.value })}
+              style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
+            >
+              {(paymentMethods || []).map((pm) => (
+                <option key={pm.id} value={pm.name}>{pm.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Categoría</label>
+            <select
+              value={recurringForm.category || 'Gastos Fijos'}
+              onChange={(e) => setRecurringForm({ ...recurringForm, category: e.target.value })}
+              style={{ fontSize: '0.75rem', padding: '6px 26px 6px 10px', width: '100%' }}
+            >
+              {categoryOptions.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '0.73rem',
+          color: 'var(--text-high)',
+          cursor: 'pointer',
+          padding: '4px 2px',
+          userSelect: 'none'
+        }}>
+          <input
+            type="checkbox"
+            checked={Boolean(recurringForm.autoApprove)}
+            onChange={(e) => setRecurringForm({ ...recurringForm, autoApprove: e.target.checked })}
+          />
+          Auto-aprobar gasto al llegar el día del mes
+        </label>
 
         <TacticalButton
           type="submit"

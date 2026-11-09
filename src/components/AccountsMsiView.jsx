@@ -14,6 +14,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
     paymentMethods,
     msiPlans,
     recurringExpenses,
+    categories,
     showAccountModal,
     setShowAccountModal,
     showMsiModal,
@@ -26,11 +27,17 @@ export default function AccountsMsiView({ onTransactionCreated }) {
     setMsiForm,
     recurringForm,
     setRecurringForm,
+    handleOpenAddAccount,
+    handleEditAccount,
     handleSaveAccount,
     handleDeleteAccount,
+    handleOpenAddMsi,
+    handleEditMsi,
     handleSaveMsi,
     handlePayInstallment,
     handleDeleteMsi,
+    handleOpenAddRecurring,
+    handleEditRecurring,
     handleSaveRecurring,
     handleApproveRecurring,
     handleDeleteRecurring
@@ -41,14 +48,16 @@ export default function AccountsMsiView({ onTransactionCreated }) {
       {/* 💳 SECCIÓN 1: CUENTAS Y TARJETAS */}
       <AccountsSection
         paymentMethods={paymentMethods}
-        onAddClick={() => setShowAccountModal(true)}
+        onAddClick={handleOpenAddAccount}
+        onEditAccount={handleEditAccount}
         onDeleteAccount={handleDeleteAccount}
       />
 
       {/* 📦 SECCIÓN 2: PLANES MESES SIN INTERESES (MSI) */}
       <MsiPlansSection
         msiPlans={msiPlans}
-        onAddClick={() => setShowMsiModal(true)}
+        onAddClick={handleOpenAddMsi}
+        onEditMsi={handleEditMsi}
         onPayInstallment={handlePayInstallment}
         onDeleteMsi={handleDeleteMsi}
       />
@@ -56,7 +65,8 @@ export default function AccountsMsiView({ onTransactionCreated }) {
       {/* ⏰ SECCIÓN 3: GASTOS RECURRENTES Y SERVICIOS FIJOS */}
       <RecurringExpensesSection
         recurringExpenses={recurringExpenses}
-        onAddClick={() => setShowRecurringModal(true)}
+        onAddClick={handleOpenAddRecurring}
+        onEditRecurring={handleEditRecurring}
         onApproveRecurring={handleApproveRecurring}
         onDeleteRecurring={handleDeleteRecurring}
       />
@@ -76,6 +86,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
         msiForm={msiForm}
         setMsiForm={setMsiForm}
         paymentMethods={paymentMethods}
+        categories={categories}
         onSubmit={handleSaveMsi}
       />
 
@@ -85,6 +96,7 @@ export default function AccountsMsiView({ onTransactionCreated }) {
         recurringForm={recurringForm}
         setRecurringForm={setRecurringForm}
         paymentMethods={paymentMethods}
+        categories={categories}
         onSubmit={handleSaveRecurring}
       />
     </div>

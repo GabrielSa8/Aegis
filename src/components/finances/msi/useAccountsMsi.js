@@ -11,7 +11,8 @@ import {
   saveRecurringExpense, 
   approveRecurringExpense, 
   deleteRecurringExpense,
-  getNextMsiBillingDate
+  getNextMsiBillingDate,
+  getCategories
 } from '../../../utils/storage';
 
 const INITIAL_ACCOUNT_FORM = {
@@ -26,21 +27,21 @@ const INITIAL_ACCOUNT_FORM = {
 
 const INITIAL_MSI_FORM = {
   description: '',
-  paymentMethod: 'nu_credito',
+  paymentMethod: '',
   totalAmount: '',
   totalInstallments: 6,
   remainingInstallments: 6,
   monthlyAmount: '',
   startDate: new Date().toISOString().split('T')[0],
   nextDueDate: '',
-  category: 'Educación & Certs'
+  category: 'Planes MSI'
 };
 
 const INITIAL_RECURRING_FORM = {
   description: '',
   amount: '',
-  category: 'Servicios (Luz, Internet, etc.)',
-  paymentMethod: 'bbva_debito',
+  category: 'Gastos Fijos',
+  paymentMethod: '',
   frequency: 'monthly',
   dueDay: 10,
   autoApprove: false
@@ -50,6 +51,7 @@ export function useAccountsMsi(onTransactionCreated) {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [msiPlans, setMsiPlans] = useState([]);
   const [recurringExpenses, setRecurringExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modales
@@ -68,14 +70,16 @@ export function useAccountsMsi(onTransactionCreated) {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [methods, msi, recurring] = await Promise.all([
+      const [methods, msi, recurring, cats] = await Promise.all([
         getPaymentMethods(),
         getMsiPlans(),
-        getRecurringExpenses()
+        getRecurringExpenses(),
+        getCategories()
       ]);
       setPaymentMethods(methods || []);
       setMsiPlans(msi || []);
       setRecurringExpenses(recurring || []);
+      setCategories(cats || []);
     } catch (e) {
       console.error('Error cargando cuentas y MSI:', e);
     } finally {
@@ -145,7 +149,8 @@ export function useAccountsMsi(onTransactionCreated) {
 
     setMsiForm({
       ...INITIAL_MSI_FORM,
-      paymentMethod: defaultPm?.name || 'Crédito',
+      paymentMethod: defaultPm?.name || '',
+      category: 'Planes MSI',
       nextDueDate: defaultNextDue
     });
     setShowMsiModal(true);
@@ -160,7 +165,7 @@ export function useAccountsMsi(onTransactionCreated) {
     setMsiForm({
       id: plan.id,
       description: plan.description || '',
-      paymentMethod: plan.paymentMethod || (paymentMethods[0]?.name || 'Crédito'),
+      paymentMethod: plan.paymentMethod || (paymentMethods[0]?.name || ''),
       totalAmount: plan.totalAmount != null ? String(plan.totalAmount) : '',
       totalInstallments: plan.totalInstallments || 6,
       remainingInstallments: plan.remainingInstallments != null ? plan.remainingInstallments : (plan.totalInstallments || 6),
@@ -168,7 +173,7 @@ export function useAccountsMsi(onTransactionCreated) {
       startDate: plan.startDate || new Date().toISOString().split('T')[0],
       nextDueDate: calculatedDue,
       status: plan.status || 'active',
-      category: plan.category || 'Educación & Certs'
+      category: plan.category || 'Planes MSI'
     });
     setShowMsiModal(true);
   };
@@ -197,7 +202,7 @@ export function useAccountsMsi(onTransactionCreated) {
       startDate: msiForm.startDate || new Date().toISOString().split('T')[0],
       nextDueDate: finalNextDue,
       status: msiForm.status || 'active',
-      category: msiForm.category || 'General'
+      category: msiForm.category || 'Planes MSI'
     };
 
     const updated = await saveMsiPlan(newPlan);
@@ -223,7 +228,12 @@ export function useAccountsMsi(onTransactionCreated) {
 
   // Handlers Gastos Recurrentes
   const handleOpenAddRecurring = () => {
-    setRecurringForm(INITIAL_RECURRING_FORM);
+    const defaultPm = paymentMethods.find((p) => p.type !== 'credit') || paymentMethods[0];
+    setRecurringForm({
+      ...INITIAL_RECURRING_FORM,
+      paymentMethod: defaultPm?.name || '',
+      category: 'Gastos Fijos'
+    });
     setShowRecurringModal(true);
   };
 
@@ -233,8 +243,8 @@ export function useAccountsMsi(onTransactionCreated) {
       id: rec.id,
       description: rec.description || '',
       amount: rec.amount != null ? String(rec.amount) : '',
-      category: rec.category || 'Servicios (Luz, Internet, etc.)',
-      paymentMethod: rec.paymentMethod || (paymentMethods[0]?.name || 'Débito'),
+      category: rec.category || 'Gastos Fijos',
+      paymentMethod: rec.paymentMethod || (paymentMethods[0]?.name || ''),
       frequency: rec.frequency || 'monthly',
       dueDay: rec.dueDay != null ? rec.dueDay : 10,
       autoApprove: !!rec.autoApprove,
@@ -252,7 +262,7 @@ export function useAccountsMsi(onTransactionCreated) {
       id,
       description: recurringForm.description.trim(),
       amount: parseFloat(recurringForm.amount) || 0,
-      category: recurringForm.category,
+      category: recurringForm.category || 'Gastos Fijos',
       paymentMethod: recurringForm.paymentMethod,
       frequency: recurringForm.frequency,
       dueDay: parseInt(recurringForm.dueDay, 10) || 1,
@@ -313,6 +323,7 @@ export function useAccountsMsi(onTransactionCreated) {
     paymentMethods,
     msiPlans,
     recurringExpenses,
+    categories,
     loading,
     showAccountModal,
     setShowAccountModal,
