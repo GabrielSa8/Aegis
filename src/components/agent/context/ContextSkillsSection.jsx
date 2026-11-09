@@ -15,14 +15,16 @@ export function ContextSkillsSection({
   const [mode, setMode] = useState('modpack'); // 'modpack' | 'individual'
   const [modpacks, setModpacks] = useState(() => loadStoredModpacks());
 
-  // Escuchar si se actualizaron los modpacks desde la pestaña DevOps
+  // Escuchar si se actualizaron los modpacks desde la pestaña DevOps o comandos slash
   useEffect(() => {
     const handleUpdate = () => setModpacks(loadStoredModpacks());
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('aegis:modpack-activated', handleUpdate);
+    window.addEventListener('aegis:modpacks-updated', handleUpdate);
     return () => {
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('aegis:modpack-activated', handleUpdate);
+      window.removeEventListener('aegis:modpacks-updated', handleUpdate);
     };
   }, []);
 
@@ -32,8 +34,27 @@ export function ContextSkillsSection({
     const isApplied = packActiveSkills.length > 0 && packActiveSkills.every(s => activeSkills.includes(s));
 
     if (isApplied) {
-      // Desactivar las skills pertenecientes a este modpack
-      const remaining = activeSkills.filter(s => !packActiveSkills.includes(s));
+      // Identificar los otros modpacks que actualmente están activos / aplicados
+      const otherAppliedPacks = modpacks.filter((other) => {
+        if (other.id === pack.id) return false;
+        const otherDisabled = other.disabledSubSkills || [];
+        const otherSkills = other.skills.filter((s) => !otherDisabled.includes(s));
+        return otherSkills.length > 0 && otherSkills.every((s) => activeSkills.includes(s));
+      });
+
+      // Recopilar el conjunto de skills protegidas que aún son requeridas por los otros modpacks activos
+      const preservedSkills = new Set();
+      otherAppliedPacks.forEach((other) => {
+        const otherDisabled = other.disabledSubSkills || [];
+        other.skills
+          .filter((s) => !otherDisabled.includes(s))
+          .forEach((s) => preservedSkills.add(s));
+      });
+
+      // Solo desvincular las skills de este modpack que NO pertenezcan a otros modpacks activos
+      const remaining = activeSkills.filter(
+        (s) => !packActiveSkills.includes(s) || preservedSkills.has(s)
+      );
       onUpdateActive('skills', remaining);
     } else {
       // Activar / sumar las skills de este modpack
@@ -101,7 +122,22 @@ export function ContextSkillsSection({
 
       {/* Modo: Por Modpack */}
       {mode === 'modpack' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '6px' }}>
+        <div
+          className="custom-scrollbar"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '8px',
+            maxHeight: '220px',
+            overflowY: 'auto',
+            padding: '8px',
+            background: 'color-mix(in srgb, var(--bg-main) 65%, transparent)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            boxSizing: 'border-box',
+            width: '100%'
+          }}
+        >
           {modpacks.map((pack) => {
             const disabled = pack.disabledSubSkills || [];
             const packActiveSkills = pack.skills.filter(s => !disabled.includes(s));
@@ -125,22 +161,66 @@ export function ContextSkillsSection({
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '84px',
+                  boxSizing: 'border-box',
                   gap: '4px',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 800, color: isApplied ? 'var(--primary)' : 'var(--text-high)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      color: isApplied ? 'var(--primary)' : 'var(--text-high)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    title={pack.name}
+                  >
                     📦 {pack.name}
                   </span>
-                  {isApplied && <Check size={12} color="var(--primary)" />}
+                  {isApplied && <Check size={12} color="var(--primary)" style={{ flexShrink: 0 }} />}
                 </div>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: '1.25' }}>
-                  {pack.description}
+
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    color: 'var(--text-muted)',
+                    lineHeight: '1.3',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minHeight: '1.6rem'
+                  }}
+                  title={pack.description}
+                >
+                  {pack.description || 'Sin descripción'}
                 </span>
-                <span style={{ fontSize: '0.58rem', fontFamily: 'var(--font-mono)', color: isApplied ? 'var(--primary)' : 'var(--text-muted)' }}>
-                  {packActiveSkills.length} skills ({isApplied ? 'Vinculado' : 'Clic para vincular'})
-                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 'auto', paddingTop: '2px' }}>
+                  <span style={{ fontSize: '0.58rem', fontFamily: 'var(--font-mono)', color: isApplied ? 'var(--primary)' : 'var(--text-muted)' }}>
+                    {packActiveSkills.length} skills
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.56rem',
+                      padding: '1px 5px',
+                      borderRadius: 'var(--radius-xs)',
+                      background: isApplied
+                        ? 'color-mix(in srgb, var(--primary) 20%, transparent)'
+                        : 'color-mix(in srgb, var(--bg-card) 90%, transparent)',
+                      color: isApplied ? 'var(--primary)' : 'var(--text-muted)',
+                      fontWeight: 600
+                    }}
+                  >
+                    {isApplied ? 'Vinculado' : 'Inactivo'}
+                  </span>
+                </div>
               </button>
             );
           })}

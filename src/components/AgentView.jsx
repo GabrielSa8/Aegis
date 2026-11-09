@@ -209,6 +209,7 @@ export default function AgentView() {
           activeContext={activeContext}
           contexts={contexts}
           onSelectContext={handleSelectContext}
+          onSaveContexts={handleSaveContexts}
           currentSessionId={currentSessionId}
           activeModel={activeModel}
           onSelectModel={setActiveModel}

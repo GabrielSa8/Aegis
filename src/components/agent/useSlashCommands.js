@@ -13,6 +13,17 @@ import {
   parseProviderQuota,
   parseProviderSkills
 } from './slashCommandFormatters';
+import {
+  resolveOrCreateProjectContext,
+  resolveOrCreateProjectModpack,
+  formatHelpCommandResponse,
+  formatContextListResponse,
+  formatContextSwitchResponse,
+  formatContextCreatedResponse,
+  formatModpackSwitchResponse,
+  formatModpackCreatedResponse
+} from './projectContextResolver';
+import { loadStoredModpacks, saveStoredModpacks } from '../devops/devopsHelpers';
 
 const FALLBACK_QUOTAS = [
   { family: 'Gemini Models', limitType: 'Five Hour Limit Remaining', percent: 82, reset: 'Hoy en ~3h' },
@@ -33,6 +44,9 @@ export function useSlashCommands({
   onSetEffortMode,
   messages = [],
   activeContext = {},
+  contexts = [],
+  onSelectContext,
+  onSaveContexts,
   currentSessionId,
   onSubmitPrompt,
   activeModel,
@@ -308,6 +322,158 @@ export function useSlashCommands({
         }
         return;
       }
+
+      // K. Guía de Comandos Rápidos (/help)
+      if (cmdId === 'help' || cmdText === '/help' || cmdText.startsWith('/help ')) {
+        onInjectSystemMessage?.({
+          id: 'sys_help_' + Date.now(),
+          role: 'assistant',
+          content: formatHelpCommandResponse(agentType),
+          context: activeContext?.label || 'General',
+          timestamp: 'Ahora'
+        });
+        return;
+      }
+
+      // L. Contexto de Proyecto (/context <tema|list>)
+      if (cmdId === 'context' || cmdText === '/context' || cmdText.startsWith('/context')) {
+        const arg = cmdText.replace(/^\/context\s*/, '').trim();
+
+        if (!arg || arg.toLowerCase() === 'list') {
+          onInjectSystemMessage?.({
+            id: 'sys_ctx_list_' + Date.now(),
+            role: 'assistant',
+            content: formatContextListResponse(contexts, activeContext?.id),
+            context: activeContext?.label || 'General',
+            timestamp: 'Ahora'
+          });
+          return;
+        }
+
+        try {
+          const res = await resolveOrCreateProjectContext(arg, contexts);
+          if (res.error) {
+            onInjectSystemMessage?.({
+              id: 'sys_ctx_err_' + Date.now(),
+              role: 'assistant',
+              content: `> [!WARNING] Error de Contexto\n> ${res.error}`,
+              context: activeContext?.label || 'General',
+              timestamp: 'Ahora'
+            });
+            return;
+          }
+
+          if (res.action === 'switch') {
+            onSelectContext?.(res.context.id);
+            onInjectSystemMessage?.({
+              id: 'sys_ctx_switch_' + Date.now(),
+              role: 'assistant',
+              content: formatContextSwitchResponse(res.context),
+              context: res.context.label,
+              timestamp: 'Ahora'
+            });
+          } else if (res.action === 'create' || res.action === 'update') {
+            const nextList =
+              res.action === 'update'
+                ? contexts.map((c) => (c.id === res.context.id ? res.context : c))
+                : [...contexts, res.context];
+            onSaveContexts?.(nextList);
+            onSelectContext?.(res.context.id);
+            onInjectSystemMessage?.({
+              id: 'sys_ctx_create_' + Date.now(),
+              role: 'assistant',
+              content: formatContextCreatedResponse(res.context, res.sourceNote),
+              context: res.context.label,
+              timestamp: 'Ahora'
+            });
+          }
+        } catch (ctxErr) {
+          onInjectSystemMessage?.({
+            id: 'sys_ctx_err_' + Date.now(),
+            role: 'assistant',
+            content: `> [!WARNING] Error resolviendo contexto para '${arg}': ${ctxErr}`,
+            context: activeContext?.label || 'General',
+            timestamp: 'Ahora'
+          });
+        }
+        return;
+      }
+
+      // M. Modpack de Skills (/pack <tema>)
+      if (cmdId === 'pack' || cmdText === '/pack' || cmdText.startsWith('/pack')) {
+        const arg = cmdText.replace(/^\/pack\s*/, '').trim();
+
+        if (!arg) {
+          onChangePrompt('/pack ');
+          return;
+        }
+
+        try {
+          const res = await resolveOrCreateProjectModpack(arg);
+          if (res.error) {
+            onInjectSystemMessage?.({
+              id: 'sys_pack_err_' + Date.now(),
+              role: 'assistant',
+              content: `> [!WARNING] Error de Modpack\n> ${res.error}`,
+              context: activeContext?.label || 'General',
+              timestamp: 'Ahora'
+            });
+            return;
+          }
+
+          if (res.action === 'activate') {
+            const disabled = res.modpack.disabledSubSkills || [];
+            const activeSkills = res.modpack.skills.filter((s) => !disabled.includes(s));
+            localStorage.setItem('aegis_active_skills', JSON.stringify(activeSkills));
+            localStorage.setItem('aegis_active_modpack', res.modpack.name);
+            window.dispatchEvent(
+              new CustomEvent('aegis:modpack-activated', {
+                detail: { modpackName: res.modpack.name, skills: activeSkills }
+              })
+            );
+            onInjectSystemMessage?.({
+              id: 'sys_pack_switch_' + Date.now(),
+              role: 'assistant',
+              content: formatModpackSwitchResponse(res.modpack),
+              context: activeContext?.label || 'General',
+              timestamp: 'Ahora'
+            });
+          } else if (res.action === 'create' || res.action === 'update') {
+            let saved = [];
+            try {
+              saved = loadStoredModpacks();
+            } catch {}
+            const nextPacks =
+              res.action === 'update'
+                ? saved.map((p) => (p.id === res.modpack.id ? res.modpack : p))
+                : [res.modpack, ...saved];
+            saveStoredModpacks(nextPacks);
+            localStorage.setItem('aegis_active_skills', JSON.stringify(res.modpack.skills));
+            localStorage.setItem('aegis_active_modpack', res.modpack.name);
+            window.dispatchEvent(
+              new CustomEvent('aegis:modpack-activated', {
+                detail: { modpackName: res.modpack.name, skills: res.modpack.skills }
+              })
+            );
+            onInjectSystemMessage?.({
+              id: 'sys_pack_create_' + Date.now(),
+              role: 'assistant',
+              content: formatModpackCreatedResponse(res.modpack, res.sourceNote),
+              context: activeContext?.label || 'General',
+              timestamp: 'Ahora'
+            });
+          }
+        } catch (packErr) {
+          onInjectSystemMessage?.({
+            id: 'sys_pack_err_' + Date.now(),
+            role: 'assistant',
+            content: `> [!WARNING] Error configurando modpack para '${arg}': ${packErr}`,
+            context: activeContext?.label || 'General',
+            timestamp: 'Ahora'
+          });
+        }
+        return;
+      }
     },
     [
       onChangePrompt,
@@ -316,6 +482,9 @@ export function useSlashCommands({
       onInjectSystemMessage,
       activeModel,
       activeContext,
+      contexts,
+      onSelectContext,
+      onSaveContexts,
       messages,
       onSubmitPrompt,
       onClearHistory,

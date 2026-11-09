@@ -110,6 +110,9 @@ export function loadStoredModpacks() {
 export function saveStoredModpacks(modpacks) {
   try {
     localStorage.setItem(MODPACKS_STORAGE_KEY, JSON.stringify(modpacks));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('aegis:modpacks-updated', { detail: { modpacks } }));
+    }
   } catch (e) {
     console.error('Error guardando modpacks:', e);
   }

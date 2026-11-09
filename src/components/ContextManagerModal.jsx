@@ -35,7 +35,8 @@ export default function ContextManagerModal({
     currentContextId,
     onSaveContexts,
     onSelectContext,
-    onClose
+    onClose,
+    isOpen
   });
 
   if (!isOpen) return null;
@@ -46,7 +47,7 @@ export default function ContextManagerModal({
       onClose={onClose}
       title="Administrador de Contextos del Agente"
       icon={Folder}
-      maxWidth="780px"
+      maxWidth="820px"
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', width: '100%' }}>
           <TacticalButton variant="secondary" onClick={onClose}>
@@ -58,7 +59,7 @@ export default function ContextManagerModal({
         </div>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', flex: 1, minHeight: 0, maxHeight: '65vh', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', flex: 1, minHeight: 0, maxHeight: '70vh', overflow: 'hidden' }}>
         <ContextListSidebar
           editingList={editingList}
           selectedId={selectedId}

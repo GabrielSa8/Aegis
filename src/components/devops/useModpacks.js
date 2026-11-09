@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { loadStoredModpacks, saveStoredModpacks } from './devopsHelpers';
 
 /**
@@ -9,6 +9,15 @@ export function useModpacks({ showToast }) {
   const [modpacks, setModpacks] = useState(() => loadStoredModpacks());
   const [isModpackModalOpen, setIsModpackModalOpen] = useState(false);
   const [editingModpack, setEditingModpack] = useState(null);
+
+  // Sincronización reactiva en vivo cuando se crean o activan modpacks desde el Agente (/pack)
+  useEffect(() => {
+    const handleSync = () => {
+      setModpacks(loadStoredModpacks());
+    };
+    window.addEventListener('aegis:modpacks-updated', handleSync);
+    return () => window.removeEventListener('aegis:modpacks-updated', handleSync);
+  }, []);
 
   // Toggle Rey Maestro
   const handleToggleMaster = useCallback((modpackId) => {

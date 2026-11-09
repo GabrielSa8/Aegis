@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, PanelTop, PanelLeft, PanelRight, Workflow } from 'lucide-react';
+import { ShieldCheck, PanelTop, PanelLeft, PanelRight, Workflow, Terminal } from 'lucide-react';
 
 const SHORTCUTS = [
   { kbd: 'Ctrl + K', label: 'Paleta Omnibar', desc: 'Buscador universal de notas, temas, acciones y macros' },
@@ -77,6 +77,40 @@ export function OnboardingStepCheatSheet({ harnessEnabled = true }) {
           <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-high)', lineHeight: 1.4 }}>
             <strong>¿Cómo funciona el Aegis Harness ({harnessEnabled ? 'Activo' : 'Configurable en Ajustes'})?</strong> En lugar de gastar siempre en un modelo lento o cambiar de nivel a mano, evalúa cada subtarea en vivo: ejecuta pasos simples en <strong>L1 (Flash)</strong>, sube a <strong>L2 (Balanceado)</strong> o <strong>L3 (Profundo)</strong> cuando el siguiente paso lo exige, poda archivos ruidosos (<code style={{ fontSize: '0.65rem' }}>lockfiles</code>), alinea el caché KV (-80% latencia) y auto-repara fallos. Puedes alternarlo en la barra superior (<code style={{ fontSize: '0.65rem' }}>Auto L1⇄L3</code>) o en <strong>Ajustes ➔ Motor IA</strong>.
           </p>
+        </div>
+
+        {/* ⚡ Comandos Rápidos Esenciales (/slash) */}
+        <div style={{ marginTop: '0.45rem', padding: '8px 10px', borderRadius: 'var(--radius-sm)', background: 'color-mix(in srgb, var(--bg-card) 50%, transparent)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: 700, color: 'var(--primary)' }}>
+            <Terminal size={14} />
+            <span>Comandos Rápidos Esenciales (Escribe / en el chat)</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '4px' }}>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--accent)', fontWeight: 600 }}>/usage</code> — Cuotas de 5h y semanal
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--accent)', fontWeight: 600 }}>/compact</code> — Comprimir y liberar memoria
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--accent)', fontWeight: 600 }}>/model</code> — Conmutar modelo en vivo
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--accent)', fontWeight: 600 }}>/intensity</code> — Esfuerzo low/mid/high
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--primary)', fontWeight: 600 }}>/context &lt;tema&gt;</code> — Auto-crear contexto
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--primary)', fontWeight: 600 }}>/pack &lt;tema&gt;</code> — Auto-crear modpack
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--accent)', fontWeight: 600 }}>/help</code> — Guía completa en chat
+            </div>
+            <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+              <code style={{ color: 'var(--text-high)', fontWeight: 600 }}>/clip & /diff</code> — Inyección rápida
+            </div>
+          </div>
         </div>
 
         {/* 🚀 Primer paso recomendado: Plugins */}

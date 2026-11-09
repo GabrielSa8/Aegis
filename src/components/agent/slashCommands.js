@@ -55,6 +55,30 @@ export const COMMON_SYSTEM_COMMANDS = [
     desc: 'Inspecciona patrones de hábitos (0 tokens) y propuestas de skills',
     icon: 'Brain',
     category: 'Agente'
+  },
+  {
+    id: 'context',
+    command: '/context',
+    label: 'Contexto de Proyecto',
+    desc: 'Conmuta o auto-crea un contexto analizando Bóveda y repos (/context <tema|list>)',
+    icon: 'FolderGit2',
+    category: 'Proyecto'
+  },
+  {
+    id: 'pack',
+    command: '/pack',
+    label: 'Modpack de Skills',
+    desc: 'Activa o auto-ensambla un modpack adaptado al stack del proyecto (/pack <tema>)',
+    icon: 'Package',
+    category: 'Skills'
+  },
+  {
+    id: 'help',
+    command: '/help',
+    label: 'Guía de Comandos Rápidos',
+    desc: 'Despliega la guía de comandos (/usage, /compact, /model, /context, /pack)',
+    icon: 'HelpCircle',
+    category: 'Ayuda'
   }
 ];
 

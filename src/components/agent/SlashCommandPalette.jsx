@@ -11,7 +11,10 @@ import {
   Sparkles,
   Code,
   Brain,
-  Cpu
+  Cpu,
+  FolderGit2,
+  Package,
+  HelpCircle
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -26,7 +29,10 @@ const ICON_MAP = {
   Terminal,
   Code,
   Brain,
-  Cpu
+  Cpu,
+  FolderGit2,
+  Package,
+  HelpCircle
 };
 
 export default function SlashCommandPalette({

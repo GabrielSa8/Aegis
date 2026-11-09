@@ -25,7 +25,7 @@ export function ContextEditorPane({
   }, []);
 
   return (
-    <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.2rem', flex: 1 }}>
+    <div style={{ padding: '1rem 1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1, boxSizing: 'border-box' }}>
       {errorMsg && (
         <div
           style={{
@@ -55,7 +55,7 @@ export function ContextEditorPane({
           value={activeCtx.label || ''}
           onChange={(e) => onUpdateActive('label', e.target.value)}
           placeholder="Ej. Mi Proyecto (Backend)"
-          style={{ fontSize: '0.85rem', padding: '0.5rem 0.8rem', width: '100%' }}
+          style={{ fontSize: '0.85rem', padding: '0.45rem 0.75rem', width: '100%', boxSizing: 'border-box' }}
         />
       </div>
 
@@ -69,7 +69,7 @@ export function ContextEditorPane({
           value={activeCtx.path || ''}
           onChange={(e) => onUpdateActive('path', e.target.value)}
           placeholder="~/Proyectos/mi-proyecto..."
-          style={{ fontSize: '0.82rem', fontFamily: 'var(--font-mono)', padding: '0.5rem 0.8rem', width: '100%' }}
+          style={{ fontSize: '0.82rem', fontFamily: 'var(--font-mono)', padding: '0.45rem 0.75rem', width: '100%', boxSizing: 'border-box' }}
         />
         <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
           El agente se ejecutará dentro de esta carpeta para leer git y archivos locales.

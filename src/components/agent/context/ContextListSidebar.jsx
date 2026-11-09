@@ -35,7 +35,7 @@ export function ContextListSidebar({
         </TacticalButton>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {editingList.map((ctx) => {
           const isSelected = ctx.id === selectedId;
           return (
@@ -48,14 +48,14 @@ export function ContextListSidebar({
                 justifyContent: 'space-between',
                 padding: '8px 10px',
                 borderRadius: 'var(--radius-md)',
-                background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                background: isSelected ? 'color-mix(in srgb, var(--primary) 15%, transparent)' : 'transparent',
                 border: isSelected ? '1px solid var(--primary)' : '1px solid transparent',
                 cursor: 'pointer',
                 transition: 'var(--transition)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                <Folder size={14} color={isSelected ? '#10b981' : '#788882'} />
+                <Folder size={14} color={isSelected ? 'var(--primary)' : 'var(--text-muted)'} />
                 <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   <span
                     style={{

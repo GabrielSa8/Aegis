@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DEFAULT_CONTEXTS } from './contextConstants';
 
 export function useContextManager({
@@ -6,11 +6,38 @@ export function useContextManager({
   currentContextId,
   onSaveContexts,
   onSelectContext,
-  onClose
+  onClose,
+  isOpen
 }) {
   const [editingList, setEditingList] = useState(contexts || DEFAULT_CONTEXTS);
   const [selectedId, setSelectedId] = useState(currentContextId || 'general');
   const [errorMsg, setErrorMsg] = useState(null);
+
+  // Sincronización reactiva permanente con los contextos externos del Agente
+  useEffect(() => {
+    if (Array.isArray(contexts) && contexts.length > 0) {
+      setEditingList(contexts);
+    }
+  }, [contexts]);
+
+  useEffect(() => {
+    if (currentContextId) {
+      setSelectedId(currentContextId);
+    }
+  }, [currentContextId]);
+
+  // Al abrir el modal, re-sincronizar siempre con el estado actual del Agente
+  useEffect(() => {
+    if (isOpen) {
+      if (Array.isArray(contexts) && contexts.length > 0) {
+        setEditingList(contexts);
+      }
+      if (currentContextId) {
+        setSelectedId(currentContextId);
+      }
+      setErrorMsg(null);
+    }
+  }, [isOpen, contexts, currentContextId]);
 
   const activeCtx = editingList.find((c) => c.id === selectedId) || editingList[0] || {
     id: 'nuevo',

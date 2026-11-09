@@ -45,6 +45,20 @@ export const MODULE_TOURS = {
           '{{diff}}: Inyecta automáticamente los cambios git sin commitear.',
           'Historial de comandos accesible con flechas arriba/abajo.'
         ]
+      },
+      {
+        title: 'Comandos Rápidos (/slash) y Auto-Contexto',
+        desc: 'Control maestro de cuotas, memoria, modelos y auto-generación de contextos desde el prompt.',
+        details: [
+          '/usage: Consulta cuotas reales (5h y semanal) de tu suscripción en tiempo real.',
+          '/compact: Comprime quirúrgicamente el historial para liberar tokens y memoria.',
+          '/model [nombre]: Inspecciona o conmuta el modelo en vivo (Flash, Pro, Sonnet, Opus).',
+          '/intensity [low|mid|high]: Ajusta el esfuerzo o nivel de razonamiento del modelo.',
+          '/context <tema|list>: Conmuta o auto-crea un contexto persistente analizando notas de Bóveda y repos.',
+          '/pack <tema>: Activa o auto-ensambla un modpack de skills adaptado al stack del proyecto.',
+          '/help: Despliega la guía interactiva completa de comandos y atajos en el chat.',
+          '/clip & /diff: Inyección rápida del portapapeles o cambios git sin commitear.'
+        ]
       }
     ],
     proTip: 'Usa Ctrl + K en cualquier momento para invocar la paleta omnibar y cambiar de módulo.'
