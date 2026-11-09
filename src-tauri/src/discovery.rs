@@ -790,6 +790,8 @@ pub fn auto_create_default_vault(custom_name: Option<String>) -> Result<String, 
         - [ ] [id:agent_task] Ejecutar tu primera consulta o plan técnico en el Agente IA 📅 {today} 🔼 #aegis\n"
     );
     let _ = fs::write(target_vault.join("00 Sistema/Inbox.md"), inbox_content);
+    crate::seed::seed_vault_brain_note(&target_vault);
+    crate::seed::ensure_factory_brain_and_skills();
 
     let vault_str = target_vault.to_string_lossy().to_string();
 

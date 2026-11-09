@@ -6,11 +6,27 @@ import { useAgentSessions } from './useAgentSessions';
 import { useAgentStream } from './useAgentStream';
 
 export function useAgent() {
-  // Carga de contextos desde localStorage con fallback
+  // Carga de contextos desde localStorage con fusión automática del Pack de Skills Base V2
   const [contexts, setContexts] = useState(() => {
     try {
       const saved = localStorage.getItem('aegis_agent_contexts');
-      if (saved) return JSON.parse(saved);
+      const seededFlag = localStorage.getItem('aegis_brain_skills_v2_seeded');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!seededFlag && Array.isArray(parsed)) {
+          const merged = parsed.map((ctx) => {
+            const def = DEFAULT_CONTEXTS.find((d) => d.id === ctx.id);
+            if (!def) return ctx;
+            const combinedSkills = Array.from(new Set([...(ctx.skills || []), ...def.skills]));
+            return { ...ctx, skills: combinedSkills };
+          });
+          localStorage.setItem('aegis_agent_contexts', JSON.stringify(merged));
+          localStorage.setItem('aegis_brain_skills_v2_seeded', '1');
+          return merged;
+        }
+        return parsed;
+      }
+      localStorage.setItem('aegis_brain_skills_v2_seeded', '1');
     } catch (e) {
       console.error('Error cargando contextos:', e);
     }

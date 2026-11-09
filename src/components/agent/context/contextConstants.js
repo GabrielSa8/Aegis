@@ -1,24 +1,31 @@
 export const AVAILABLE_SKILLS = [
-  'tadu-backend',
-  'jetpack-compose-patterns',
-  'obsidian-vault-architect',
-  'react-ts-performance',
+  'caveman',
+  'caveman-commit',
+  'cavecrew',
+  'input-filter-optimization',
+  'superpowers',
+  'ponytail',
   'clean-code-security',
   'tdd-practitioner',
-  'frontend-design',
-  'impeccable',
-  'ponytail',
-  'superpowers',
-  'browser-automation',
-  'diagram-design',
-  'feynman-technique-mentor',
-  'find-skills',
-  'spaced-repetition-generator',
+  'grill-me',
+  'codebase-design',
+  'improve-codebase-architecture',
+  'triage',
+  'git-guardrails-claude-code',
   'project-architect-ideation',
   'project-postmortem-retrospective',
+  'frontend-design',
+  'impeccable',
+  'react-ts-performance',
+  'obsidian-vault-architect',
+  'feynman-technique-mentor',
+  'spaced-repetition-generator',
   'skill-project-router',
-  'cavecrew',
-  'caveman'
+  'find-skills',
+  'skill-evolver',
+  'browser-automation',
+  'diagram-design',
+  'jetpack-compose-patterns'
 ];
 
 export const DEFAULT_CONTEXTS = [
@@ -27,27 +34,64 @@ export const DEFAULT_CONTEXTS = [
     label: 'General & Bóveda',
     path: '',
     effort: 'low',
-    skills: ['obsidian-vault-architect', 'caveman']
+    skills: [
+      'caveman',
+      'superpowers',
+      'ponytail',
+      'input-filter-optimization',
+      'obsidian-vault-architect',
+      'skill-project-router',
+      'find-skills'
+    ]
   },
   {
     id: 'backend',
-    label: 'Backend & APIs',
+    label: 'Backend & Arquitectura',
     path: '',
     effort: 'high',
-    skills: ['clean-code-security', 'tdd-practitioner', 'superpowers']
+    skills: [
+      'caveman',
+      'superpowers',
+      'ponytail',
+      'clean-code-security',
+      'tdd-practitioner',
+      'codebase-design',
+      'improve-codebase-architecture',
+      'project-architect-ideation',
+      'triage',
+      'git-guardrails-claude-code',
+      'caveman-commit',
+      'cavecrew'
+    ]
   },
   {
     id: 'frontend',
     label: 'Frontend & UI/UX',
     path: '',
     effort: 'high',
-    skills: ['frontend-design', 'impeccable', 'react-ts-performance']
+    skills: [
+      'caveman',
+      'superpowers',
+      'ponytail',
+      'frontend-design',
+      'impeccable',
+      'react-ts-performance',
+      'clean-code-security'
+    ]
   },
   {
     id: 'research',
-    label: 'Investigación & Estudio',
+    label: 'Investigación & Diseño',
     path: '',
     effort: 'low',
-    skills: ['obsidian-vault-architect', 'feynman-technique-mentor', 'spaced-repetition-generator']
+    skills: [
+      'caveman',
+      'superpowers',
+      'grill-me',
+      'obsidian-vault-architect',
+      'feynman-technique-mentor',
+      'spaced-repetition-generator',
+      'skill-evolver'
+    ]
   }
 ];

@@ -19,6 +19,7 @@ pub mod security;
 pub mod environment;
 pub mod discovery;
 pub mod harness;
+pub mod seed;
 
 #[tauri::command]
 fn ping() -> String {
@@ -211,6 +212,9 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             use tauri::Manager;
+            // Auto-sembrar BRAIN.md de nivel Principal Engineer y pack de 22 skills base en el arranque
+            seed::ensure_factory_brain_and_skills();
+
             let master_pw_enabled = config::get_aegis_config()
                 .map(|c| c.security.master_password_enabled)
                 .unwrap_or(false);

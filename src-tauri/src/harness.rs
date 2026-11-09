@@ -466,8 +466,9 @@ pub fn build_harness_plan(
         "low".to_string()
     };
 
-    // Pilar 2 & 4: Prefijo estático alineado para KV-Cache + Contrato de edición quirúrgica
+    // Pilar 2 & 4: Prefijo estático alineado para KV-Cache + Contrato Brain Principal Engineer + Edición quirúrgica
     let mut static_prefix = String::from("[AEGIS-HARNESS-STATIC-CONTRACT]\n");
+    static_prefix.push_str(crate::seed::get_compact_brain_contract());
     if response_style == "caveman" {
         static_prefix.push_str("- Estilo: Directo al código/solución. Cero saludos, preámbulos o relleno.\n");
     }
