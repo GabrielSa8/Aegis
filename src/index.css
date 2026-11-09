@@ -2838,9 +2838,7 @@ select:focus-visible {
   transform: translateY(-36px);
   transform-origin: top center;
   opacity: 0.85;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  overflow: visible;
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
               opacity 0.15s ease, 
               gap 0.2s ease, 
@@ -2848,13 +2846,10 @@ select:focus-visible {
               max-width 0.2s ease;
 }
 
-.dynamic-island-capsule::-webkit-scrollbar {
-  display: none;
-}
-
-/* ⚡ Dynamic Island activo al entrar el mouse o al abrir historial (Zero-Jitter Translation) */
+/* ⚡ Dynamic Island activo al entrar el mouse o al abrir historial / dropdown (Zero-Jitter Translation) */
 .dynamic-island-trigger:hover .dynamic-island-capsule,
 .dynamic-island-capsule.is-pinned,
+.dynamic-island-capsule:has(.model-selector-btn.is-active),
 body.aegis-dock-open .dynamic-island-capsule {
   transform: translateY(0);
   opacity: 1;

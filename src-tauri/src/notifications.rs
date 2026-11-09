@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use tauri_plugin_notification::NotificationExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,6 +25,7 @@ pub fn send_desktop_notification(
                 "taskDeadlinesAlert" => cfg.notifications.task_deadlines_alert,
                 "financeCutoffsAlert" => cfg.notifications.finance_cutoffs_alert,
                 "gitBranchAlerts" => cfg.notifications.git_branch_alerts,
+                "agentCompletionAlert" => cfg.notifications.agent_completion_alert,
                 _ => true,
             };
             if !enabled {
@@ -39,6 +40,20 @@ pub fn send_desktop_notification(
         .body(&body)
         .show()
         .map_err(|e| format!("Error emitiendo notificación nativa: {}", e))?;
+
+    let event_type = match notification_type.as_deref() {
+        Some("sentinelTempAlert") => "alert",
+        Some("financeCutoffsAlert") => "alert",
+        Some("taskDeadlinesAlert") => "notification",
+        Some("agentCompletionAlert") => "none",
+        _ => "notification",
+    };
+    if event_type != "none" {
+        let _ = app.emit("aegis:notification-sound", serde_json::json!({
+            "soundType": event_type,
+            "title": title
+        }));
+    }
 
     Ok(true)
 }

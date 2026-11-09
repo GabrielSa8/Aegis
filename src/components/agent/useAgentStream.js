@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { reduceStreamChunk } from './agentHelpers';
+import { soundService } from '../../utils/soundService';
 
 export function useAgentStream({
   activeContext,
@@ -132,6 +133,21 @@ export function useAgentStream({
           }
         }).catch((err) => console.error('Error guardando mensaje en SQLite:', err));
       }
+      // Notificación nativa si Aegis está minimizado o en otra ventana/escritorio
+      if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) {
+        const preview = finalContent
+          .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+          .replace(/```[\s\S]*?```/gi, '[Bloque de código]')
+          .trim();
+        const snippet = preview ? preview.slice(0, 120) : 'Respuesta lista.';
+        const ctxLabel = activeContextRef.current?.label || 'General';
+        invoke('send_desktop_notification', {
+          title: `⚡ Aegis · Tarea Lista (${ctxLabel})`,
+          body: snippet,
+          notificationType: 'agentCompletionAlert'
+        }).catch((err) => console.warn('Error emitiendo notificación de fondo:', err));
+      }
+
       delete currentAccumulatorRef.current[chunk.stream_id];
       delete lastProcessedSeqRef.current[chunk.stream_id];
     } else if (chunk.event_type === 'error') {
@@ -141,6 +157,18 @@ export function useAgentStream({
         isError: true,
         activeSkills: activeContextRef.current?.skills || []
       }).catch(() => {});
+
+      // Notificación nativa de error en segundo plano
+      if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) {
+        const ctxLabel = activeContextRef.current?.label || 'General';
+        const errSnippet = chunk.content ? String(chunk.content).slice(0, 120) : 'Fallo en la ejecución del agente.';
+        invoke('send_desktop_notification', {
+          title: `⚠️ Aegis · Error en Agente (${ctxLabel})`,
+          body: errSnippet,
+          notificationType: 'agentCompletionAlert'
+        }).catch((err) => console.warn('Error emitiendo notificación de error en fondo:', err));
+      }
+
       delete currentAccumulatorRef.current[chunk.stream_id];
       delete lastProcessedSeqRef.current[chunk.stream_id];
     }
@@ -152,6 +180,11 @@ export function useAgentStream({
 
     if (chunk.event_type === 'done' || chunk.event_type === 'error') {
       setLoading(false);
+      if (chunk.event_type === 'done') {
+        soundService.playSuccess();
+      } else {
+        soundService.playError();
+      }
     }
   };
 

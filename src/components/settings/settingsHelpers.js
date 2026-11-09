@@ -111,7 +111,7 @@ export const THEMES = [
   }
 ];
 
-export const AEGIS_VERSION = 'v2.18.2';
+export const AEGIS_VERSION = 'v2.18.3';
 
 export const BILLING_LINKS = [
   { name: 'Google AI Studio', url: 'https://aistudio.google.com/', desc: 'Gemini API & Cuotas' },
@@ -195,6 +195,11 @@ export const NOTIFICATION_DEFINITIONS = [
     id: 'gitBranchAlerts',
     title: 'Avisos de Divergencia Git (Ahead / Behind)',
     desc: 'Alerta cuando una rama local esté detrás del remoto para evitar conflictos.'
+  },
+  {
+    id: 'agentCompletionAlert',
+    title: 'Finalización de Tareas del Agente (Segundo Plano)',
+    desc: 'Notifica en el escritorio cuando el agente termine de razonar o ejecutar si Aegis está minimizado o en otra ventana.'
   }
 ];
 

@@ -73,6 +73,16 @@ pub struct NotificationsConfig {
     pub task_deadlines_alert: bool,
     pub finance_cutoffs_alert: bool,
     pub git_branch_alerts: bool,
+    #[serde(default = "default_true")]
+    pub agent_completion_alert: bool,
+    #[serde(default = "default_true")]
+    pub sound_enabled: bool,
+    #[serde(default = "default_sound_volume")]
+    pub sound_volume: f32,
+}
+
+fn default_sound_volume() -> f32 {
+    0.5
 }
 
 impl Default for NotificationsConfig {
@@ -82,6 +92,9 @@ impl Default for NotificationsConfig {
             task_deadlines_alert: true,
             finance_cutoffs_alert: true,
             git_branch_alerts: false,
+            agent_completion_alert: true,
+            sound_enabled: true,
+            sound_volume: 0.5,
         }
     }
 }

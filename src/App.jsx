@@ -13,6 +13,7 @@ import { useSecurity } from './components/security/useSecurity';
 import MasterLockScreen from './components/security/MasterLockScreen';
 import { OnboardingModal } from './components/onboarding';
 import { ModuleTourModal } from './components/tours';
+import { soundService } from './utils/soundService';
 
 // 🧩 Módulos Desacoplables con Lazy Loading (Zero overhead en arranque)
 const AgentView = lazy(() => import('./components/AgentView'));
@@ -103,6 +104,13 @@ export default function App() {
         }
         applyUiScale(cfg?.uiScale);
 
+        if (cfg?.notifications) {
+          soundService.configure({
+            enabled: cfg.notifications.soundEnabled ?? true,
+            volume: cfg.notifications.soundVolume ?? 0.5
+          });
+        }
+
         // Si es el primer arranque y el onboarding no se ha completado
         if (cfg?.onboardingCompleted === false) {
           setShowOnboarding(true);
@@ -127,6 +135,12 @@ export default function App() {
       if (newCfg.uiScale) {
         applyUiScale(newCfg.uiScale);
       }
+      if (newCfg.notifications) {
+        soundService.configure({
+          enabled: newCfg.notifications.soundEnabled ?? true,
+          volume: newCfg.notifications.soundVolume ?? 0.5
+        });
+      }
     };
 
     listen('aegis:config-reloaded', (event) => {
@@ -141,6 +155,21 @@ export default function App() {
     return () => {
       if (unlistenTauri) unlistenTauri();
       window.removeEventListener('aegis:config-reloaded', onDomReload);
+    };
+  }, []);
+
+  // Escucha de eventos de audio globales emitidos por backend o SO
+  useEffect(() => {
+    let unlistenSound = null;
+    listen('aegis:notification-sound', (event) => {
+      const soundType = event?.payload?.soundType || 'notification';
+      soundService.play(soundType);
+    }).then((unsub) => {
+      unlistenSound = unsub;
+    }).catch(() => {});
+
+    return () => {
+      if (unlistenSound) unlistenSound();
     };
   }, []);
 

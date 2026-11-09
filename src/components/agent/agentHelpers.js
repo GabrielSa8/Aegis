@@ -133,7 +133,7 @@ export function reduceStreamChunk(msg, chunk) {
   if (chunk.event_type === 'error') {
     return {
       ...msg,
-      content: (msg.content ? msg.content + '\n\n' : '') + `⚠️ [Error agy]: ${chunk.content}`,
+      content: (msg.content ? msg.content + '\n\n' : '') + `⚠️ [Error]: ${chunk.content}`,
       loading: false,
       permissionPrompt: null,
       statusText: null,

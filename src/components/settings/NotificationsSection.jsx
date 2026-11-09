@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { NOTIFICATION_DEFINITIONS } from './settingsHelpers';
 import TacticalButton from '../ui/TacticalButton';
-import { Bell, Monitor, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Bell, Monitor, CheckCircle2, ShieldAlert, Volume2, VolumeX } from 'lucide-react';
+import { soundService } from '../../utils/soundService';
 
 export default function NotificationsSection({ config, setConfig, updateNotifications }) {
   const [testStatus, setTestStatus] = useState(null);
@@ -12,6 +13,8 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
   const notifications = config.notifications || {};
   const closeToTray = config.closeToTray ?? true;
   const startMinimized = config.startMinimized ?? false;
+  const soundEnabled = notifications.soundEnabled ?? true;
+  const soundVolume = notifications.soundVolume ?? 0.5;
 
   const handleTestNotification = async () => {
     try {
@@ -136,6 +139,96 @@ export default function NotificationsSection({ config, setConfig, updateNotifica
                 onChange={(e) => setConfig && setConfig({ ...config, startMinimized: e.target.checked })}
               />
             </div>
+          </div>
+
+          {/* Sección de Audio Táctico Sintetizado */}
+          <div style={{
+            marginTop: '8px',
+            paddingTop: '10px',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {soundEnabled ? <Volume2 size={15} color="var(--primary)" /> : <VolumeX size={15} color="var(--text-muted)" />}
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-high)' }}>
+                  Efectos Sonoros y Chimes Tácticos
+                </span>
+              </div>
+              <TacticalButton
+                variant="ghost"
+                size="xs"
+                onClick={() => {
+                  soundService.configure({ enabled: true, volume: soundVolume });
+                  soundService.playSuccess();
+                }}
+              >
+                Probar
+              </TacticalButton>
+            </div>
+
+            <div
+              onClick={() => {
+                const next = !soundEnabled;
+                updateNotifications({ soundEnabled: next });
+                soundService.configure({ enabled: next, volume: soundVolume });
+              }}
+              className={`tactical-option-row ${soundEnabled ? 'active' : ''}`}
+            >
+              <div style={{ paddingRight: '1rem', flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: soundEnabled ? 'var(--text-high)' : 'var(--text-muted)', display: 'block' }}>
+                  Sonidos de Alertas y Tareas
+                </span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  Chimes sutiles sintetizados con Web Audio API (cero assets) al resolver tareas o recibir alertas.
+                </span>
+              </div>
+              <div className="tactical-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={(e) => {
+                    updateNotifications({ soundEnabled: e.target.checked });
+                    soundService.configure({ enabled: e.target.checked, volume: soundVolume });
+                  }}
+                />
+              </div>
+            </div>
+
+            {soundEnabled && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'color-mix(in srgb, var(--primary) 6%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--primary) 15%, transparent)'
+              }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', minWidth: '55px' }}>
+                  Volumen: {Math.round(soundVolume * 100)}%
+                </span>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1"
+                  step="0.05"
+                  value={soundVolume}
+                  onChange={(e) => {
+                    const vol = parseFloat(e.target.value);
+                    updateNotifications({ soundVolume: vol });
+                    soundService.configure({ enabled: true, volume: vol });
+                  }}
+                  style={{
+                    flex: 1,
+                    accentColor: 'var(--primary)',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
