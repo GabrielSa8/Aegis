@@ -28,6 +28,7 @@ pub struct GatewayRuntimeStatus {
     pub error_message: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct TelegramUser {
     id: i64,
@@ -40,6 +41,7 @@ struct TelegramChat {
     id: i64,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct TelegramMessage {
     message_id: i64,
@@ -940,7 +942,6 @@ fn generate_financial_summary() -> String {
     };
 
     let today = chrono_like_today();
-    let month_prefix = if today.len() >= 7 { &today[0..7] } else { "" };
 
     // 1. Métodos de pago
     let methods = crate::finances::sqlite_get_payment_methods().unwrap_or_default();

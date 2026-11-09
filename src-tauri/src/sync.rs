@@ -390,31 +390,20 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
     let tx_data = crate::finances::sqlite_get_transactions().unwrap_or_default();
     let budgets = crate::finances::sqlite_get_budgets().unwrap_or_default();
     let categories = crate::finances::sqlite_get_categories().unwrap_or_default();
+    let payment_methods = crate::finances::sqlite_get_payment_methods().unwrap_or_default();
+    let msi_plans = crate::finances::sqlite_get_msi_plans().unwrap_or_default();
+    let recurring_expenses = crate::finances::sqlite_get_recurring_expenses().unwrap_or_default();
     let custom_games = crate::leisure::sqlite_get_custom_games().unwrap_or_default();
     let game_catalog = crate::leisure::sqlite_export_game_catalog().unwrap_or_default();
     let game_stats = crate::leisure::sqlite_export_game_stats().unwrap_or_default();
     let game_sessions = crate::leisure::sqlite_export_game_sessions().unwrap_or_default();
     let timeline = crate::finances::sqlite_get_timeline_events().unwrap_or_default();
 
-    // Preferencias sincronizables de Ajustes (perfil, tema, límites de tokens, alertas, módulos, plugins)
-    let syncable_settings = crate::config::get_aegis_config().ok().map(|cfg| {
-        serde_json::json!({
-            "profile": cfg.profile,
-            "theme": cfg.theme,
-            "uiScale": cfg.ui_scale,
-            "tokenBudget": cfg.token_budget,
-            "notifications": cfg.notifications,
-            "enabledModules": cfg.enabled_modules,
-            "communityPluginsEnabled": cfg.community_plugins_enabled,
-            "enableGamemode": cfg.enable_gamemode,
-            "enableGamescopeFsr": cfg.enable_gamescope_fsr,
-            "agentType": cfg.agent_type,
-            "harness": cfg.harness,
-            "closeToTray": cfg.close_to_tray,
-            "minimizeToTray": cfg.minimize_to_tray
-        })
-    });
-
+    // NOTA DE ARQUITECTURA P2P (Doctrina Desacoplamiento Estricto):
+    // Las preferencias de entorno local, UI y hardware (tema, escala DPI, módulos activos, plugins activos,
+    // aceleradores GameMode/FSR y tray) permanecen estrictamente desacopladas por máquina para evitar
+    // sobrescribir la configuración visual o los flujos específicos de cada dispositivo.
+    // Solo se sincronizan datos de negocio (SQLite) y archivos de plugins comunitarios para que estén disponibles.
     let community_plugins = crate::plugins::export_community_plugins_payload().unwrap_or_default();
 
     Ok(serde_json::json!({
@@ -423,12 +412,14 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
         "transactions": tx_data,
         "budgets": budgets,
         "categories": categories,
+        "paymentMethods": payment_methods,
+        "msiPlans": msi_plans,
+        "recurringExpenses": recurring_expenses,
         "customGames": custom_games,
         "gameCatalog": game_catalog,
         "gameStats": game_stats,
         "gameSessions": game_sessions,
         "timelineEvents": timeline,
-        "settings": syncable_settings,
         "communityPlugins": community_plugins
     }))
 }
@@ -461,6 +452,36 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
         for c in arr {
             if let Some(name) = c.get("name").and_then(|v| v.as_str()) {
                 let _ = crate::finances::sqlite_add_category(name.to_string());
+                total_imported += 1;
+            }
+        }
+    }
+
+    // Métodos de Pago
+    if let Some(arr) = payload.get("paymentMethods").and_then(|v| v.as_array()) {
+        for pm in arr {
+            if let Ok(method) = serde_json::from_value::<crate::finances::PaymentMethod>(pm.clone()) {
+                let _ = crate::finances::sqlite_save_payment_method(method);
+                total_imported += 1;
+            }
+        }
+    }
+
+    // Planes MSI
+    if let Some(arr) = payload.get("msiPlans").and_then(|v| v.as_array()) {
+        for p in arr {
+            if let Ok(plan) = serde_json::from_value::<crate::finances::MsiPlan>(p.clone()) {
+                let _ = crate::finances::sqlite_save_msi_plan(plan);
+                total_imported += 1;
+            }
+        }
+    }
+
+    // Gastos Recurrentes
+    if let Some(arr) = payload.get("recurringExpenses").and_then(|v| v.as_array()) {
+        for r in arr {
+            if let Ok(item) = serde_json::from_value::<crate::finances::RecurringExpense>(r.clone()) {
+                let _ = crate::finances::sqlite_save_recurring_expense(item);
                 total_imported += 1;
             }
         }
@@ -507,95 +528,12 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
         }
     }
 
-    // Plugins comunitarios (archivos y manifiestos de extensiones instaladas)
+    // Plugins comunitarios (archivos y manifiestos de extensiones instaladas para que estén disponibles)
+    // El estado activo (communityPluginsEnabled) no se sobreescribe para respetar la preferencia local.
     if let Some(arr) = payload.get("communityPlugins").and_then(|v| v.as_array()) {
         if let Ok(exported) = serde_json::from_value::<Vec<crate::plugins::ExportedCommunityPlugin>>(serde_json::Value::Array(arr.clone())) {
             if let Ok(count) = crate::plugins::import_community_plugins_payload(exported) {
                 total_imported += count;
-            }
-        }
-    }
-
-    // Preferencias sincronizables de Ajustes (Perfil, Tema, Alertas, Módulos, Plugins, Tokens)
-    if let Some(st) = payload.get("settings").and_then(|v| v.as_object()) {
-        if let Ok(mut current_cfg) = crate::config::get_aegis_config() {
-            let mut cfg_modified = false;
-
-            if let Some(p) = st.get("profile") {
-                if let Ok(prof) = serde_json::from_value::<crate::config::UserProfile>(p.clone()) {
-                    current_cfg.profile = prof;
-                    cfg_modified = true;
-                }
-            }
-            if let Some(t) = st.get("theme").and_then(|v| v.as_str()) {
-                if !t.is_empty() {
-                    current_cfg.theme = t.to_string();
-                    cfg_modified = true;
-                }
-            }
-            if let Some(s) = st.get("uiScale").and_then(|v| v.as_f64()) {
-                current_cfg.ui_scale = s as f32;
-                cfg_modified = true;
-            }
-            if let Some(tb) = st.get("tokenBudget") {
-                if let Ok(budget) = serde_json::from_value::<crate::config::TokenBudgetConfig>(tb.clone()) {
-                    current_cfg.token_budget = budget;
-                    cfg_modified = true;
-                }
-            }
-            if let Some(n) = st.get("notifications") {
-                if let Ok(notifs) = serde_json::from_value::<crate::config::NotificationsConfig>(n.clone()) {
-                    current_cfg.notifications = notifs;
-                    cfg_modified = true;
-                }
-            }
-            // Sincronizar módulos oficiales (unión inclusiva: si el otro dispositivo los tiene activos, se transfieren y activan)
-            if let Some(em) = st.get("enabledModules") {
-                if let Ok(modules) = serde_json::from_value::<crate::config::EnabledModulesConfig>(em.clone()) {
-                    current_cfg.enabled_modules.finances = current_cfg.enabled_modules.finances || modules.finances;
-                    current_cfg.enabled_modules.tasks = current_cfg.enabled_modules.tasks || modules.tasks;
-                    current_cfg.enabled_modules.sentinel = current_cfg.enabled_modules.sentinel || modules.sentinel;
-                    current_cfg.enabled_modules.devops = current_cfg.enabled_modules.devops || modules.devops;
-                    current_cfg.enabled_modules.gaming = current_cfg.enabled_modules.gaming || modules.gaming;
-                    cfg_modified = true;
-                }
-            }
-            // Sincronizar estados de plugins comunitarios (unión inclusiva)
-            if let Some(cpe) = st.get("communityPluginsEnabled").and_then(|v| v.as_object()) {
-                for (k, v) in cpe {
-                    if let Some(b) = v.as_bool() {
-                        let cur = current_cfg.community_plugins_enabled.get(k).copied().unwrap_or(false);
-                        current_cfg.community_plugins_enabled.insert(k.clone(), cur || b);
-                        cfg_modified = true;
-                    }
-                }
-            }
-            if let Some(at) = st.get("agentType").and_then(|v| v.as_str()) {
-                if !at.is_empty() {
-                    current_cfg.agent_type = at.to_string();
-                    cfg_modified = true;
-                }
-            }
-            if let Some(hr) = st.get("harness") {
-                if let Ok(h_cfg) = serde_json::from_value::<crate::harness::HarnessConfig>(hr.clone()) {
-                    current_cfg.harness = h_cfg;
-                    cfg_modified = true;
-                }
-            }
-            if let Some(gm) = st.get("enableGamemode").and_then(|v| v.as_bool()) {
-                current_cfg.enable_gamemode = current_cfg.enable_gamemode || gm;
-                cfg_modified = true;
-            }
-            if let Some(fsr) = st.get("enableGamescopeFsr").and_then(|v| v.as_bool()) {
-                current_cfg.enable_gamescope_fsr = current_cfg.enable_gamescope_fsr || fsr;
-                cfg_modified = true;
-            }
-
-            if cfg_modified {
-                if let Ok(_) = crate::config::save_aegis_config(current_cfg.clone()) {
-                    total_imported += 1;
-                    notify_config_updated(&current_cfg);
-                }
             }
         }
     }
@@ -856,5 +794,9 @@ mod tests {
         let val = payload.unwrap();
         assert!(val.get("deviceId").is_some());
         assert!(val.get("transactions").is_some());
+        assert!(val.get("paymentMethods").is_some());
+        assert!(val.get("msiPlans").is_some());
+        assert!(val.get("recurringExpenses").is_some());
+        assert!(val.get("settings").is_none(), "Settings de entorno local no deben ser exportados en P2P");
     }
 }
