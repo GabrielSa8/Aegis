@@ -7,9 +7,11 @@ import {
 } from './taskHelpers';
 import { useTaskGroups } from './useTaskGroups';
 
+let _cachedTasks = null;
+
 export function useTasks() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState(() => _cachedTasks || []);
+  const [loading, setLoading] = useState(() => !_cachedTasks);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,7 +50,8 @@ export function useTasks() {
       setRefreshing(true);
       setError(null);
       const res = await invoke('get_vault_tasks');
-      setTasks(res || []);
+      _cachedTasks = res || [];
+      setTasks(_cachedTasks);
     } catch (err) {
       console.error('Error cargando tareas de la Bóveda:', err);
       setError(String(err));

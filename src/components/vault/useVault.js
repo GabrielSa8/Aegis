@@ -7,10 +7,14 @@ import { useVaultDragDrop } from './useVaultDragDrop';
  * useVault — Custom Hook que encapsula el estado, persistencia IPC de Tauri,
  * búsqueda de texto completo y árbol de carpetas de la Bóveda Obsidian.
  */
+let _cachedVaultNotes = null;
+let _cachedVaultFolders = null;
+let _cachedVaultStats = null;
+
 export function useVault() {
-  const [notes, setNotes] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState(() => _cachedVaultNotes || []);
+  const [stats, setStats] = useState(() => _cachedVaultStats || null);
+  const [loading, setLoading] = useState(() => !_cachedVaultNotes);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -36,7 +40,7 @@ export function useVault() {
   const [showSidebar, setShowSidebar] = useState(true);
 
   // Estructura de carpetas en disco
-  const [vaultFolders, setVaultFolders] = useState([]);
+  const [vaultFolders, setVaultFolders] = useState(() => _cachedVaultFolders || []);
 
   // Modales de Creación
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
@@ -136,9 +140,12 @@ export function useVault() {
         invoke('get_vault_notes'),
         invoke('get_vault_stats')
       ]);
-      setVaultFolders(foldersRes || []);
-      setNotes(notesRes || []);
-      setStats(statsRes || null);
+      _cachedVaultFolders = foldersRes || [];
+      _cachedVaultNotes = notesRes || [];
+      _cachedVaultStats = statsRes || null;
+      setVaultFolders(_cachedVaultFolders);
+      setNotes(_cachedVaultNotes);
+      setStats(_cachedVaultStats);
 
       if (!activeNoteRef.current && notesRes && notesRes.length > 0) {
         const inicio = notesRes.find((n) => n.title.toLowerCase() === 'inicio') || notesRes[0];

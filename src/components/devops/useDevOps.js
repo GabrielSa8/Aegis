@@ -6,10 +6,13 @@ import { useSkillLifecycle } from './useSkillLifecycle';
  * useDevOps — Custom Hook orquestador para telemetría DevOps, flota Git y habilidades.
  * Arquitectura modular estricta alineada a la Doctrina Anti-Monolitos.
  */
+let _cachedRepos = null;
+let _cachedSkills = null;
+
 export function useDevOps() {
-  const [repos, setRepos] = useState([]);
-  const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [repos, setRepos] = useState(() => _cachedRepos || []);
+  const [skills, setSkills] = useState(() => _cachedSkills || []);
+  const [loading, setLoading] = useState(() => !_cachedRepos);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -41,8 +44,10 @@ export function useDevOps() {
         invoke('get_git_fleet_status'),
         invoke('get_skills_catalog')
       ]);
-      setRepos(fleetRes || []);
-      setSkills(skillsRes || []);
+      _cachedRepos = fleetRes || [];
+      _cachedSkills = skillsRes || [];
+      setRepos(_cachedRepos);
+      setSkills(_cachedSkills);
     } catch (err) {
       console.error('Error cargando telemetría DevOps:', err);
       setError(String(err));
