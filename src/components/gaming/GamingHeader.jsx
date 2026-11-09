@@ -5,10 +5,6 @@ import TacticalButton from '../ui/TacticalButton';
 export default function GamingHeader({
   searchQuery,
   setSearchQuery,
-  categoryFilter,
-  setCategoryFilter,
-  steamCount,
-  customCount,
   launchMessage,
   gamingStatus,
   gamepadConnected,
@@ -16,13 +12,6 @@ export default function GamingHeader({
   onLaunchSteam,
   onRefresh
 }) {
-  const categories = [
-    { id: 'all', label: `Todos (${steamCount + customCount})` },
-    { id: 'steam', label: `Steam (${steamCount})` },
-    { id: 'web', label: 'Web' },
-    { id: 'emu', label: 'Emuladores' }
-  ];
-
   return (
     <div className="gaming-header-card" style={{
       display: 'flex',
@@ -33,60 +22,33 @@ export default function GamingHeader({
       border: '1px solid var(--border-color)',
       borderRadius: 'var(--radius-md)',
       flexShrink: 0,
-      gap: '10px',
+      gap: '12px',
       flexWrap: 'wrap'
     }}>
-      {/* Buscador & Pastillas */}
-      <div className="gaming-header-search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', minWidth: '260px', flexWrap: 'wrap' }}>
-        <div className="gaming-header-input-wrap" style={{ position: 'relative', width: '220px' }}>
-          <Search size={13} style={{ position: 'absolute', left: '8px', top: '7px', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar juegos..."
-            style={{
-              width: '100%',
-              height: '26px',
-              paddingLeft: '26px',
-              paddingRight: '8px',
-              fontSize: '0.74rem',
-              background: 'rgba(0,0,0,0.25)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--text-high)'
-            }}
-          />
-        </div>
-
-        <div className="gaming-header-categories" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {categories.map((cat) => {
-            const isActive = categoryFilter === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryFilter(cat.id)}
-                className="gaming-category-tab-btn"
-                style={{
-                  padding: '2px 8px',
-                  fontSize: '0.68rem',
-                  background: isActive ? 'var(--primary-glow)' : 'transparent',
-                  border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border-color)'}`,
-                  color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  fontWeight: isActive ? 700 : 500
-                }}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
+      {/* 🔍 Buscador de Títulos */}
+      <div className="gaming-header-search-wrap" style={{ position: 'relative', width: '260px', flexShrink: 0 }}>
+        <Search size={13} style={{ position: 'absolute', left: '9px', top: '7.5px', color: 'var(--text-muted)' }} />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar juegos en la biblioteca..."
+          style={{
+            width: '100%',
+            height: '28px',
+            paddingLeft: '28px',
+            paddingRight: '8px',
+            fontSize: '0.75rem',
+            background: 'rgba(0,0,0,0.25)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-high)'
+          }}
+        />
       </div>
 
-      {/* Telemetría & Acciones */}
-      <div className="gaming-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* 🚀 Telemetría de Sistema & Acciones de Cabecera */}
+      <div className="gaming-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {launchMessage && (
           <span className="gaming-launch-message" style={{ fontSize: '0.72rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
             {launchMessage}
@@ -146,7 +108,7 @@ export default function GamingHeader({
           className="gaming-action-btn"
           style={{ height: '26px' }}
         >
-          + Juego
+          Juego
         </TacticalButton>
 
         <TacticalButton

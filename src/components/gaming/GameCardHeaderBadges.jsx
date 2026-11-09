@@ -1,11 +1,13 @@
 import React from 'react';
-import { Trash2, Info, Trophy, Laptop, Package } from 'lucide-react';
+import { Trash2, Info, Trophy, Laptop, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function GameCardHeaderBadges({
   game,
   isSteam,
   achUnlocked,
   achTotal,
+  isHidden = false,
+  onToggleHide,
   onDelete,
   onOpenDetails
 }) {
@@ -37,7 +39,9 @@ export default function GameCardHeaderBadges({
               color: 'var(--danger)',
               cursor: 'pointer',
               padding: '3px 5px',
-              borderRadius: 'var(--radius-sm)'
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center'
             }}
             title="Eliminar este lanzador"
           >
@@ -66,10 +70,56 @@ export default function GameCardHeaderBadges({
         >
           <Info size={11} color="var(--primary)" />
         </button>
+
+        {onToggleHide && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleHide(game, isSteam);
+            }}
+            className="gaming-badge-btn gaming-badge-hide-btn"
+            style={{
+              background: isHidden
+                ? 'color-mix(in srgb, var(--warning) 25%, black)'
+                : 'color-mix(in srgb, var(--bg-card) 85%, black)',
+              border: `1px solid ${isHidden ? 'var(--warning)' : 'var(--border-color)'}`,
+              color: isHidden ? 'var(--warning)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '3px 5px',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            title={isHidden ? 'Restaurar de la Bóveda' : 'Ocultar en la Bóveda'}
+          >
+            {isHidden ? <Eye size={11} color="var(--warning)" /> : <EyeOff size={11} />}
+          </button>
+        )}
       </div>
 
-      {/* Badges Superior Derecha: Logros, Estado Multi-Dispositivo y Plataforma */}
+      {/* Badges Superior Derecha: Bóveda, Logros, Estado Multi-Dispositivo y Plataforma */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {isHidden && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+              background: 'color-mix(in srgb, var(--warning) 22%, black)',
+              border: '1px solid color-mix(in srgb, var(--warning) 60%, transparent)',
+              padding: '2px 5px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.58rem',
+              fontWeight: 800,
+              color: 'var(--warning)'
+            }}
+            title="Título resguardado en la Bóveda"
+          >
+            <Lock size={9} />
+            <span>BÓVEDA</span>
+          </div>
+        )}
+
         {!isInstalled && (
           <div
             style={{

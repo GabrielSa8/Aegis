@@ -8,6 +8,8 @@ const GameCard = memo(function GameCard({
   game,
   isSteam,
   gameStats,
+  isHidden = false,
+  onToggleHide,
   onLaunch,
   onInstall,
   onDelete,
@@ -55,7 +57,9 @@ const GameCard = memo(function GameCard({
         borderRadius: 'var(--radius-md)',
         overflow: 'hidden',
         background: 'color-mix(in srgb, var(--bg-card) 92%, black)',
-        border: '1px solid var(--border-color)',
+        border: isHidden
+          ? '1px dashed color-mix(in srgb, var(--warning) 60%, var(--border-color))'
+          : '1px solid var(--border-color)',
         transition: 'transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease',
         display: 'flex',
         flexDirection: 'column',
@@ -105,6 +109,8 @@ const GameCard = memo(function GameCard({
         isSteam={isSteam}
         achUnlocked={achUnlocked}
         achTotal={achTotal}
+        isHidden={isHidden}
+        onToggleHide={onToggleHide}
         onDelete={onDelete}
         onOpenDetails={onOpenDetails}
       />

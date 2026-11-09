@@ -1,10 +1,12 @@
 export { useGaming } from './useGaming';
 export { default as GameCard } from './GameCard';
 export { default as GamingHeader } from './GamingHeader';
+export { default as GamingFilterBar } from './GamingFilterBar';
 export { default as AccelerationBar } from './AccelerationBar';
 export { default as CustomGameModal } from './CustomGameModal';
 export { default as ActiveGameSessionBar } from './ActiveGameSessionBar';
 export { default as GameDetailModal } from './GameDetailModal';
+export { default as UnlockGamingVaultModal } from './UnlockGamingVaultModal';
 export { default as GameAchievementsTab } from './GameAchievementsTab';
 export { default as GameSessionsTab } from './GameSessionsTab';
 export { default as GameReviewTab } from './GameReviewTab';

@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { INITIAL_GAME_FORM, checkGamepadConnected } from './gameHelpers';
+import {
+  INITIAL_GAME_FORM,
+  checkGamepadConnected,
+  sortGamesList,
+  getGameNormalizedId,
+  getHiddenGameIds,
+  saveHiddenGameIds
+} from './gameHelpers';
 import { useGameSessionTracker } from './useGameSessionTracker';
 
 export function useGaming() {
@@ -10,6 +17,19 @@ export function useGaming() {
   const [gameStatsMap, setGameStatsMap] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // ⇅ Estado de Ordenamiento
+  const [sortBy, setSortBy] = useState(() => {
+    return localStorage.getItem('aegis_gaming_sort_by') || 'recent';
+  });
+
+  // 🔒 Bóveda de Juegos Ocultos / Encriptados
+  const [hiddenGameIds, setHiddenGameIds] = useState(() => {
+    return new Set(getHiddenGameIds());
+  });
+  const [showHiddenVault, setShowHiddenVault] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [masterPasswordEnabled, setMasterPasswordEnabled] = useState(false);
 
   const [useGamescopeFsr, setUseGamescopeFsr] = useState(() => {
     return localStorage.getItem('aegis_leisure_gamescope') === 'true';
@@ -43,6 +63,25 @@ export function useGaming() {
       window.removeEventListener('gamepadconnected', handleConnect);
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
     };
+  }, []);
+
+  // Cargar estado de seguridad reactivo para Bóveda
+  useEffect(() => {
+    invoke('get_security_status')
+      .then((res) => {
+        if (res && typeof res.masterPasswordEnabled === 'boolean') {
+          setMasterPasswordEnabled(res.masterPasswordEnabled);
+        }
+      })
+      .catch(() => {});
+
+    const handleSecChange = (e) => {
+      if (e.detail && typeof e.detail.masterPasswordEnabled === 'boolean') {
+        setMasterPasswordEnabled(e.detail.masterPasswordEnabled);
+      }
+    };
+    window.addEventListener('aegis:security-status-changed', handleSecChange);
+    return () => window.removeEventListener('aegis:security-status-changed', handleSecChange);
   }, []);
 
   const refreshStats = useCallback(async () => {
@@ -82,9 +121,8 @@ export function useGaming() {
       const [status, unifiedCatalog, cGames] = await Promise.all([
         invoke('get_gaming_status').catch(() => null),
         invoke('get_unified_game_catalog').catch(async () => {
-          // Fallback legacy si get_unified_game_catalog falla
           const fallbackSteam = await invoke('get_installed_steam_games').catch(() => []);
-          return fallbackSteam.map(s => ({
+          return fallbackSteam.map((s) => ({
             gameId: `steam_${s.appId}`,
             title: s.name,
             appId: String(s.appId),
@@ -102,7 +140,6 @@ export function useGaming() {
 
       setGamingStatus(status);
 
-      // Normalizar catálogo unificado para la cuadrícula de Steam
       const steamItems = Array.isArray(unifiedCatalog)
         ? unifiedCatalog
             .filter((g) => g.isSteam || Boolean(g.appId))
@@ -120,6 +157,7 @@ export function useGaming() {
                 achievementsUnlocked: g.achievementsUnlocked,
                 achievementsTotal: g.achievementsTotal,
                 totalPlayTimeSeconds: g.totalPlayTimeSeconds,
+                lastPlayed: g.lastPlayed,
                 isSteam: true
               };
             })
@@ -153,6 +191,49 @@ export function useGaming() {
     setUseMangohud(val);
     localStorage.setItem('aegis_leisure_mangohud', String(val));
   };
+
+  const handleSetSortBy = useCallback((newSort) => {
+    setSortBy(newSort);
+    localStorage.setItem('aegis_gaming_sort_by', newSort);
+  }, []);
+
+  // 🔒 Operaciones de Bóveda / Ocultar Juegos
+  const isGameHidden = useCallback((game, isSteam = false) => {
+    const id = getGameNormalizedId(game, isSteam);
+    return hiddenGameIds.has(id);
+  }, [hiddenGameIds]);
+
+  const toggleHideGame = useCallback((game, isSteam = false) => {
+    const id = getGameNormalizedId(game, isSteam);
+    setHiddenGameIds((prev) => {
+      const next = new Set(prev);
+      const isCurrentlyHidden = next.has(id);
+      if (isCurrentlyHidden) {
+        next.delete(id);
+        setLaunchMessage(`"${game.title || game.name}" restaurado al catálogo`);
+      } else {
+        next.add(id);
+        setLaunchMessage(`"${game.title || game.name}" resguardado en la Bóveda`);
+      }
+      saveHiddenGameIds(Array.from(next));
+      return next;
+    });
+    setTimeout(() => setLaunchMessage(null), 3000);
+  }, [setLaunchMessage]);
+
+  const handleToggleVault = useCallback(() => {
+    if (showHiddenVault) {
+      setShowHiddenVault(false);
+      setLaunchMessage('Bóveda resguardada');
+      setTimeout(() => setLaunchMessage(null), 2000);
+    } else {
+      if (masterPasswordEnabled) {
+        setShowUnlockModal(true);
+      } else {
+        setShowHiddenVault(true);
+      }
+    }
+  }, [showHiddenVault, masterPasswordEnabled, setLaunchMessage]);
 
   const handleSaveCustomGame = async (e) => {
     e.preventDefault();
@@ -207,36 +288,40 @@ export function useGaming() {
     setShowGameModal(true);
   };
 
-  const handleOpenDetailModal = (game) => {
-    setSelectedGameForDetail(game);
-  };
-
-  const handleCloseDetailModal = () => {
-    setSelectedGameForDetail(null);
-  };
-
-  // Filtrado de juegos por búsqueda y categoría
+  // Filtrado y ordenamiento de juegos
   const filteredSteamGames = useMemo(() => {
-    return steamGames.filter((g) => {
+    const filtered = steamGames.filter((g) => {
+      const isHidden = isGameHidden(g, true);
+      if (!showHiddenVault && isHidden) return false;
+      if (categoryFilter === 'vault' && !isHidden) return false;
+
       const matchesSearch =
         !searchQuery ||
         g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         String(g.appId).includes(searchQuery);
-      const matchesCat = categoryFilter === 'all' || categoryFilter === 'steam';
+      const matchesCat = categoryFilter === 'all' || categoryFilter === 'steam' || categoryFilter === 'vault';
       return matchesSearch && matchesCat;
     });
-  }, [steamGames, searchQuery, categoryFilter]);
+
+    return sortGamesList(filtered, sortBy, gameStatsMap);
+  }, [steamGames, searchQuery, categoryFilter, isGameHidden, showHiddenVault, sortBy, gameStatsMap]);
 
   const filteredCustomGames = useMemo(() => {
-    return customGames.filter((g) => {
+    const filtered = customGames.filter((g) => {
+      const isHidden = isGameHidden(g, false);
+      if (!showHiddenVault && isHidden) return false;
+      if (categoryFilter === 'vault' && !isHidden) return false;
+
       const matchesSearch =
         !searchQuery ||
         g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (g.description && g.description.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesCat = categoryFilter === 'all' || categoryFilter === g.category;
+      const matchesCat = categoryFilter === 'all' || categoryFilter === g.category || categoryFilter === 'vault';
       return matchesSearch && matchesCat;
     });
-  }, [customGames, searchQuery, categoryFilter]);
+
+    return sortGamesList(filtered, sortBy, gameStatsMap);
+  }, [customGames, searchQuery, categoryFilter, isGameHidden, showHiddenVault, sortBy, gameStatsMap]);
 
   return {
     gamingStatus,
@@ -252,6 +337,18 @@ export function useGaming() {
     setSearchQuery,
     categoryFilter,
     setCategoryFilter,
+    sortBy,
+    setSortBy: handleSetSortBy,
+    hiddenGameIds,
+    hiddenCount: hiddenGameIds.size,
+    showHiddenVault,
+    setShowHiddenVault,
+    showUnlockModal,
+    setShowUnlockModal,
+    masterPasswordEnabled,
+    isGameHidden,
+    toggleHideGame,
+    handleToggleVault,
     useGamescopeFsr,
     handleToggleGamescope,
     gamescopeRes,
@@ -278,8 +375,8 @@ export function useGaming() {
     },
     closeGameDetail: () => setSelectedGameForDetail(null),
     handleOpenEditModal,
-    handleOpenDetailModal,
-    handleCloseDetailModal,
+    handleOpenDetailModal: (game) => setSelectedGameForDetail(game),
+    handleCloseDetailModal: () => setSelectedGameForDetail(null),
     handleSaveCustomGame,
     handleDeleteCustomGame,
     handleInstallSteamGame,

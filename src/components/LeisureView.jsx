@@ -4,10 +4,12 @@ import {
   useGaming,
   GameCard,
   GamingHeader,
+  GamingFilterBar,
   AccelerationBar,
   CustomGameModal,
   ActiveGameSessionBar,
-  GameDetailModal
+  GameDetailModal,
+  UnlockGamingVaultModal
 } from './gaming';
 
 export default function LeisureView() {
@@ -20,6 +22,17 @@ export default function LeisureView() {
     setSearchQuery,
     categoryFilter,
     setCategoryFilter,
+    sortBy,
+    setSortBy,
+    hiddenCount,
+    showHiddenVault,
+    setShowHiddenVault,
+    showUnlockModal,
+    setShowUnlockModal,
+    masterPasswordEnabled,
+    isGameHidden,
+    toggleHideGame,
+    handleToggleVault,
     useGamescopeFsr,
     gamescopeRes,
     useMangohud,
@@ -60,14 +73,10 @@ export default function LeisureView() {
       overflowY: 'auto',
       paddingRight: '2px'
     }}>
-      {/* 🧭 Barra Superior: Filtros & Telemetría */}
+      {/* 🧭 Barra Superior: Buscador & Telemetría */}
       <GamingHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        steamCount={steamGames.length}
-        customCount={customGames.length}
         launchMessage={launchMessage}
         gamingStatus={gamingStatus}
         gamepadConnected={gamepadConnected}
@@ -85,6 +94,19 @@ export default function LeisureView() {
         useMangohud={useMangohud}
         onToggleMangohud={handleToggleMangohud}
         mangohudInstalled={gamingStatus?.mangohudInstalled}
+      />
+
+      {/* 🏷️ Barra de Navegación y Filtros: Categorías, Ordenamiento & Bóveda */}
+      <GamingFilterBar
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        sortBy={sortBy}
+        onSetSortBy={setSortBy}
+        steamCount={steamGames.length}
+        customCount={customGames.length}
+        hiddenCount={hiddenCount}
+        showHiddenVault={showHiddenVault}
+        onToggleVault={handleToggleVault}
       />
 
       {/* ⏱️ HUD Flotante: Sesión Activa de Juego */}
@@ -141,6 +163,8 @@ export default function LeisureView() {
             game={game}
             isSteam={true}
             gameStats={gameStatsMap[game.appId]}
+            isHidden={isGameHidden(game, true)}
+            onToggleHide={toggleHideGame}
             onLaunch={handleLaunchGame}
             onInstall={handleInstallSteamGame}
             onOpenDetails={openGameDetail}
@@ -153,6 +177,8 @@ export default function LeisureView() {
             game={game}
             isSteam={false}
             gameStats={gameStatsMap[game.id]}
+            isHidden={isGameHidden(game, false)}
+            onToggleHide={toggleHideGame}
             onLaunch={handleLaunchGame}
             onDelete={handleDeleteCustomGame}
             onOpenDetails={openGameDetail}
@@ -186,6 +212,17 @@ export default function LeisureView() {
         gameFormData={gameFormData}
         setGameFormData={setGameFormData}
         onSubmit={handleSaveCustomGame}
+      />
+
+      {/* 🪟 Modal Táctico: Desbloquear Bóveda de Juegos Encriptada */}
+      <UnlockGamingVaultModal
+        isOpen={showUnlockModal}
+        onClose={() => setShowUnlockModal(false)}
+        onUnlockSuccess={() => {
+          setShowUnlockModal(false);
+          setShowHiddenVault(true);
+        }}
+        masterPasswordEnabled={masterPasswordEnabled}
       />
 
       {/* 🪟 Modal Táctico: Detalle de Juego (Logros, Tiempos, Reseña & Obsidian) */}
