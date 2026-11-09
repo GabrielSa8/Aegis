@@ -140,7 +140,7 @@ export default function AgentView() {
         gap: '0',
         position: 'relative',
         padding: '0',
-        paddingRight: isRightDockPinned ? '60px' : '0',
+        paddingRight: isRightDockPinned ? 'calc(var(--right-dock-w-pinned, 54px) + 6px)' : '0',
         transition: 'padding-right 0.25s cubic-bezier(0.34, 1.3, 0.64, 1)'
       }}>
         {/* 🗄️ Historial de Sesiones Flotante (Drawer Centrado bajo la Isla) */}

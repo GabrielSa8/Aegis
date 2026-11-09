@@ -6,10 +6,7 @@ export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode
   const beamRight = modeIndex === 0 ? 'calc(66.66% + 2px)' : modeIndex === 1 ? 'calc(33.33% + 2px)' : '4px';
 
   return (
-    <div
-      className="effort-switch-container"
-      style={{ gridTemplateColumns: '1fr 1fr 1fr', minWidth: '248px' }}
-    >
+    <div className="effort-switch-container">
       {/* 🛤️ Riel Guía Base de Fondo */}
       <div className="effort-laser-rail" />
 
@@ -31,7 +28,8 @@ export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode
         title="Aegis Harness Activo: Detecta y cambia el nivel automáticamente en cada paso (L1 Flash ⇄ L2 Balanceado ⇄ L3 Profundo) con poda ACI y auto-verificación"
       >
         <Shield size={13} color="currentColor" />
-        <span>Auto L1⇄L3</span>
+        <span className="effort-label-long">Auto L1⇄L3</span>
+        <span className="effort-label-short">Auto</span>
       </button>
 
       {/* Botón Flash (Manual L1) */}
@@ -42,7 +40,8 @@ export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode
         title="Modo Manual L1 (Flash): Respuesta rápida fija para toda la consulta"
       >
         <Zap size={13} color="currentColor" />
-        <span>Flash</span>
+        <span className="effort-label-long">Flash</span>
+        <span className="effort-label-short">L1</span>
       </button>
 
       {/* Botón Profundo (Manual L3) */}
@@ -53,7 +52,8 @@ export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode
         title="Modo Manual L3 (Profundo): Razonamiento exhaustivo fijo para toda la consulta"
       >
         <Brain size={13} color="currentColor" />
-        <span>Profundo</span>
+        <span className="effort-label-long">Profundo</span>
+        <span className="effort-label-short">L3</span>
       </button>
     </div>
   );

@@ -103,7 +103,7 @@ function ModelSelectorDropdown({
     <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`header-tactical-toggle ${isOpen ? 'is-active' : ''}`}
+        className={`header-tactical-toggle model-selector-btn ${isOpen ? 'is-active' : ''}`}
         title={`Motor de IA activo: ${displayName(currentModel)} (${currentModel.provider})`}
         style={{
           display: 'flex',
@@ -120,9 +120,9 @@ function ModelSelectorDropdown({
         }}
       >
         <CurrentIcon size={13} color="var(--primary)" />
-        <span>{currentModel.shortLabel}</span>
+        <span className="model-selector-text">{currentModel.shortLabel}</span>
         {intensity && (
-          <span style={{ color: 'var(--primary)', fontSize: '0.66rem', textTransform: 'uppercase' }}>
+          <span className="model-intensity-badge" style={{ color: 'var(--primary)', fontSize: '0.66rem', textTransform: 'uppercase' }}>
             {intensity}
           </span>
         )}

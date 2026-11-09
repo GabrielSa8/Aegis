@@ -38,6 +38,12 @@
   --radius-xl: 20px;
   --radius-2xl: 26px;
   --radius-full: 9999px;
+
+  /* 🧭 Dimensiones Adaptativas de Docks Laterales */
+  --left-dock-w-expanded: 176px;
+  --left-dock-w-pinned: 54px;
+  --right-dock-w-expanded: 204px;
+  --right-dock-w-pinned: 54px;
 }
 
 /* 🎨 TEMAS VISUALES AEGIS (DATA-THEME) */
@@ -2176,19 +2182,27 @@ select option:checked {
 .effort-switch-container {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm, 8px);
   padding: 2px;
   user-select: none;
-  min-width: 170px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 248px;
+  transition: min-width 0.2s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .effort-switch-container:hover {
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.effort-label-long {
+  display: inline;
+}
+
+.effort-label-short {
+  display: none;
 }
 
 .effort-laser-rail {
@@ -2802,16 +2816,40 @@ select:focus-visible {
   z-index: 100;
   pointer-events: auto;
   padding-bottom: 12px;
+  max-width: calc(100vw - 16px);
+  display: flex;
+  justify-content: center;
 }
 
 .dynamic-island-capsule {
   height: 44px;
+  width: max-content;
+  max-width: calc(100vw - 20px);
   display: flex;
   align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: 10px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--bg-card) 96%, black);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
   transform: translateY(-36px);
   transform-origin: top center;
   opacity: 0.85;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.15s ease, 
+              gap 0.2s ease, 
+              padding 0.2s ease,
+              max-width 0.2s ease;
+}
+
+.dynamic-island-capsule::-webkit-scrollbar {
+  display: none;
 }
 
 /* ⚡ Dynamic Island activo al entrar el mouse o al abrir historial (Zero-Jitter Translation) */
@@ -2822,6 +2860,103 @@ body.aegis-dock-open .dynamic-island-capsule {
   opacity: 1;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 2px 14px color-mix(in srgb, var(--primary) 20%, transparent);
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+
+/* 📐 Responsividad Adaptativa de Docks (Ventana vs Pantalla Completa) */
+@media (max-width: 1280px) {
+  :root {
+    --left-dock-w-expanded: 154px;
+    --left-dock-w-pinned: 48px;
+    --right-dock-w-expanded: 174px;
+    --right-dock-w-pinned: 48px;
+  }
+
+  .dynamic-island-capsule {
+    gap: 6px;
+    padding: 0 10px;
+    max-width: calc(100vw - 16px);
+  }
+
+  /* Marca compacta: icono + pulso */
+  .brand-title-text {
+    display: none !important;
+  }
+
+  /* Ocultar shortcuts secundarios en botones de cabecera */
+  .header-kbd-shortcut {
+    display: none !important;
+  }
+
+  /* Effort Switch compacto */
+  .effort-switch-container {
+    min-width: 176px !important;
+  }
+  .effort-switch-tab {
+    padding: 3px 6px 4px 6px !important;
+    gap: 3px !important;
+    font-size: 0.70rem !important;
+  }
+  .effort-label-long {
+    display: none !important;
+  }
+  .effort-label-short {
+    display: inline !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --left-dock-w-expanded: 140px;
+    --left-dock-w-pinned: 44px;
+    --right-dock-w-expanded: 156px;
+    --right-dock-w-pinned: 44px;
+  }
+
+  .dynamic-island-capsule {
+    gap: 4px;
+    padding: 0 7px;
+    height: 40px;
+    border-radius: 0 0 14px 14px;
+  }
+
+  /* Brain button: solo icono */
+  .brain-toggle-label {
+    display: none !important;
+  }
+
+  /* Effort switch: micro */
+  .effort-switch-container {
+    min-width: 110px !important;
+  }
+  .effort-switch-tab {
+    padding: 2px 4px !important;
+    gap: 0 !important;
+    font-size: 0.65rem !important;
+  }
+  .effort-label-short {
+    display: none !important;
+  }
+
+  /* Selector de modelos compacto */
+  .model-selector-btn {
+    padding: 3px 6px !important;
+    font-size: 0.70rem !important;
+  }
+  .model-selector-text {
+    max-width: 80px !important;
+  }
+  .model-intensity-badge {
+    display: none !important;
+  }
+
+  /* Telemetría compacta */
+  .telemetry-pill {
+    padding: 2px 6px !important;
+    font-size: 0.68rem !important;
+  }
+  .telemetry-cost {
+    display: none !important;
+  }
 }
 
 /* 🌊 Dock de Historial: 100% Fluido, Zero FOUC, Cero Parpadeo (CSS Transition GPU-Composited) */

@@ -66,11 +66,11 @@ export default function LeftTabsDock({
   // Expansión de textos y shortcuts activa únicamente en hover
   const isExpanded = isHovered;
 
-  // Dinámica de dimensiones y traslación táctica
+  // Dinámica de dimensiones y traslación táctica adaptativa
   // Desanclado: retraído al borde (peek de 5px) -> Salto elástico con spring bounce en hover
-  // Fijado: Visible permanente a 54px (puros logos) -> Salto elástico de expansión en hover
-  const dockWidth = isExpanded ? '176px' : (isPinned ? '54px' : '176px');
-  const triggerWidth = isExpanded ? '176px' : (isPinned ? '54px' : '14px');
+  // Fijado: Visible permanente a variable de tema (puros logos) -> Salto elástico de expansión en hover
+  const dockWidth = isExpanded ? 'var(--left-dock-w-expanded, 176px)' : (isPinned ? 'var(--left-dock-w-pinned, 54px)' : 'var(--left-dock-w-expanded, 176px)');
+  const triggerWidth = isExpanded ? 'var(--left-dock-w-expanded, 176px)' : (isPinned ? 'var(--left-dock-w-pinned, 54px)' : '14px');
   
   const dockTransform = !isPinned && !isHovered
     ? 'translateX(calc(-100% + 5px)) scale(0.96)'
@@ -111,7 +111,10 @@ export default function LeftTabsDock({
           display: 'flex',
           flexDirection: 'column',
           userSelect: 'none',
-          overflow: 'hidden',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          maxHeight: 'min(580px, calc(100vh - 40px))',
+          scrollbarWidth: 'none',
           transition: isHovered
             ? 'transform 0.36s cubic-bezier(0.34, 1.48, 0.64, 1), width 0.32s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.25s ease, opacity 0.2s ease'
             : 'transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.2s ease, opacity 0.2s ease',

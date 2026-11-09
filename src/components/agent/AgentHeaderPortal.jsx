@@ -93,8 +93,8 @@ export default function AgentHeaderPortal({
         title="Alternar vista de pensamiento y herramientas (Ctrl + O)"
       >
         <Brain size={14} color="currentColor" />
-        <span>{expandThoughts ? 'Ocultar Raz.' : 'Ver Raz.'}</span>
-        <kbd style={{
+        <span className="brain-toggle-label">{expandThoughts ? 'Ocultar Raz.' : 'Ver Raz.'}</span>
+        <kbd className="header-kbd-shortcut" style={{
           fontSize: '0.60rem',
           padding: '1px 4px',
           borderRadius: '3px',
@@ -145,6 +145,7 @@ export default function AgentHeaderPortal({
 
       {/* 🪙 Métrica Táctica de Tokens de la Sesión (+ Costo USD en API de Pago) */}
       <div 
+        className="telemetry-pill"
         title={
           tokenStats.isPayPerToken && tokenStats.formattedCost
             ? `Telemetría Facturable: ${tokenStats.total.toLocaleString()} tokens (${tokenStats.input.toLocaleString()} in | ${tokenStats.output.toLocaleString()} out) · Costo Acumulado: $${tokenStats.sessionCostUsd.toFixed(5)} USD`
@@ -176,7 +177,7 @@ export default function AgentHeaderPortal({
         {tokenStats.isPayPerToken && tokenStats.formattedCost ? (
           <>
             <Coins size={12} color="currentColor" />
-            <span>{tokenStats.formatted} tk · {tokenStats.formattedCost}</span>
+            <span>{tokenStats.formatted} tk<span className="telemetry-cost"> · {tokenStats.formattedCost}</span></span>
           </>
         ) : (
           <>

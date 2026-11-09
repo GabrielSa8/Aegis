@@ -60,11 +60,11 @@ export default function RightContextsDock({
   const [isHovered, setIsHovered] = useState(false);
   const isExpanded = isHovered;
 
-  // Dimensiones y traslación táctica hacia el borde derecho
+  // Dimensiones y traslación táctica adaptativa hacia el borde derecho
   // Desanclado: retraído al borde derecho (peek de 5px) -> Salto elástico hacia la izquierda en hover
-  // Fijado: Visible permanente a 54px (puros logos) -> Salto elástico de expansión hacia la izquierda
-  const dockWidth = isExpanded ? '204px' : (isPinned ? '54px' : '204px');
-  const triggerWidth = isExpanded ? '204px' : (isPinned ? '54px' : '14px');
+  // Fijado: Visible permanente a variable de tema (puros logos) -> Salto elástico de expansión hacia la izquierda
+  const dockWidth = isExpanded ? 'var(--right-dock-w-expanded, 204px)' : (isPinned ? 'var(--right-dock-w-pinned, 54px)' : 'var(--right-dock-w-expanded, 204px)');
+  const triggerWidth = isExpanded ? 'var(--right-dock-w-expanded, 204px)' : (isPinned ? 'var(--right-dock-w-pinned, 54px)' : '14px');
 
   const dockTransform = !isPinned && !isHovered
     ? 'translateX(calc(100% - 5px)) scale(0.96)'
@@ -109,7 +109,10 @@ export default function RightContextsDock({
           display: 'flex',
           flexDirection: 'column',
           userSelect: 'none',
-          overflow: 'hidden',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          maxHeight: 'min(580px, calc(100vh - 40px))',
+          scrollbarWidth: 'none',
           transition: isHovered
             ? 'transform 0.36s cubic-bezier(0.34, 1.48, 0.64, 1), width 0.32s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.25s ease, opacity 0.2s ease'
             : 'transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), width 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.2s ease, opacity 0.2s ease',

@@ -61,15 +61,6 @@ export default function TopHeader({
       <div 
         className={`dynamic-island-capsule ${isPinned ? 'is-pinned' : ''}`}
         style={{
-          width: 'max-content',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          gap: '10px',
-          padding: '0 16px',
-          background: 'color-mix(in srgb, var(--bg-card) 96%, black)',
-          border: '1px solid var(--border-color)',
-          borderTop: 'none',
-          borderRadius: '0 0 18px 18px',
           userSelect: 'none',
           cursor: isPinned ? 'default' : 'pointer'
         }}
@@ -100,14 +91,17 @@ export default function TopHeader({
             <ShieldCheck size={14} color="var(--primary)" />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ 
-              fontSize: '0.84rem', 
-              fontWeight: 800, 
-              letterSpacing: '0.06em',
-              background: 'linear-gradient(135deg, var(--text-high) 35%, var(--primary) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
+            <span 
+              className="brand-title-text"
+              style={{ 
+                fontSize: '0.84rem', 
+                fontWeight: 800, 
+                letterSpacing: '0.06em',
+                background: 'linear-gradient(135deg, var(--text-high) 35%, var(--primary) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
               Aegis
             </span>
             <span
@@ -170,7 +164,7 @@ export default function TopHeader({
             }}
           >
             <Search size={12} />
-            <kbd style={{ fontFamily: 'inherit', color: 'var(--text-high)', fontSize: '0.64rem' }}>Ctrl+K</kbd>
+            <kbd className="header-kbd-shortcut" style={{ fontFamily: 'inherit', color: 'var(--text-high)', fontSize: '0.64rem' }}>Ctrl+K</kbd>
           </button>
 
           {/* Indicador Táctico de Actualización (G.1.3) */}
