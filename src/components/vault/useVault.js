@@ -39,6 +39,15 @@ export function useVault() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // Estados de Cifrado Granular en Reposo (AES-256-GCM)
+  const [isNoteLocked, setIsNoteLocked] = useState(false);
+  const [noteLockReason, setNoteLockReason] = useState(null); // 'general' | 'specific'
+  const [encryptingNote, setEncryptingNote] = useState(false);
+  const [decryptingNote, setDecryptingNote] = useState(false);
+  const [encryptModalOpen, setEncryptModalOpen] = useState(false);
+  const [decryptModalOpen, setDecryptModalOpen] = useState(false);
+  const activeNotePasswordRef = useRef(null);
+
   // Estructura de carpetas en disco
   const [vaultFolders, setVaultFolders] = useState(() => _cachedVaultFolders || []);
 
@@ -113,23 +122,130 @@ export function useVault() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const loadNote = useCallback(async (note) => {
+  const loadNote = useCallback(async (note, specificPassword = null) => {
     setActiveNote(note);
     setLoadingNote(true);
     setSaveSuccess(false);
     scrollPosRef.current = { ratio: 0, px: 0 };
     if (viewerContainerRef.current) viewerContainerRef.current.scrollTop = 0;
     if (textareaRef.current) textareaRef.current.scrollTop = 0;
+
+    const pwd = specificPassword || (activeNoteRef.current?.path === note.path ? activeNotePasswordRef.current : null);
+
     try {
-      const content = await invoke('read_vault_note', { path: note.path });
+      const content = await invoke('read_vault_note', { path: note.path, password: pwd });
       setNoteContent(content);
+      setIsNoteLocked(false);
+      setNoteLockReason(null);
+      if (pwd) {
+        activeNotePasswordRef.current = pwd;
+      }
     } catch (err) {
-      console.error('Error leyendo nota:', err);
-      setNoteContent(`Error al leer archivo: ${err}`);
+      const errStr = String(err);
+      if (errStr.includes('AEGIS_NOTE_LOCKED_SPECIFIC') || errStr.includes('Contraseña incorrecta')) {
+        setIsNoteLocked(true);
+        setNoteLockReason('specific');
+        setNoteContent('');
+      } else if (errStr.includes('AEGIS_NOTE_LOCKED_GENERAL') || errStr.includes('AEGIS_VAULT_LOCKED')) {
+        setIsNoteLocked(true);
+        setNoteLockReason('general');
+        setNoteContent('');
+      } else {
+        setIsNoteLocked(false);
+        setNoteLockReason(null);
+        console.error('Error leyendo nota:', err);
+        setNoteContent(`Error al leer archivo: ${err}`);
+      }
     } finally {
       setLoadingNote(false);
     }
   }, []);
+
+  // Cifrar nota activa en reposo (AES-256-GCM) con selector General vs Específico
+  const handleEncryptActiveNote = useCallback(async ({ mode = 'general', password = null }) => {
+    if (!activeNote || activeNote.is_encrypted) return;
+    try {
+      setEncryptingNote(true);
+      const updated = await invoke('encrypt_vault_note', {
+        path: activeNote.path,
+        mode,
+        password
+      });
+      if (mode === 'specific' && password) {
+        activeNotePasswordRef.current = password;
+      }
+      setActiveNote(updated);
+      setNotes((prev) => prev.map((n) => (n.path === activeNote.path ? updated : n)));
+      setEncryptModalOpen(false);
+      await loadNote(updated, password);
+    } catch (err) {
+      console.error('Error cifrando nota:', err);
+      alert(`Error cifrando nota: ${err}`);
+    } finally {
+      setEncryptingNote(false);
+    }
+  }, [activeNote, loadNote]);
+
+  // Descifrar nota activa permanentemente
+  const handleDecryptActiveNote = useCallback(async (password = null) => {
+    if (!activeNote || !activeNote.is_encrypted) return;
+    try {
+      setDecryptingNote(true);
+      const pwd = password || activeNotePasswordRef.current || null;
+      const updated = await invoke('decrypt_vault_note', {
+        path: activeNote.path,
+        password: pwd
+      });
+      activeNotePasswordRef.current = null;
+      setActiveNote(updated);
+      setNotes((prev) => prev.map((n) => (n.path === activeNote.path ? updated : n)));
+      setDecryptModalOpen(false);
+      await loadNote(updated);
+    } catch (err) {
+      console.error('Error descifrando nota:', err);
+      alert(`Error descifrando nota: ${err}`);
+    } finally {
+      setDecryptingNote(false);
+    }
+  }, [activeNote, loadNote]);
+
+  // Desbloquear nota protegida mediante Contraseña Maestra o Específica
+  const handleUnlockNote = useCallback(async (password) => {
+    if (noteLockReason === 'specific') {
+      try {
+        if (!activeNoteRef.current) return { success: false, error: 'Nota no seleccionada' };
+        await loadNote(activeNoteRef.current, password);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: String(err) };
+      }
+    } else {
+      // General
+      try {
+        await invoke('unlock_vault', { password });
+        setIsNoteLocked(false);
+        setNoteLockReason(null);
+        window.dispatchEvent(new CustomEvent('aegis:vault-unlocked'));
+        if (activeNoteRef.current) {
+          await loadNote(activeNoteRef.current);
+        }
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: String(err) };
+      }
+    }
+  }, [noteLockReason, loadNote]);
+
+  // Sincronizar recarga si la bóveda se desbloquea externamente (ej. desde Finanzas)
+  useEffect(() => {
+    const onVaultUnlocked = () => {
+      if (activeNoteRef.current && isNoteLocked && noteLockReason === 'general') {
+        loadNote(activeNoteRef.current);
+      }
+    };
+    window.addEventListener('aegis:vault-unlocked', onVaultUnlocked);
+    return () => window.removeEventListener('aegis:vault-unlocked', onVaultUnlocked);
+  }, [isNoteLocked, noteLockReason, loadNote]);
 
   const loadVaultData = useCallback(async () => {
     try {
@@ -288,7 +404,11 @@ export function useVault() {
     if (!activeNote) return;
     setSaving(true);
     try {
-      await invoke('save_vault_note', { path: activeNote.path, content: noteContent });
+      await invoke('save_vault_note', {
+        path: activeNote.path,
+        content: noteContent,
+        password: activeNotePasswordRef.current || null
+      });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
@@ -664,6 +784,18 @@ export function useVault() {
     itemToRename,
     setItemToRename,
     handleRequestRename,
-    handleConfirmRename
+    handleConfirmRename,
+    // Cifrado Granular
+    isNoteLocked,
+    noteLockReason,
+    encryptingNote,
+    decryptingNote,
+    encryptModalOpen,
+    setEncryptModalOpen,
+    decryptModalOpen,
+    setDecryptModalOpen,
+    handleEncryptActiveNote,
+    handleDecryptActiveNote,
+    handleUnlockNote
   };
 }

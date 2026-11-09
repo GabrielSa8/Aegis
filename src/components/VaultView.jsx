@@ -9,7 +9,9 @@ import {
   NewNoteModal,
   NewFolderModal,
   VaultDeleteModal,
-  VaultRenameModal
+  VaultRenameModal,
+  EncryptNoteModal,
+  DecryptPromptModal
 } from './vault';
 
 /**
@@ -84,6 +86,13 @@ export default function VaultView() {
               handleSave={vault.handleSave}
               handleDeleteActiveNote={vault.handleDeleteActiveNote}
               handleRenameActiveNote={vault.handleRenameActiveNote}
+              onEncryptNote={vault.handleEncryptActiveNote}
+              onDecryptNote={vault.handleDecryptActiveNote}
+              onOpenEncryptModal={() => vault.setEncryptModalOpen(true)}
+              onOpenDecryptModal={() => vault.setDecryptModalOpen(true)}
+              encryptingNote={vault.encryptingNote}
+              decryptingNote={vault.decryptingNote}
+              isNoteLocked={vault.isNoteLocked}
             />
           )}
 
@@ -100,6 +109,9 @@ export default function VaultView() {
             handleTagClick={vault.handleTagClick}
             showSidebar={vault.showSidebar}
             setShowSidebar={vault.setShowSidebar}
+            isNoteLocked={vault.isNoteLocked}
+            noteLockReason={vault.noteLockReason}
+            onUnlockNote={vault.handleUnlockNote}
           />
 
           {/* 🔗 Red de Conocimiento: Panel Retráctil de Backlinks, Salientes y Micro-Grafo */}
@@ -160,6 +172,25 @@ export default function VaultView() {
         onClose={() => vault.setItemToRename(null)}
         onSubmit={vault.handleConfirmRename}
         item={vault.itemToRename}
+      />
+
+      {/* Modal Táctico: Cifrado Granular de Nota (General vs Específico) */}
+      <EncryptNoteModal
+        isOpen={vault.encryptModalOpen}
+        onClose={() => vault.setEncryptModalOpen(false)}
+        noteTitle={vault.activeNote?.title}
+        onConfirm={vault.handleEncryptActiveNote}
+        loading={vault.encryptingNote}
+      />
+
+      {/* Modal Táctico: Solicitud de Contraseña para Descifrar Nota */}
+      <DecryptPromptModal
+        isOpen={vault.decryptModalOpen}
+        onClose={() => vault.setDecryptModalOpen(false)}
+        noteTitle={vault.activeNote?.title}
+        isSpecific={vault.activeNote?.encryption_mode === 'specific'}
+        onConfirm={vault.handleDecryptActiveNote}
+        loading={vault.decryptingNote}
       />
     </div>
   );

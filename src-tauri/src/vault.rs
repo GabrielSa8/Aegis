@@ -1,9 +1,29 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
+use rand::{rngs::OsRng, RngCore};
+
+pub const ENC_MAGIC: &[u8] = b"AEGIS_ENC\x01";
+pub const ENC_MODE_GENERAL: u8 = 0x00;
+pub const ENC_MODE_SPECIFIC: u8 = 0x01;
+
+fn read_enc_mode(path: &Path) -> Option<String> {
+    let mut file = fs::File::open(path).ok()?;
+    let mut header = [0u8; 11];
+    let n = file.read(&mut header).ok()?;
+    if n >= 11 && &header[0..10] == ENC_MAGIC {
+        if header[10] == ENC_MODE_SPECIFIC {
+            Some("specific".to_string())
+        } else {
+            Some("general".to_string())
+        }
+    } else {
+        Some("general".to_string())
+    }
+}
 
 pub fn get_vault_root() -> PathBuf {
     if let Ok(cfg) = crate::config::get_aegis_config() {
@@ -48,6 +68,10 @@ pub struct VaultNote {
     pub hub: String,
     pub modified_time: u64,
     pub size_bytes: u64,
+    #[serde(default)]
+    pub is_encrypted: bool,
+    #[serde(default)]
+    pub encryption_mode: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -130,9 +154,13 @@ fn resolve_hub(relative_path: &str) -> String {
 
 fn is_vault_path_safe(target_path: &Path) -> bool {
     let vault_root = get_vault_root();
-    if let Ok(canonical) = target_path.canonicalize() {
-        if let Ok(root) = vault_root.canonicalize() {
-            return canonical.starts_with(root);
+    if let Ok(root) = vault_root.canonicalize() {
+        if let Ok(canonical) = target_path.canonicalize() {
+            return canonical.starts_with(&root);
+        } else if let Some(parent) = target_path.parent() {
+            if let Ok(canonical_parent) = parent.canonicalize() {
+                return canonical_parent.starts_with(&root);
+            }
         }
     }
     false
@@ -170,28 +198,46 @@ fn collect_notes(dir: &Path, root: &Path, notes: &mut Vec<VaultNote>) -> Result<
 
         if path.is_dir() {
             collect_notes(&path, root, notes)?;
-        } else if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("md") {
-            let relative = path.strip_prefix(root).unwrap_or(&path);
-            let relative_str = relative.to_string_lossy().to_string();
-            let hub = resolve_hub(&relative_str);
-            let title = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Sin título").to_string();
+        } else if path.is_file() {
+            let is_md = path.extension().and_then(|ext| ext.to_str()) == Some("md");
+            let file_str = path.to_string_lossy();
+            let is_enc = file_str.ends_with(".md.enc");
 
-            let metadata = entry.metadata().ok();
-            let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
-            let modified_time = metadata
-                .and_then(|m| m.modified().ok())
-                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            if is_md || is_enc {
+                let relative = path.strip_prefix(root).unwrap_or(&path);
+                let relative_str = relative.to_string_lossy().to_string();
+                let hub = resolve_hub(&relative_str);
+                let title = if is_enc {
+                    file_name.strip_suffix(".md.enc").unwrap_or(file_name).to_string()
+                } else {
+                    path.file_stem().and_then(|s| s.to_str()).unwrap_or("Sin título").to_string()
+                };
 
-            notes.push(VaultNote {
-                path: path.to_string_lossy().to_string(),
-                relative_path: relative_str,
-                title,
-                hub,
-                modified_time,
-                size_bytes,
-            });
+                let metadata = entry.metadata().ok();
+                let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+                let modified_time = metadata
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+
+                let encryption_mode = if is_enc {
+                    read_enc_mode(&path)
+                } else {
+                    None
+                };
+
+                notes.push(VaultNote {
+                    path: path.to_string_lossy().to_string(),
+                    relative_path: relative_str,
+                    title,
+                    hub,
+                    modified_time,
+                    size_bytes,
+                    is_encrypted: is_enc,
+                    encryption_mode,
+                });
+            }
         }
     }
     Ok(())
@@ -364,7 +410,11 @@ pub fn add_vault_task(file_path: String, text: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn read_vault_note(path: String) -> Result<String, String> {
+pub fn read_vault_note(
+    path: String,
+    password: Option<String>,
+    state: tauri::State<crate::security::VaultState>,
+) -> Result<String, String> {
     let p = Path::new(&path);
     if !p.exists() {
         return Err(format!("Archivo no encontrado: {}", path));
@@ -372,16 +422,299 @@ pub fn read_vault_note(path: String) -> Result<String, String> {
     if !is_vault_path_safe(p) {
         return Err("Acceso denegado: ruta fuera de la Bóveda".into());
     }
-    fs::read_to_string(p).map_err(|e| e.to_string())
+
+    if path.ends_with(".enc") {
+        let raw = fs::read(p).map_err(|e| e.to_string())?;
+        if raw.len() >= 11 && &raw[0..10] == ENC_MAGIC {
+            if raw[10] == ENC_MODE_SPECIFIC {
+                if raw.len() < 11 + 16 + 12 {
+                    return Err("Archivo cifrado corrupto (longitud insuficiente)".into());
+                }
+                let salt = &raw[11..27];
+                let payload = &raw[27..];
+
+                let pwd = match password {
+                    Some(ref p) if !p.trim().is_empty() => p.trim(),
+                    _ => return Err("AEGIS_NOTE_LOCKED_SPECIFIC".to_string()),
+                };
+
+                let key = crate::security::derive_master_key(pwd, salt)?;
+                let decrypted = crate::security::decrypt_bytes(&key, payload)
+                    .map_err(|_| "Contraseña incorrecta para esta nota".to_string())?;
+                let plaintext = String::from_utf8(decrypted)
+                    .map_err(|e| format!("Texto no válido tras descifrar: {}", e))?;
+                Ok(plaintext)
+            } else {
+                // ENC_MODE_GENERAL
+                let payload = &raw[11..];
+                let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+                if !is_locked {
+                    let guard = state.master_key.read().map_err(|e| e.to_string())?;
+                    if let Some(ref k) = *guard {
+                        let decrypted = crate::security::decrypt_bytes(k, payload)?;
+                        let plaintext = String::from_utf8(decrypted)
+                            .map_err(|e| format!("Texto no válido tras descifrar: {}", e))?;
+                        return Ok(plaintext);
+                    }
+                }
+                Err("AEGIS_NOTE_LOCKED_GENERAL".to_string())
+            }
+        } else {
+            // Formato general legacy
+            let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+            if is_locked {
+                return Err("AEGIS_NOTE_LOCKED_GENERAL".to_string());
+            }
+            let guard = state.master_key.read().map_err(|e| e.to_string())?;
+            let key = match *guard {
+                Some(ref k) => *k,
+                None => return Err("AEGIS_NOTE_LOCKED_GENERAL".to_string()),
+            };
+            let decrypted = crate::security::decrypt_bytes(&key, &raw)?;
+            let plaintext = String::from_utf8(decrypted)
+                .map_err(|e| format!("Texto no válido tras descifrar: {}", e))?;
+            Ok(plaintext)
+        }
+    } else {
+        fs::read_to_string(p).map_err(|e| e.to_string())
+    }
 }
 
 #[tauri::command]
-pub fn save_vault_note(path: String, content: String) -> Result<(), String> {
+pub fn save_vault_note(
+    path: String,
+    content: String,
+    password: Option<String>,
+    state: tauri::State<crate::security::VaultState>,
+) -> Result<(), String> {
     let p = Path::new(&path);
     if !is_vault_path_safe(p) {
         return Err("Acceso denegado: ruta fuera de la Bóveda".into());
     }
-    fs::write(p, content).map_err(|e| e.to_string())
+
+    if path.ends_with(".enc") {
+        let raw = fs::read(p).map_err(|e| e.to_string())?;
+        if raw.len() >= 11 && &raw[0..10] == ENC_MAGIC && raw[10] == ENC_MODE_SPECIFIC {
+            let salt = &raw[11..27];
+            let pwd = match password {
+                Some(ref p) if !p.trim().is_empty() => p.trim(),
+                _ => return Err("Se requiere la contraseña específica para guardar esta nota cifrada".to_string()),
+            };
+            let key = crate::security::derive_master_key(pwd, salt)?;
+            let payload = crate::security::encrypt_bytes(&key, content.as_bytes())?;
+            let mut out = Vec::with_capacity(10 + 1 + 16 + payload.len());
+            out.extend_from_slice(ENC_MAGIC);
+            out.push(ENC_MODE_SPECIFIC);
+            out.extend_from_slice(salt);
+            out.extend_from_slice(&payload);
+            fs::write(p, out).map_err(|e| e.to_string())
+        } else {
+            // General
+            let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+            if is_locked {
+                return Err("AEGIS_VAULT_LOCKED".to_string());
+            }
+            let guard = state.master_key.read().map_err(|e| e.to_string())?;
+            let key = match *guard {
+                Some(ref k) => *k,
+                None => return Err("AEGIS_VAULT_LOCKED".to_string()),
+            };
+            let payload = crate::security::encrypt_bytes(&key, content.as_bytes())?;
+            let mut out = Vec::with_capacity(10 + 1 + payload.len());
+            out.extend_from_slice(ENC_MAGIC);
+            out.push(ENC_MODE_GENERAL);
+            out.extend_from_slice(&payload);
+            fs::write(p, out).map_err(|e| e.to_string())
+        }
+    } else {
+        fs::write(p, content).map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+pub fn encrypt_vault_note(
+    path: String,
+    mode: Option<String>,
+    password: Option<String>,
+    state: tauri::State<crate::security::VaultState>,
+) -> Result<VaultNote, String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Archivo no encontrado: {}", path));
+    }
+    if !is_vault_path_safe(p) {
+        return Err("Acceso denegado: ruta fuera de la Bóveda".into());
+    }
+    if path.ends_with(".enc") {
+        return Err("El archivo ya está cifrado".into());
+    }
+
+    let plaintext_bytes = fs::read(p).map_err(|e| e.to_string())?;
+    let enc_mode_str = mode.unwrap_or_else(|| "general".to_string());
+
+    let (file_bytes, enc_mode_result) = if enc_mode_str == "specific" {
+        let pwd = match password {
+            Some(ref p) if p.trim().len() >= 4 => p.trim(),
+            _ => return Err("La contraseña específica debe tener al menos 4 caracteres".into()),
+        };
+        let mut salt = [0u8; 16];
+        OsRng.fill_bytes(&mut salt);
+
+        let key = crate::security::derive_master_key(pwd, &salt)?;
+        let payload = crate::security::encrypt_bytes(&key, &plaintext_bytes)?;
+
+        let mut out = Vec::with_capacity(10 + 1 + 16 + payload.len());
+        out.extend_from_slice(ENC_MAGIC);
+        out.push(ENC_MODE_SPECIFIC);
+        out.extend_from_slice(&salt);
+        out.extend_from_slice(&payload);
+        (out, "specific".to_string())
+    } else {
+        let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+        if is_locked {
+            return Err("AEGIS_VAULT_LOCKED".to_string());
+        }
+        let guard = state.master_key.read().map_err(|e| e.to_string())?;
+        let key = match *guard {
+            Some(ref k) => *k,
+            None => return Err("AEGIS_VAULT_LOCKED".to_string()),
+        };
+        let payload = crate::security::encrypt_bytes(&key, &plaintext_bytes)?;
+
+        let mut out = Vec::with_capacity(10 + 1 + payload.len());
+        out.extend_from_slice(ENC_MAGIC);
+        out.push(ENC_MODE_GENERAL);
+        out.extend_from_slice(&payload);
+        (out, "general".to_string())
+    };
+
+    let enc_path_str = format!("{}.enc", path);
+    let enc_path = Path::new(&enc_path_str);
+
+    fs::write(enc_path, file_bytes).map_err(|e| e.to_string())?;
+
+    // Sobrescritura segura con ceros antes de unlinking
+    let len = plaintext_bytes.len();
+    let zero_bytes = vec![0u8; len];
+    let _ = fs::write(p, zero_bytes);
+    let _ = fs::remove_file(p);
+
+    let root = get_vault_root();
+    let relative = enc_path.strip_prefix(&root).unwrap_or(enc_path);
+    let relative_str = relative.to_string_lossy().to_string();
+    let hub = resolve_hub(&relative_str);
+    let file_name = enc_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    let title = file_name.strip_suffix(".md.enc").unwrap_or(file_name).to_string();
+
+    let metadata = fs::metadata(enc_path).ok();
+    let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+    let modified_time = metadata
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    Ok(VaultNote {
+        path: enc_path_str,
+        relative_path: relative_str,
+        title,
+        hub,
+        modified_time,
+        size_bytes,
+        is_encrypted: true,
+        encryption_mode: Some(enc_mode_result),
+    })
+}
+
+#[tauri::command]
+pub fn decrypt_vault_note(
+    path: String,
+    password: Option<String>,
+    state: tauri::State<crate::security::VaultState>,
+) -> Result<VaultNote, String> {
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Archivo no encontrado: {}", path));
+    }
+    if !is_vault_path_safe(p) {
+        return Err("Acceso denegado: ruta fuera de la Bóveda".into());
+    }
+    if !path.ends_with(".enc") {
+        return Err("El archivo no está cifrado".into());
+    }
+
+    let raw = fs::read(p).map_err(|e| e.to_string())?;
+    let decrypted_bytes = if raw.len() >= 11 && &raw[0..10] == ENC_MAGIC {
+        if raw[10] == ENC_MODE_SPECIFIC {
+            if raw.len() < 11 + 16 + 12 {
+                return Err("Archivo cifrado corrupto".into());
+            }
+            let salt = &raw[11..27];
+            let payload = &raw[27..];
+
+            let pwd = match password {
+                Some(ref p) if !p.trim().is_empty() => p.trim(),
+                _ => return Err("Se requiere la contraseña específica para descifrar esta nota".into()),
+            };
+
+            let key = crate::security::derive_master_key(pwd, salt)?;
+            crate::security::decrypt_bytes(&key, payload)
+                .map_err(|_| "Contraseña incorrecta para esta nota".to_string())?
+        } else {
+            let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+            if is_locked {
+                return Err("AEGIS_VAULT_LOCKED".to_string());
+            }
+            let guard = state.master_key.read().map_err(|e| e.to_string())?;
+            let key = match *guard {
+                Some(ref k) => *k,
+                None => return Err("AEGIS_VAULT_LOCKED".to_string()),
+            };
+            crate::security::decrypt_bytes(&key, &raw[11..])?
+        }
+    } else {
+        let is_locked = *state.is_locked.read().map_err(|e| e.to_string())?;
+        if is_locked {
+            return Err("AEGIS_VAULT_LOCKED".to_string());
+        }
+        let guard = state.master_key.read().map_err(|e| e.to_string())?;
+        let key = match *guard {
+            Some(ref k) => *k,
+            None => return Err("AEGIS_VAULT_LOCKED".to_string()),
+        };
+        crate::security::decrypt_bytes(&key, &raw)?
+    };
+
+    let dec_path_str = path.strip_suffix(".enc").unwrap_or(&path).to_string();
+    let dec_path = Path::new(&dec_path_str);
+
+    fs::write(dec_path, &decrypted_bytes).map_err(|e| e.to_string())?;
+    let _ = fs::remove_file(p);
+
+    let root = get_vault_root();
+    let relative = dec_path.strip_prefix(&root).unwrap_or(dec_path);
+    let relative_str = relative.to_string_lossy().to_string();
+    let hub = resolve_hub(&relative_str);
+    let title = dec_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Sin título").to_string();
+
+    let metadata = fs::metadata(dec_path).ok();
+    let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+    let modified_time = metadata
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    Ok(VaultNote {
+        path: dec_path_str,
+        relative_path: relative_str,
+        title,
+        hub,
+        modified_time,
+        size_bytes,
+        is_encrypted: false,
+        encryption_mode: None,
+    })
 }
 
 #[tauri::command]
@@ -429,6 +762,10 @@ pub fn search_vault_content(query: String, hub_filter: Option<String>) -> Result
             if !hf_clean.is_empty() && hf_clean != "Todos" && note.hub != *hf_clean {
                 continue;
             }
+        }
+
+        if note.is_encrypted {
+            continue;
         }
 
         let p = Path::new(&note.path);
@@ -506,6 +843,8 @@ pub fn create_vault_note(relative_path: String, content: Option<String>) -> Resu
             .map(|d| d.as_secs())
             .unwrap_or(0),
         size_bytes: initial.len() as u64,
+        is_encrypted: false,
+        encryption_mode: None,
     })
 }
 

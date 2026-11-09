@@ -16,3 +16,5 @@ export * from './VaultMicroGraph';
 export * from './VaultBacklinksList';
 export * from './VaultOutgoingList';
 export * from './VaultBacklinksPanel';
+export * from './EncryptNoteModal';
+export * from './DecryptPromptModal';

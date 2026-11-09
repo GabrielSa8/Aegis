@@ -301,7 +301,13 @@ export default function App() {
         onOpenSettings={() => handleRequestTabChange('settings')}
         onOpenCommandPalette={() => setShowCommandPalette(true)}
         isMasterPasswordEnabled={securityStatus.masterPasswordEnabled}
+        isLocked={securityStatus.isLocked}
         onLockVault={lockVault}
+        onUnlockVault={() => {
+          if (activeTab !== 'vault' && activeTab !== 'finances') {
+            handleRequestTabChange('vault');
+          }
+        }}
       />
 
       {/* 🚀 Contenedor de Trabajo: Dock Izquierdo de Vistas + Lienzo Central */}
@@ -338,8 +344,34 @@ export default function App() {
         <ErrorBoundary key={activeTab} name={activeTab}>
           <Suspense fallback={<ModuleLoader />}>
             {activeTab === 'agent' && <AgentView />}
-            {activeTab === 'finances' && <FinancesView />}
-            {activeTab === 'vault' && <VaultView />}
+            {activeTab === 'finances' && (
+              securityStatus.masterPasswordEnabled && securityStatus.isLocked ? (
+                <MasterLockScreen
+                  onUnlock={unlockVault}
+                  hasEncryptedDb={securityStatus.hasEncryptedDb}
+                  autoLockMinutes={securityStatus.autoLockMinutes}
+                  isScoped={true}
+                  title="Finanzas Protegidas"
+                  subtitle="Ingresa tu Contraseña Maestra para descifrar cuentas, saldos y transacciones en memoria."
+                />
+              ) : (
+                <FinancesView />
+              )
+            )}
+            {activeTab === 'vault' && (
+              securityStatus.masterPasswordEnabled && securityStatus.isLocked ? (
+                <MasterLockScreen
+                  onUnlock={unlockVault}
+                  hasEncryptedDb={securityStatus.hasEncryptedDb}
+                  autoLockMinutes={securityStatus.autoLockMinutes}
+                  isScoped={true}
+                  title="Bóveda de Conocimiento Protegida"
+                  subtitle="Ingresa tu Contraseña Maestra para desbloquear tus notas y red de conocimiento."
+                />
+              ) : (
+                <VaultView />
+              )
+            )}
             {activeTab === 'devops' && <DevOpsView />}
             {activeTab === 'tasks' && <TasksView />}
             {activeTab === 'sentinel' && <SentinelView />}
@@ -402,8 +434,8 @@ export default function App() {
         }}
       />
 
-      {/* 🛡️ Pantalla de Bloqueo de Seguridad (Master Lock Screen) */}
-      {securityStatus.masterPasswordEnabled && securityStatus.isLocked && (
+      {/* 🛡️ Pantalla de Bloqueo Global (Solo si la base de datos completa está cifrada en reposo) */}
+      {securityStatus.masterPasswordEnabled && securityStatus.isLocked && securityStatus.hasEncryptedDb && (
         <MasterLockScreen
           onUnlock={unlockVault}
           hasEncryptedDb={securityStatus.hasEncryptedDb}

@@ -8,6 +8,7 @@ import {
   PinOff,
   Minus,
   Lock,
+  Unlock,
   HelpCircle
 } from 'lucide-react';
 import { useAppUpdater, UpdateCockpitPill, UpdateModal } from './updater';
@@ -16,7 +17,9 @@ export default function TopHeader({
   onOpenSettings,
   onOpenCommandPalette,
   isMasterPasswordEnabled = false,
-  onLockVault
+  isLocked = false,
+  onLockVault,
+  onUnlockVault
 }) {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const {
@@ -237,18 +240,18 @@ export default function TopHeader({
             <HelpCircle size={13} />
           </button>
 
-          {/* Bloquear Vault */}
+          {/* Bloquear / Desbloquear Bóveda */}
           {isMasterPasswordEnabled && (
             <button
-              onClick={onLockVault}
-              title="Bloquear Vault con Contraseña Maestra (Alt + L)"
-              aria-label="Bloquear Vault con Contraseña Maestra (Alt + L)"
+              onClick={isLocked ? onUnlockVault : onLockVault}
+              title={isLocked ? 'Bóveda Bloqueada (Clic para desbloquear)' : 'Bloquear datos sensibles con Contraseña Maestra (Alt + L)'}
+              aria-label={isLocked ? 'Bóveda Bloqueada' : 'Bloquear Vault'}
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--border-color)',
+                background: isLocked ? 'color-mix(in srgb, var(--warning, #d97706) 18%, transparent)' : 'rgba(255, 255, 255, 0.03)',
+                border: `1px solid ${isLocked ? 'color-mix(in srgb, var(--warning, #d97706) 45%, transparent)' : 'var(--border-color)'}`,
                 borderRadius: 'var(--radius-sm, 8px)',
                 padding: '4px 7px',
-                color: 'var(--text-muted)',
+                color: isLocked ? 'var(--warning, #d97706)' : 'var(--text-muted)',
                 fontSize: '0.74rem',
                 cursor: 'pointer',
                 display: 'flex',
@@ -256,10 +259,16 @@ export default function TopHeader({
                 justifyContent: 'center',
                 transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.borderColor = 'var(--primary)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isLocked ? 'var(--warning, #d97706)' : 'var(--primary)';
+                e.currentTarget.style.borderColor = isLocked ? 'var(--warning, #d97706)' : 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isLocked ? 'var(--warning, #d97706)' : 'var(--text-muted)';
+                e.currentTarget.style.borderColor = isLocked ? 'color-mix(in srgb, var(--warning, #d97706) 45%, transparent)' : 'var(--border-color)';
+              }}
             >
-              <Lock size={13} />
+              {isLocked ? <Lock size={13} /> : <Unlock size={13} />}
             </button>
           )}
 

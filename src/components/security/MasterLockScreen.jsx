@@ -2,7 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Shield, Lock, Unlock, Eye, EyeOff, AlertTriangle, Key } from 'lucide-react';
 import TacticalButton from '../ui/TacticalButton';
 
-export default function MasterLockScreen({ onUnlock, hasEncryptedDb, autoLockMinutes }) {
+export default function MasterLockScreen({
+  onUnlock,
+  hasEncryptedDb,
+  autoLockMinutes,
+  isScoped = false,
+  title,
+  subtitle
+}) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
@@ -33,17 +40,31 @@ export default function MasterLockScreen({ onUnlock, hasEncryptedDb, autoLockMin
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'color-mix(in srgb, var(--bg-main) 97%, black)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        userSelect: 'none'
-      }}
+      style={
+        isScoped
+          ? {
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              userSelect: 'none',
+              background: 'transparent'
+            }
+          : {
+              position: 'fixed',
+              inset: 0,
+              zIndex: 99999,
+              background: 'color-mix(in srgb, var(--bg-main) 97%, black)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              userSelect: 'none'
+            }
+      }
     >
       <div
         className={shake ? 'aegis-shake-anim' : ''}
@@ -92,7 +113,7 @@ export default function MasterLockScreen({ onUnlock, hasEncryptedDb, autoLockMin
             color: 'var(--text-high)'
           }}
         >
-          Aegis Security Vault
+          {title || 'Aegis Security Vault'}
         </h2>
 
         <p
@@ -103,7 +124,7 @@ export default function MasterLockScreen({ onUnlock, hasEncryptedDb, autoLockMin
             lineHeight: 1.4
           }}
         >
-          Protección de datos en reposo activada. Ingresa tu Contraseña Maestra para desbloquear el Cockpit.
+          {subtitle || 'Protección de datos en reposo activada. Ingresa tu Contraseña Maestra para desbloquear el Cockpit.'}
         </p>
 
         {/* Tactical Badges */}

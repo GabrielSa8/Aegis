@@ -7,7 +7,9 @@ import {
   Eye,
   Edit3,
   Save,
-  Trash2
+  Trash2,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { TacticalButton } from '../ui/TacticalButton';
 
@@ -27,7 +29,14 @@ export function VaultNoteHeader({
   saving,
   handleSave,
   handleDeleteActiveNote,
-  handleRenameActiveNote
+  handleRenameActiveNote,
+  onEncryptNote,
+  onDecryptNote,
+  onOpenEncryptModal,
+  onOpenDecryptModal,
+  encryptingNote = false,
+  decryptingNote = false,
+  isNoteLocked = false
 }) {
   if (!activeNote) return null;
 
@@ -59,6 +68,27 @@ export function VaultNoteHeader({
             >
               {activeNote.title}
             </h3>
+            {activeNote.is_encrypted && (
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  background: 'color-mix(in srgb, var(--warning, #d97706) 18%, transparent)',
+                  color: 'var(--warning, #d97706)',
+                  border: '1px solid color-mix(in srgb, var(--warning, #d97706) 35%, transparent)'
+                }}
+                title={
+                  activeNote.encryption_mode === 'specific'
+                    ? 'Cifrado en reposo con Contraseña Específica (AES-256-GCM)'
+                    : 'Cifrado en reposo con Contraseña Maestra (AES-256-GCM)'
+                }
+              >
+                {activeNote.encryption_mode === 'specific' ? 'AES-256 (PIN)' : 'AES-256'}
+              </span>
+            )}
             {handleRenameActiveNote && (
               <button
                 onClick={handleRenameActiveNote}
@@ -105,6 +135,42 @@ export function VaultNoteHeader({
             <CheckCircle2 size={13} />
             <span className="vault-btn-label">Guardado</span>
           </span>
+        )}
+
+        {/* 🔒 Cifrar / 🔓 Descifrar Nota */}
+        {activeNote.is_encrypted ? (
+          <button
+            onClick={() => {
+              if (activeNote.encryption_mode === 'specific' || isNoteLocked) {
+                onOpenDecryptModal?.();
+              } else {
+                onDecryptNote?.();
+              }
+            }}
+            disabled={decryptingNote}
+            title="Descifrar permanentemente a archivo Markdown plano (.md)"
+            aria-label="Descifrar nota"
+            className="vault-btn"
+            style={{ color: 'var(--warning, #d97706)' }}
+          >
+            <Unlock size={13} />
+            <span className="vault-btn-label">
+              {decryptingNote ? 'Descifrando...' : 'Descifrar'}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={onOpenEncryptModal || onEncryptNote}
+            disabled={encryptingNote}
+            title="Cifrar nota en reposo con AES-256-GCM (.md.enc)"
+            aria-label="Cifrar nota"
+            className="vault-btn"
+          >
+            <Lock size={13} />
+            <span className="vault-btn-label">
+              {encryptingNote ? 'Cifrando...' : 'Cifrar'}
+            </span>
+          </button>
         )}
 
         {/* Copiar enlace Wiki [[Nota]] */}

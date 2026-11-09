@@ -7,7 +7,8 @@ import {
   FileText, 
   GripVertical, 
   Edit3, 
-  Trash2 
+  Trash2,
+  Lock
 } from 'lucide-react';
 import { getFolderFileCount } from './vaultHelpers';
 
@@ -260,11 +261,19 @@ export const VaultTreeNode = React.memo(function VaultTreeNode({
               <span style={{ color: 'var(--text-muted)', display: 'flex', opacity: 0.35 }}>
                 <GripVertical size={11} />
               </span>
-              <FileText
-                size={13}
-                color={isSelected ? 'var(--primary)' : 'var(--text-muted)'}
-                style={{ flexShrink: 0 }}
-              />
+              {note.is_encrypted ? (
+                <Lock
+                  size={12}
+                  color={isSelected ? 'var(--primary)' : 'var(--warning, #d97706)'}
+                  style={{ flexShrink: 0 }}
+                />
+              ) : (
+                <FileText
+                  size={13}
+                  color={isSelected ? 'var(--primary)' : 'var(--text-muted)'}
+                  style={{ flexShrink: 0 }}
+                />
+              )}
               <span
                 style={{
                   fontSize: '0.76rem',
