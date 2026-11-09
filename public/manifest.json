@@ -1,17 +1,22 @@
 {
-  "short_name": "LifeOS",
-  "name": "LifeOS — Control Financiero",
-  "description": "Tu centro local e inteligente de control financiero personal.",
+  "short_name": "Aegis",
+  "name": "Aegis — Cockpit Maestro",
+  "description": "Sistema Operativo Personal y Centro de Mando Maestro Soberano.",
   "icons": [
     {
       "src": "favicon.svg",
-      "sizes": "64x64 32x32 24x24 16x16",
+      "sizes": "any",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0b0f19",
-  "background_color": "#0b0f19",
+  "theme_color": "#0f1211",
+  "background_color": "#0f1211",
   "orientation": "portrait"
 }
