@@ -120,6 +120,7 @@ pub fn run() {
             finances::sqlite_get_msi_plans,
             finances::sqlite_save_msi_plan,
             finances::sqlite_pay_msi_installment,
+            finances::sqlite_process_auto_msi_installments,
             finances::sqlite_delete_msi_plan,
             finances::sqlite_get_recurring_expenses,
             finances::sqlite_save_recurring_expense,

@@ -11,11 +11,13 @@ export default function RecurringModal({
   paymentMethods = [],
   onSubmit
 }) {
+  const isEditing = Boolean(recurringForm.id);
+
   return (
     <ModalWrapper
       isOpen={isOpen}
       onClose={onClose}
-      title="Programar Gasto Fijo / Servicio"
+      title={isEditing ? 'Editar Gasto Fijo / Servicio' : 'Programar Gasto Fijo / Servicio'}
       icon={Repeat}
       maxWidth="380px"
     >
@@ -77,7 +79,7 @@ export default function RecurringModal({
           variant="primary"
           style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center' }}
         >
-          Guardar Gasto Fijo
+          {isEditing ? 'Guardar Cambios' : 'Guardar Gasto Fijo'}
         </TacticalButton>
       </form>
     </ModalWrapper>

@@ -1,36 +1,58 @@
 import { useMemo, useState, useEffect } from 'react';
 import { CreditCard, Wallet, Banknote } from 'lucide-react';
-import { getPaymentMethods } from '../../../utils/storage';
+import { getPaymentMethods, getMsiPlans } from '../../../utils/storage';
 
 export default function QuickAccountsSummary({ monthlyTxs = [] }) {
   const [methods, setMethods] = useState([]);
+  const [msiPlans, setMsiPlans] = useState([]);
 
   useEffect(() => {
     let mounted = true;
-    getPaymentMethods()
-      .then((res) => {
-        if (mounted && Array.isArray(res)) setMethods(res);
+    Promise.all([getPaymentMethods(), getMsiPlans()])
+      .then(([m, p]) => {
+        if (mounted) {
+          if (Array.isArray(m)) setMethods(m);
+          if (Array.isArray(p)) setMsiPlans(p);
+        }
       })
       .catch(() => {});
-    return () => { mounted = false; };
+
+    const handleUpdate = () => {
+      Promise.all([getPaymentMethods(), getMsiPlans()])
+        .then(([m, p]) => {
+          if (mounted) {
+            if (Array.isArray(m)) setMethods(m);
+            if (Array.isArray(p)) setMsiPlans(p);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('aegis:payment-methods-changed', handleUpdate);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('aegis:payment-methods-changed', handleUpdate);
+    };
   }, []);
 
-  // Mapear gastos del ciclo activo agrupados por método de pago
-  const spentByMethod = useMemo(() => {
-    const map = new Map();
+  // Mapear gastos y abonos del ciclo activo agrupados por método de pago
+  const { expensesMap, abonosMap } = useMemo(() => {
+    const expMap = new Map();
+    const abMap = new Map();
     for (const tx of monthlyTxs) {
+      const rawMethod = (tx.paymentMethod || '').trim().toLowerCase();
+      const amt = Number(tx.amount) || 0;
+      if (!rawMethod) continue;
       if (tx.type === 'expense') {
-        const rawMethod = (tx.paymentMethod || '').trim().toLowerCase();
-        const amt = Number(tx.amount) || 0;
-        if (rawMethod) {
-          map.set(rawMethod, (map.get(rawMethod) || 0) + amt);
-        }
+        expMap.set(rawMethod, (expMap.get(rawMethod) || 0) + amt);
+      } else if (tx.type === 'income') {
+        abMap.set(rawMethod, (abMap.get(rawMethod) || 0) + amt);
       }
     }
-    return map;
+    return { expensesMap: expMap, abonosMap: abMap };
   }, [monthlyTxs]);
 
-  // Cruzar las tarjetas registradas con sus gastos del ciclo y límites
+  // Cruzar las tarjetas registradas con sus gastos del ciclo, MSI diferidos y límites
   const cardsData = useMemo(() => {
     if (!methods || methods.length === 0) return [];
 
@@ -40,8 +62,24 @@ export default function QuickAccountsSummary({ monthlyTxs = [] }) {
       const nameKey = name.toLowerCase();
       const idKey = (pm.id || '').toLowerCase();
 
-      // Buscar gasto por nombre exacto o por id
-      const spent = spentByMethod.get(nameKey) || spentByMethod.get(idKey) || 0;
+      // Deuda retenida por MSI activos en esta tarjeta
+      let msiDebt = 0;
+      if (isCredit && Array.isArray(msiPlans)) {
+        for (const plan of msiPlans) {
+          if (plan.status === 'completed' || !plan.remainingInstallments || plan.remainingInstallments <= 0) continue;
+          const pMethod = (plan.paymentMethod || '').trim().toLowerCase();
+          if (pMethod === nameKey || pMethod === idKey || (nameKey && pMethod.includes(nameKey))) {
+            const mAmount = Number(plan.monthlyAmount) || (plan.totalInstallments > 0 ? Number(plan.totalAmount) / plan.totalInstallments : 0);
+            msiDebt += Number(plan.remainingInstallments) * mAmount;
+          }
+        }
+      }
+
+      // Buscar gasto neto (restando abonos si es crédito) + capital retenido de MSI
+      const exp = (expensesMap.get(nameKey) || 0) + (idKey && idKey !== nameKey ? (expensesMap.get(idKey) || 0) : 0);
+      const inc = isCredit ? ((abonosMap.get(nameKey) || 0) + (idKey && idKey !== nameKey ? (abonosMap.get(idKey) || 0) : 0)) : 0;
+      const revolvingSpent = Math.max(0, exp - inc);
+      const spent = isCredit ? revolvingSpent + msiDebt : exp;
 
       // Saldo total / límite según el tipo
       const total = Number(isCredit ? pm.creditLimit || pm.balance || 0 : pm.balance || 0);
@@ -59,7 +97,7 @@ export default function QuickAccountsSummary({ monthlyTxs = [] }) {
         pct
       };
     });
-  }, [methods, spentByMethod]);
+  }, [methods, expensesMap, abonosMap, msiPlans]);
 
   const getUsageColor = (pct) => {
     if (pct >= 85) return 'var(--danger, #ef4444)';

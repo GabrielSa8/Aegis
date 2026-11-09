@@ -44,6 +44,9 @@ function Dashboard({
         <TelemetryStatsGrid
           metrics={metrics}
           showBudgets={showBudgets}
+          transactions={safeTransactions}
+          selectedDate={selectedDate}
+          cutoffDay={cutoffDay}
         />
       )}
 

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Repeat, Plus, Check, Trash2 } from 'lucide-react';
+import { Repeat, Plus, Check, Trash2, Pencil } from 'lucide-react';
 
 export default function RecurringExpensesSection({
   recurringExpenses = [],
   onAddClick,
+  onEditRecurring,
   onApproveRecurring,
   onDeleteRecurring
 }) {
@@ -155,6 +156,17 @@ export default function RecurringExpensesSection({
                         <span>Aprobar</span>
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => onEditRecurring && onEditRecurring(rec)}
+                      className="structure-action-btn"
+                      title="Editar gasto fijo"
+                      style={{ padding: '3px 7px', fontSize: '0.66rem' }}
+                    >
+                      <Pencil size={11} style={{ color: 'var(--accent, var(--primary))' }} />
+                      <span>Editar</span>
+                    </button>
 
                     <button
                       type="button"

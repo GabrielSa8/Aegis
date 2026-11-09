@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getTodayLocalDateStr } from '../../../utils/storage';
 
 const WEEKDAYS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 const MONTH_NAMES = [
@@ -79,8 +80,7 @@ export default function MiniCalendarPopover({ selectedDate, onSelectDate, onClos
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayIndex = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // 0 = Lunes
 
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayStr = getTodayLocalDateStr();
 
   const handleDayClick = (day) => {
     const mm = String(viewMonth + 1).padStart(2, '0');

@@ -1,13 +1,19 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, CreditCard } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PiggyBank } from 'lucide-react';
+import CreditCardKpiCard from './CreditCardKpiCard';
 
-export function TelemetryStatsGrid({ metrics, showBudgets }) {
+export function TelemetryStatsGrid({
+  metrics,
+  showBudgets,
+  transactions,
+  selectedDate,
+  cutoffDay,
+  paymentMethods
+}) {
   const {
     netBalance,
     totalIncome,
     totalExpense,
-    daysRemaining,
-    totalCreditAccumulated,
     savingsRate
   } = metrics;
 
@@ -98,45 +104,13 @@ export function TelemetryStatsGrid({ metrics, showBudgets }) {
         </div>
       </div>
 
-      {/* Acumulado Tarjeta + Corte */}
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
-          borderRadius: 'var(--radius-md)',
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px'
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Tarjeta
-            </span>
-            <span
-              style={{
-                fontSize: '0.58rem',
-                padding: '1px 5px',
-                borderRadius: '3px',
-                background: daysRemaining <= 5 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(168, 85, 247, 0.2)',
-                color: daysRemaining <= 5 ? '#f87171' : '#c084fc',
-                fontWeight: 700
-              }}
-            >
-              {daysRemaining}d corte
-            </span>
-          </div>
-          <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#c084fc', fontFamily: 'var(--font-mono)' }}>
-            ${totalCreditAccumulated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        </div>
-        <div style={{ padding: '6px', borderRadius: 'var(--radius-sm)', background: 'rgba(168, 85, 247, 0.1)' }}>
-          <CreditCard size={15} color="#c084fc" />
-        </div>
-      </div>
+      {/* 💳 Acumulado Tarjeta + Corte (Selector Táctico Dinámico) */}
+      <CreditCardKpiCard
+        transactions={transactions}
+        selectedDate={selectedDate}
+        globalCutoffDay={cutoffDay}
+        externalPaymentMethods={paymentMethods}
+      />
 
       {/* Tasa de Ahorro */}
       <div

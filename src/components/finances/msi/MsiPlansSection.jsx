@@ -1,7 +1,7 @@
 import React from 'react';
-import { Layers, Plus, Trash2, Zap, CheckCircle2 } from 'lucide-react';
+import { Layers, Plus, Trash2, Zap, CheckCircle2, Pencil } from 'lucide-react';
 
-export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstallment, onDeleteMsi }) {
+export default function MsiPlansSection({ msiPlans = [], onAddClick, onEditMsi, onPayInstallment, onDeleteMsi }) {
   return (
     <div style={{
       background: 'transparent',
@@ -152,6 +152,17 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
 
                     <button
                       type="button"
+                      onClick={() => onEditMsi && onEditMsi(plan)}
+                      className="structure-action-btn"
+                      title="Editar plan MSI"
+                      style={{ padding: '3px 7px', fontSize: '0.66rem' }}
+                    >
+                      <Pencil size={11} style={{ color: 'var(--accent, var(--primary))' }} />
+                      <span>Editar</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => onDeleteMsi(plan)}
                       className="structure-action-btn delete"
                       title="Eliminar plan MSI"
@@ -182,10 +193,18 @@ export default function MsiPlansSection({ msiPlans = [], onAddClick, onPayInstal
 
                 {/* Fila 3: Detalle de montos y cuota mensual */}
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.67rem', color: 'var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.67rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                     <span>Total: <strong style={{ color: 'var(--text-high)', fontFamily: 'var(--font-mono)' }}>${(plan.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
                     <span>·</span>
                     <span>Restante: <strong style={{ color: 'var(--text-high)', fontFamily: 'var(--font-mono)' }}>${Number((plan.monthlyAmount || 0) * plan.remainingInstallments).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                    {!isCompleted && plan.nextDueDate && (
+                      <>
+                        <span>·</span>
+                        <span title="Día en que se registra el cobro automático de este mes">
+                          Cobro auto: <strong style={{ color: 'var(--accent, var(--primary))' }}>{plan.nextDueDate}</strong>
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   <div style={{ textAlign: 'right' }}>

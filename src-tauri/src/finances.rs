@@ -690,11 +690,42 @@ pub fn sqlite_save_msi_plan(plan: MsiPlan) -> Result<(), String> {
     Ok(())
 }
 
+fn add_one_month_to_iso_date(date_str: &str) -> String {
+    let parts: Vec<&str> = date_str.split('-').collect();
+    if parts.len() == 3 {
+        if let (Ok(mut y), Ok(mut m), Ok(d)) = (
+            parts[0].parse::<i32>(),
+            parts[1].parse::<u32>(),
+            parts[2].parse::<u32>(),
+        ) {
+            m += 1;
+            if m > 12 {
+                m = 1;
+                y += 1;
+            }
+            let max_days = match m {
+                2 => {
+                    if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+                        29
+                    } else {
+                        28
+                    }
+                }
+                4 | 6 | 9 | 11 => 30,
+                _ => 31,
+            };
+            let safe_day = std::cmp::min(d, max_days);
+            return format!("{:04}-{:02}-{:02}", y, m, safe_day);
+        }
+    }
+    date_str.to_string()
+}
+
 #[tauri::command]
-pub fn sqlite_pay_msi_installment(id: String) -> Result<(), String> {
+pub fn sqlite_pay_msi_installment(id: String, _debit_method: Option<String>) -> Result<(), String> {
     let conn = get_db_connection()?;
     let plan = conn.query_row(
-        "SELECT id, description, payment_method, remaining_installments, monthly_amount, category FROM msi_plans WHERE id = ?1",
+        "SELECT id, description, payment_method, remaining_installments, monthly_amount, category, next_due_date FROM msi_plans WHERE id = ?1",
         params![id],
         |r| {
             let rem: i64 = r.get(3)?;
@@ -705,11 +736,12 @@ pub fn sqlite_pay_msi_installment(id: String) -> Result<(), String> {
                 rem,
                 r.get::<_, f64>(4)?,
                 r.get::<_, String>(5)?,
+                r.get::<_, String>(6)?,
             ))
         },
     ).map_err(|e| format!("Plan MSI no encontrado: {}", e))?;
 
-    let (plan_id, desc, pm, rem, amount, cat) = plan;
+    let (plan_id, desc, pm, rem, amount, cat, next_due) = plan;
     if rem <= 0 {
         return Err("El plan ya está liquidado al 100%".to_string());
     }
@@ -717,23 +749,87 @@ pub fn sqlite_pay_msi_installment(id: String) -> Result<(), String> {
     let new_rem = rem - 1;
     let new_status = if new_rem == 0 { "completed" } else { "active" };
 
-    // Registrar transacción de gasto
+    // Registrar transacción de mensualidad asignada a la tarjeta de crédito del plan (ciclo activo)
     let today = chrono_like_today();
     let tx_id = format!("tx_msi_{}_{}", plan_id, fastrand_suffix());
     let tx_desc = format!("Mensualidad MSI: {}", desc);
+    let payment_source = pm;
 
     conn.execute(
         "INSERT INTO transactions (id, amount, type, category, payment_method, date, description, created_at)
          VALUES (?1, ?2, 'expense', ?3, ?4, ?5, ?6, ?7)",
-        params![tx_id, amount, cat, pm, today, tx_desc, chrono_like_now()],
+        params![tx_id, amount, cat, payment_source, today, tx_desc, chrono_like_now()],
     ).map_err(|e| format!("Error creando transacción de mensualidad: {}", e))?;
 
+    let advanced_due = add_one_month_to_iso_date(&next_due);
     conn.execute(
-        "UPDATE msi_plans SET remaining_installments = ?1, status = ?2 WHERE id = ?3",
-        params![new_rem, new_status, plan_id],
+        "UPDATE msi_plans SET remaining_installments = ?1, status = ?2, next_due_date = ?3 WHERE id = ?4",
+        params![new_rem, new_status, advanced_due, plan_id],
     ).map_err(|e| format!("Error actualizando cuotas MSI: {}", e))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn sqlite_process_auto_msi_installments(today_opt: Option<String>) -> Result<usize, String> {
+    let conn = get_db_connection()?;
+    let today = today_opt.unwrap_or_else(chrono_like_today);
+
+    let mut stmt = conn.prepare(
+        "SELECT id, description, payment_method, remaining_installments, monthly_amount, category, next_due_date
+         FROM msi_plans WHERE status = 'active' AND remaining_installments > 0"
+    ).map_err(|e| e.to_string())?;
+
+    let plans: Vec<(String, String, String, i64, f64, String, String)> = stmt.query_map([], |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get(2)?,
+            r.get(3)?,
+            r.get(4)?,
+            r.get(5)?,
+            r.get(6)?,
+        ))
+    }).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+
+    let mut processed_count = 0;
+
+    for (plan_id, desc, pm, rem, amount, cat, next_due) in plans {
+        if rem <= 0 { continue; }
+
+        // Si la fecha de cobro (1 día después del corte) ya llegó o venció:
+        if next_due <= today {
+            let tx_desc = format!("Mensualidad MSI: {}", desc);
+
+            // Evitar duplicar si ya se cobró esta mensualidad en esta fecha
+            let existing_count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM transactions WHERE description = ?1 AND date = ?2",
+                params![tx_desc, next_due],
+                |r| r.get(0)
+            ).unwrap_or(0);
+
+            if existing_count == 0 {
+                let tx_id = format!("tx_msi_{}_{}", plan_id, fastrand_suffix());
+                conn.execute(
+                    "INSERT INTO transactions (id, amount, type, category, payment_method, date, description, created_at)
+                     VALUES (?1, ?2, 'expense', ?3, ?4, ?5, ?6, ?7)",
+                    params![tx_id, amount, cat, pm, next_due, tx_desc, chrono_like_now()],
+                ).map_err(|e| format!("Error registrando cobro automático MSI: {}", e))?;
+                processed_count += 1;
+            }
+
+            let new_rem = rem - 1;
+            let new_status = if new_rem == 0 { "completed" } else { "active" };
+            let advanced_due = add_one_month_to_iso_date(&next_due);
+
+            conn.execute(
+                "UPDATE msi_plans SET remaining_installments = ?1, status = ?2, next_due_date = ?3 WHERE id = ?4",
+                params![new_rem, new_status, advanced_due, plan_id],
+            ).map_err(|e| format!("Error actualizando cuotas MSI automáticas: {}", e))?;
+        }
+    }
+
+    Ok(processed_count)
 }
 
 #[tauri::command]

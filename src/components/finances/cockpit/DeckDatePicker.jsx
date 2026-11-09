@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Calendar, Zap, Clock } from 'lucide-react';
 import MiniCalendarPopover from './MiniCalendarPopover';
+import { getTodayLocalDateStr } from '../../../utils/storage';
 
 export default function DeckDatePicker({
   value,
@@ -12,13 +13,12 @@ export default function DeckDatePicker({
 }) {
   const [showMiniCal, setShowMiniCal] = useState(false);
 
-  // Fechas relativas
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  // Fechas relativas locales (evitan desfase UTC)
+  const todayStr = getTodayLocalDateStr();
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = getTodayLocalDateStr(yesterdayDate);
 
   const isToday = value === todayStr;
   const isYesterday = value === yesterdayStr;

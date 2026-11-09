@@ -74,13 +74,18 @@ export function useAnalyticsData(transactions, selectedDate, externalPaymentMeth
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
+    cutout: '66%',
+    layout: {
+      padding: { top: 2, bottom: 2, left: 2, right: 2 }
+    },
     plugins: {
       legend: {
         position: 'right',
         labels: {
-          color: '#d1d5db',
-          font: { family: 'inherit', size: 11 },
-          boxWidth: 12,
+          color: '#9ca3af',
+          font: { family: 'inherit', size: 9 },
+          boxWidth: 8,
+          padding: 4
         },
       },
       tooltip: {
@@ -234,13 +239,18 @@ export function useAnalyticsData(transactions, selectedDate, externalPaymentMeth
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
+    cutout: '66%',
+    layout: {
+      padding: { top: 2, bottom: 2, left: 2, right: 2 }
+    },
     plugins: {
       legend: {
         position: 'right',
         labels: {
-          color: '#d1d5db',
-          font: { family: 'inherit', size: 11 },
-          boxWidth: 12,
+          color: '#9ca3af',
+          font: { family: 'inherit', size: 9 },
+          boxWidth: 8,
+          padding: 4
         },
       },
       tooltip: {

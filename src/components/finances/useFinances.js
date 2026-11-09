@@ -18,7 +18,8 @@ import {
   getTimelineEvents,
   saveTimelineEvent,
   toggleTimelineEvent,
-  deleteTimelineEvent
+  deleteTimelineEvent,
+  processAutoMsiInstallments
 } from '../../utils/storage';
 
 export function useFinances() {
@@ -70,6 +71,7 @@ export function useFinances() {
         await initializeStorage();
         await requestPersistentStorage();
         await createAutoSnapshot();
+        await processAutoMsiInstallments();
         if (!isMounted) return;
         const [snaps, list, evts] = await Promise.all([
           getSnapshots(),
@@ -105,6 +107,19 @@ export function useFinances() {
     window.addEventListener('aegis-cutoff-day-changed', handleCutoffChange);
     return () => window.removeEventListener('aegis-cutoff-day-changed', handleCutoffChange);
   }, []);
+
+  // Escuchar cambios reactivos de transacciones (MSI, liquidación TDC, importaciones)
+  useEffect(() => {
+    const handleTxChanged = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setTransactions(e.detail);
+      } else {
+        refreshTransactionsAndSnapshots();
+      }
+    };
+    window.addEventListener('aegis:transactions-changed', handleTxChanged);
+    return () => window.removeEventListener('aegis:transactions-changed', handleTxChanged);
+  }, [refreshTransactionsAndSnapshots]);
 
   const handleUpdateCutoffDay = useCallback((newDay) => {
     const updated = setFinanceCutoffDay(newDay);

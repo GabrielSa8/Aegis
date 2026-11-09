@@ -1,5 +1,6 @@
 export { useDashboardMetrics } from './useDashboardMetrics';
 export { TelemetryStatsGrid } from './TelemetryStatsGrid';
+export { default as CreditCardKpiCard } from './CreditCardKpiCard';
 export { BudgetCategoriesGrid } from './BudgetCategoriesGrid';
 export { BudgetWaterCard } from './BudgetWaterCard';
 export { ManageBudgetsModal } from './ManageBudgetsModal';

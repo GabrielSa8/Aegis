@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getCategories, addCategory, updateCategory, deleteCategory } from '../../../utils/storage';
 
 export function useTransactionForm({
@@ -14,6 +14,7 @@ export function useTransactionForm({
   const [paymentMethod, setPaymentMethod] = useState('Débito');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(selectedDate);
+  const prevSelectedDateRef = useRef(selectedDate);
   
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -30,7 +31,7 @@ export function useTransactionForm({
     setCategory('');
     setPaymentMethod('Débito');
     setDescription('');
-    setDate(selectedDate);
+    // La fecha seleccionada se preserva hasta que el usuario la cambie explícitamente
     if (notifyCancel && editingTransaction && onCancelEdit) {
       onCancelEdit();
     }
@@ -47,9 +48,13 @@ export function useTransactionForm({
     loadCategories();
   }, []);
 
+  // Solo sincronizar fecha con selectedDate si el padre cambió explícitamente (ej. navegación en calendario externo)
   useEffect(() => {
-    if (!editingTransaction) {
-      setDate(selectedDate);
+    if (prevSelectedDateRef.current !== selectedDate) {
+      prevSelectedDateRef.current = selectedDate;
+      if (!editingTransaction) {
+        setDate(selectedDate);
+      }
     }
   }, [selectedDate, editingTransaction]);
 

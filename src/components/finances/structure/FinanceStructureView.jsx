@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CreditCard, Layers, PieChart, Target, Repeat, Flame } from 'lucide-react';
-import { getBudgets } from '../../../utils/storage';
+import { getBudgets, payCreditCard } from '../../../utils/storage';
 import {
   useAccountsMsi,
   AccountsSection,
@@ -19,6 +19,7 @@ import {
 } from '../analytics';
 import StructureDeleteModal from './StructureDeleteModal';
 import Dashboard from '../../Dashboard';
+import { PayCreditCardModal } from '../cockpit';
 
 export default function FinanceStructureView({
   safeTransactions = [],
@@ -30,6 +31,7 @@ export default function FinanceStructureView({
   const [activeAccountTab, setActiveAccountTab] = useState('accounts'); // 'accounts' | 'msi' | 'recurring'
   const [analyticsView, setAnalyticsView] = useState('cycle'); // 'cycle' | 'burnrate' | 'annual'
   const [budgets, setBudgets] = useState({});
+  const [payingCard, setPayingCard] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -49,8 +51,8 @@ export default function FinanceStructureView({
     msiForm, setMsiForm,
     recurringForm, setRecurringForm,
     handleOpenAddAccount, handleEditAccount, handleSaveAccount, handleDeleteAccount,
-    handleSaveMsi, handlePayInstallment, handleDeleteMsi,
-    handleSaveRecurring, handleApproveRecurring, handleDeleteRecurring,
+    handleOpenAddMsi, handleEditMsi, handleSaveMsi, handlePayInstallment, handleDeleteMsi,
+    handleOpenAddRecurring, handleEditRecurring, handleSaveRecurring, handleApproveRecurring, handleDeleteRecurring,
     itemToDelete, handleCancelDelete, handleConfirmDelete
   } = useAccountsMsi(onTransactionCreated);
 
@@ -121,12 +123,14 @@ export default function FinanceStructureView({
               onAddClick={handleOpenAddAccount}
               onEditAccount={handleEditAccount}
               onDeleteAccount={handleDeleteAccount}
+              onPayCard={setPayingCard}
             />
           )}
           {activeAccountTab === 'msi' && (
             <MsiPlansSection
               msiPlans={msiPlans}
-              onAddClick={() => setShowMsiModal(true)}
+              onAddClick={handleOpenAddMsi}
+              onEditMsi={handleEditMsi}
               onPayInstallment={handlePayInstallment}
               onDeleteMsi={handleDeleteMsi}
             />
@@ -134,7 +138,8 @@ export default function FinanceStructureView({
           {activeAccountTab === 'recurring' && (
             <RecurringExpensesSection
               recurringExpenses={recurringExpenses}
-              onAddClick={() => setShowRecurringModal(true)}
+              onAddClick={handleOpenAddRecurring}
+              onEditRecurring={handleEditRecurring}
               onApproveRecurring={handleApproveRecurring}
               onDeleteRecurring={handleDeleteRecurring}
             />
@@ -146,7 +151,7 @@ export default function FinanceStructureView({
       <div
         style={{
           display: 'grid',
-          gridTemplateRows: 'minmax(220px, 46%) 1fr',
+          gridTemplateRows: 'minmax(270px, 50%) 1fr',
           gap: '0.75rem',
           height: '100%',
           overflow: 'hidden'
@@ -158,14 +163,14 @@ export default function FinanceStructureView({
             borderRadius: 'var(--radius-md, 8px)',
             border: '1px solid var(--border-color, rgba(255,255,255,0.08))',
             background: 'var(--bg-card, rgba(255,255,255,0.02))',
-            padding: '0.75rem 0.85rem',
+            padding: '0.65rem 0.8rem',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.45rem',
             overflow: 'hidden'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))', paddingBottom: '0.35rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))', paddingBottom: '0.35rem', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               {analyticsView === 'burnrate' ? (
                 <Flame size={13} style={{ color: 'var(--warning)' }} />
@@ -218,28 +223,26 @@ export default function FinanceStructureView({
                 msiPlans={msiPlans}
               />
             ) : analyticsView === 'cycle' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', height: '100%' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.55rem', height: '100%', minHeight: 0 }}>
                 <CategoryExpenseChart
-                  startDate={startDate}
-                  endDate={endDate}
                   doughnutData={doughnutData}
                   doughnutOptions={doughnutOptions}
                   hasExpenses={hasExpenses}
                 />
                 <MethodExpenseChart
-                  startDate={startDate}
-                  endDate={endDate}
                   methodData={methodData}
                   methodOptions={methodOptions}
                   hasExpenses={hasExpenses}
                 />
               </div>
             ) : (
-              <YearlyEvolutionChart
-                activeFinancialYear={activeFinancialYear}
-                barData={barData}
-                barOptions={barOptions}
-              />
+              <div style={{ height: '100%', minHeight: 0 }}>
+                <YearlyEvolutionChart
+                  activeFinancialYear={activeFinancialYear}
+                  barData={barData}
+                  barOptions={barOptions}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -273,6 +276,23 @@ export default function FinanceStructureView({
       <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} accountForm={accountForm} setAccountForm={setAccountForm} onSubmit={handleSaveAccount} />
       <MsiModal isOpen={showMsiModal} onClose={() => setShowMsiModal(false)} msiForm={msiForm} setMsiForm={setMsiForm} paymentMethods={paymentMethods} onSubmit={handleSaveMsi} />
       <RecurringModal isOpen={showRecurringModal} onClose={() => setShowRecurringModal(false)} recurringForm={recurringForm} setRecurringForm={setRecurringForm} paymentMethods={paymentMethods} onSubmit={handleSaveRecurring} />
+
+      {/* 💳 Modal de Pago / Liquidación TDC */}
+      {payingCard && (
+        <PayCreditCardModal
+          isOpen={Boolean(payingCard)}
+          onClose={() => setPayingCard(null)}
+          targetCard={payingCard}
+          paymentMethods={paymentMethods}
+          transactions={safeTransactions}
+          selectedDate={selectedDate}
+          cutoffDay={cutoffDay}
+          onConfirmPayment={async (params) => {
+            await payCreditCard(params);
+            if (onTransactionCreated) onTransactionCreated();
+          }}
+        />
+      )}
 
       {/* 🗑️ Modal Unificado de Confirmación de Borrado */}
       <StructureDeleteModal

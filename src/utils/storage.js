@@ -88,9 +88,12 @@ export const saveTransaction = async (transaction) => {
     createdAt: transaction.createdAt || null
   };
 
+  let result = [];
   if (isTauri()) {
     try {
-      return await invoke('sqlite_save_transaction', { tx: normalized });
+      result = await invoke('sqlite_save_transaction', { tx: normalized });
+      window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: result }));
+      return result;
     } catch (e) {
       console.error('[Storage SQLite] Error guardando transacción:', e);
     }
@@ -101,13 +104,17 @@ export const saveTransaction = async (transaction) => {
   } else {
     await idbAddTransaction(normalized);
   }
-  return await idbGetAllTransactions();
+  result = await idbGetAllTransactions();
+  window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: result }));
+  return result;
 };
 
 export const deleteTransaction = async (id, txRecord) => {
   if (isTauri()) {
     try {
-      return await invoke('sqlite_delete_transaction', { id: String(id) });
+      const res = await invoke('sqlite_delete_transaction', { id: String(id) });
+      window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: res }));
+      return res;
     } catch (e) {
       console.error('[Storage SQLite] Error eliminando transacción:', e);
     }
@@ -132,6 +139,7 @@ export const deleteTransaction = async (id, txRecord) => {
   if (all.length !== initialLength) {
     await idbReplaceTransactions(all);
   }
+  window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: all }));
   return all;
 };
 
@@ -492,7 +500,9 @@ export const savePaymentMethod = async (method) => {
   if (isTauri()) {
     try {
       await invoke('sqlite_save_payment_method', { method });
-      return await getPaymentMethods();
+      const updated = await getPaymentMethods();
+      window.dispatchEvent(new CustomEvent('aegis:payment-methods-changed', { detail: updated }));
+      return updated;
     } catch (e) {
       console.error('[Storage SQLite] Error guardando método de pago:', e);
     }
@@ -504,7 +514,9 @@ export const deletePaymentMethod = async (id) => {
   if (isTauri()) {
     try {
       await invoke('sqlite_delete_payment_method', { id: String(id) });
-      return await getPaymentMethods();
+      const updated = await getPaymentMethods();
+      window.dispatchEvent(new CustomEvent('aegis:payment-methods-changed', { detail: updated }));
+      return updated;
     } catch (e) {
       console.error('[Storage SQLite] Error eliminando método de pago:', e);
     }
@@ -537,16 +549,123 @@ export const saveMsiPlan = async (plan) => {
   return [];
 };
 
-export const payMsiInstallment = async (id) => {
+export const payMsiInstallment = async (id, debitMethod = null) => {
   if (isTauri()) {
     try {
-      await invoke('sqlite_pay_msi_installment', { id: String(id) });
-      return await getMsiPlans();
+      await invoke('sqlite_pay_msi_installment', {
+        id: String(id),
+        debitMethod: debitMethod || null
+      });
+      const updated = await getMsiPlans();
+      window.dispatchEvent(new CustomEvent('aegis:transactions-changed'));
+      window.dispatchEvent(new CustomEvent('aegis:msi-changed', { detail: updated }));
+      return updated;
     } catch (e) {
       console.error('[Storage SQLite] Error pagando cuota MSI:', e);
     }
   }
   return [];
+};
+
+// Helper para calcular la siguiente fecha de cobro de MSI (1 día después del corte de la tarjeta)
+export const getNextMsiBillingDate = (cutoffDay, fromDateStr = null) => {
+  const d = fromDateStr ? new Date(fromDateStr + 'T12:00:00') : new Date();
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const cDay = Number(cutoffDay) || 22;
+
+  // Fecha de corte de este mes + 1 día de cobro
+  const cutoffThisMonth = new Date(year, month, cDay, 12, 0, 0);
+  const billingThisMonth = new Date(cutoffThisMonth.getTime() + 24 * 60 * 60 * 1000);
+
+  // Si aún no llega el cobro este mes:
+  if (d.getTime() < billingThisMonth.getTime()) {
+    const y = billingThisMonth.getFullYear();
+    const m = String(billingThisMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(billingThisMonth.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dayStr}`;
+  }
+
+  // Si ya pasó el cobro de este mes, programar para 1 día después del corte del próximo mes:
+  const cutoffNextMonth = new Date(year, month + 1, cDay, 12, 0, 0);
+  const billingNextMonth = new Date(cutoffNextMonth.getTime() + 24 * 60 * 60 * 1000);
+  const y = billingNextMonth.getFullYear();
+  const m = String(billingNextMonth.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(billingNextMonth.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dayStr}`;
+};
+
+// Procesador automático de cobros de cuotas MSI (se ejecuta al iniciar o cambiar fechas)
+export const processAutoMsiInstallments = async () => {
+  if (isTauri()) {
+    try {
+      const today = getTodayLocalDateStr();
+      const count = await invoke('sqlite_process_auto_msi_installments', { todayOpt: today });
+      if (count > 0) {
+        window.dispatchEvent(new CustomEvent('aegis:transactions-changed'));
+        window.dispatchEvent(new CustomEvent('aegis:msi-changed'));
+      }
+      return count;
+    } catch (e) {
+      console.error('[Storage SQLite] Error en cobro automático de MSI:', e);
+    }
+  }
+  return 0;
+};
+
+// --- LIQUIDACIÓN / PAGO DE TARJETA DE CRÉDITO (V2.2.0) ---
+export const payCreditCard = async ({ card, debitAccount, amount, date, description }) => {
+  const parsedAmount = parseFloat(amount);
+  if (!parsedAmount || parsedAmount <= 0) {
+    throw new Error('Monto de pago inválido');
+  }
+
+  const opDate = date || getTodayLocalDateStr();
+  const cardName = typeof card === 'string' ? card : (card?.name || 'Tarjeta');
+  const fromDebit = debitAccount || 'Débito';
+
+  // 1. Egreso desde la cuenta de fondos / débito
+  const debitExpense = {
+    amount: parsedAmount,
+    type: 'expense',
+    category: 'Pago Tarjeta',
+    paymentMethod: fromDebit,
+    date: opDate,
+    description: description || `Liquidación TDC ${cardName}`
+  };
+
+  // 2. Abono / Ingreso que liquida la deuda del ciclo en la tarjeta de crédito
+  const cardIncome = {
+    amount: parsedAmount,
+    type: 'income',
+    category: 'Abono / Pago Tarjeta',
+    paymentMethod: cardName,
+    date: opDate,
+    description: `Abono liquidación TDC ${cardName}`
+  };
+
+  // Guardar ambas operaciones
+  await saveTransaction(debitExpense);
+  await saveTransaction(cardIncome);
+
+  // 3. Si la cuenta de débito tiene saldo registrado, descontar el monto pagado
+  try {
+    const methods = await getPaymentMethods();
+    if (Array.isArray(methods)) {
+      const matchDebit = methods.find(
+        (m) => m.name.toLowerCase() === fromDebit.toLowerCase() || String(m.id) === String(fromDebit)
+      );
+      if (matchDebit && typeof matchDebit.balance === 'number') {
+        matchDebit.balance = Math.max(0, matchDebit.balance - parsedAmount);
+        await savePaymentMethod(matchDebit);
+      }
+    }
+  } catch (err) {
+    console.warn('[Storage] No se pudo actualizar balance de débito tras pago TDC:', err);
+  }
+
+  window.dispatchEvent(new CustomEvent('aegis:transactions-changed'));
+  return true;
 };
 
 export const deleteMsiPlan = async (id) => {

@@ -1,11 +1,12 @@
 import React from 'react';
-import { CreditCard, Plus, Trash2, Wallet, Banknote, Pencil } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Wallet, Banknote, Pencil, Zap } from 'lucide-react';
 
 export default function AccountsSection({
   paymentMethods = [],
   onAddClick,
   onEditAccount,
-  onDeleteAccount
+  onDeleteAccount,
+  onPayCard
 }) {
   return (
     <div style={{
@@ -115,6 +116,25 @@ export default function AccountsSection({
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                    {isCredit && (
+                      <button
+                        type="button"
+                        onClick={() => onPayCard && onPayCard(pm)}
+                        className="structure-action-btn"
+                        style={{
+                          background: 'color-mix(in srgb, var(--accent, var(--primary)) 16%, transparent)',
+                          borderColor: 'color-mix(in srgb, var(--accent, var(--primary)) 35%, transparent)',
+                          color: 'var(--accent, var(--primary))',
+                          padding: '3px 7px',
+                          fontSize: '0.66rem'
+                        }}
+                        title="Pagar / liquidar saldo de esta tarjeta"
+                      >
+                        <Zap size={11} />
+                        <span>Pagar</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => onEditAccount && onEditAccount(pm)}
