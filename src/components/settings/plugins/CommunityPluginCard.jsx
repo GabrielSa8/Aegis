@@ -58,7 +58,6 @@ export default function CommunityPluginCard({ plugin, onToggle, onUninstall }) {
             checked={isEnabled}
             onChange={() => onToggle(manifest.id, isEnabled)}
           />
-          <span className="slider round"></span>
         </label>
       </div>
 

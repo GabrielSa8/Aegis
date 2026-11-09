@@ -115,7 +115,6 @@ export default function AegisHarnessCard({ config, setConfig }) {
             checked={Boolean(harness.enabled)}
             onChange={(e) => updateHarnessField('enabled', e.target.checked)}
           />
-          <span className="tactical-slider" />
         </label>
       </div>
 
@@ -165,7 +164,6 @@ export default function AegisHarnessCard({ config, setConfig }) {
                     checked={checked}
                     onChange={(e) => updateHarnessField(pillar.key, e.target.checked)}
                   />
-                  <span className="tactical-slider" />
                 </label>
               </div>
             );

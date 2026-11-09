@@ -79,7 +79,6 @@ export default function P2pSyncSection() {
             disabled={loading}
             onChange={(e) => toggleSync(e.target.checked)}
           />
-          <span className="slider round"></span>
         </label>
       </div>
 

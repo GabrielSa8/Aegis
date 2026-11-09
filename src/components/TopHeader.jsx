@@ -74,37 +74,54 @@ export default function TopHeader({
           cursor: isPinned ? 'default' : 'pointer'
         }}
       >
-        {/* 🛡️ Brand Logo AEGIS */}
+        {/* 🛡️ Brand Logo Aegis */}
         <div 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '7px', 
+            gap: '8px', 
             cursor: 'default',
             flexShrink: 0,
-            paddingRight: '4px'
+            paddingRight: '6px'
           }}
-          title="Aegis Master Cockpit"
+          title="Aegis Cockpit"
         >
           <div style={{
-            background: 'color-mix(in srgb, var(--primary) 16%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--primary) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--primary) 18%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--primary) 45%, transparent)',
+            boxShadow: '0 0 10px color-mix(in srgb, var(--primary) 25%, transparent)',
             padding: '4px',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
           }}>
             <ShieldCheck size={14} color="var(--primary)" />
           </div>
-          <span style={{ 
-            fontSize: '0.82rem', 
-            fontWeight: 800, 
-            color: 'var(--text-high)', 
-            letterSpacing: '0.08em' 
-          }}>
-            AEGIS
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ 
+              fontSize: '0.84rem', 
+              fontWeight: 800, 
+              letterSpacing: '0.06em',
+              background: 'linear-gradient(135deg, var(--text-high) 35%, var(--primary) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              Aegis
+            </span>
+            <span
+              style={{
+                width: '5px',
+                height: '5px',
+                borderRadius: '50%',
+                background: 'var(--primary)',
+                boxShadow: '0 0 6px var(--primary)',
+                opacity: 0.85
+              }}
+              title="Aegis Online"
+            />
+          </div>
         </div>
 
         {/* Separador */}

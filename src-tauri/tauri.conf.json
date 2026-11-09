@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aegis",
-  "version": "2.17.0",
+  "version": "2.17.1",
   "identifier": "com.aegis.cockpit",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Aegis — Command Center",
+        "title": "Aegis",
         "width": 1280,
         "height": 800,
         "minWidth": 960,

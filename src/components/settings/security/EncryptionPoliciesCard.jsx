@@ -53,7 +53,6 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
             checked={!!status?.encryptCredentials}
             onChange={(e) => onTogglePolicy('encryptCredentials', e.target.checked)}
           />
-          <span className="slider round"></span>
         </label>
       </div>
 
@@ -88,7 +87,6 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
             checked={!!status?.encryptDatabase}
             onChange={(e) => onTogglePolicy('encryptDatabase', e.target.checked)}
           />
-          <span className="slider round"></span>
         </label>
       </div>
 
@@ -123,7 +121,6 @@ export default function EncryptionPoliciesCard({ status, onTogglePolicy, disable
             checked={!!status?.lockOnTrayMinimize}
             onChange={(e) => onTogglePolicy('lockOnTrayMinimize', e.target.checked)}
           />
-          <span className="slider round"></span>
         </label>
       </div>
     </div>

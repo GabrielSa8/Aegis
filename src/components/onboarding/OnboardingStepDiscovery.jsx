@@ -204,7 +204,6 @@ export function OnboardingStepDiscovery({
               checked={Boolean(harnessEnabled)}
               onChange={(e) => setHarnessEnabled && setHarnessEnabled(e.target.checked)}
             />
-            <span className="tactical-slider" />
           </label>
         </div>
       </div>
