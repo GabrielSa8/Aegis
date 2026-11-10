@@ -179,7 +179,7 @@ pub fn init_p2p_background_services() {
                 // 1. Iniciar loop de fondo para broadcast y descubrimiento UDP
                 let notify_udp = notify.clone();
                 let peers_map_clone = peers_map.clone();
-                tokio::spawn(async move {
+                let udp_handle = tokio::spawn(async move {
                     loop {
                         let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
                         if !config.p2p_sync.enabled {
@@ -285,7 +285,7 @@ pub fn init_p2p_background_services() {
 
                 // 2. Iniciar servidor TCP/HTTP ligero para transferencias P2P
                 let notify_tcp = notify.clone();
-                tokio::spawn(async move {
+                let tcp_handle = tokio::spawn(async move {
                     loop {
                         let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
                         if !config.p2p_sync.enabled {
@@ -337,7 +337,7 @@ pub fn init_p2p_background_services() {
                 // 3. Iniciar loop de sondeo Unicast LAN (evade AP isolation / bloqueo broadcast de routers Wi-Fi)
                 let notify_sweep = notify.clone();
                 let peers_map_sweep = peers_map.clone();
-                tokio::spawn(async move {
+                let sweep_handle = tokio::spawn(async move {
                     loop {
                         let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
                         if !config.p2p_sync.enabled {
@@ -360,6 +360,8 @@ pub fn init_p2p_background_services() {
                         }
                     }
                 });
+
+                let _ = tokio::join!(udp_handle, tcp_handle, sweep_handle);
             });
         });
 }
