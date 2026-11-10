@@ -6,8 +6,19 @@ export function useP2pSync() {
   const [loading, setLoading] = useState(true);
   const [syncingPeerIp, setSyncingPeerIp] = useState(null);
   const [lastSyncResult, setLastSyncResult] = useState(null);
+  const [firewallStatus, setFirewallStatus] = useState(null);
   const [error, setError] = useState(null);
   const isMountedRef = useRef(true);
+
+  const checkFirewall = useCallback(async () => {
+    try {
+      const fw = await invoke('check_p2p_firewall_status');
+      if (isMountedRef.current) setFirewallStatus(fw);
+      return fw;
+    } catch (_) {
+      return null;
+    }
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -28,6 +39,7 @@ export function useP2pSync() {
   useEffect(() => {
     isMountedRef.current = true;
     fetchStatus();
+    checkFirewall();
 
     // Polling regular cada 3.5s para mantener el radar de la LAN al día
     const interval = setInterval(() => {
@@ -38,7 +50,19 @@ export function useP2pSync() {
       isMountedRef.current = false;
       clearInterval(interval);
     };
-  }, [fetchStatus]);
+  }, [fetchStatus, checkFirewall]);
+
+  const openFirewallTerminal = async () => {
+    try {
+      await invoke('open_p2p_firewall_terminal');
+      // Re-verificar firewall en 6 segundos
+      setTimeout(() => {
+        checkFirewall();
+      }, 6000);
+    } catch (err) {
+      setError(typeof err === 'string' ? err : 'Error abriendo terminal');
+    }
+  };
 
   const toggleSync = async (enabled) => {
     setLoading(true);
@@ -46,6 +70,14 @@ export function useP2pSync() {
       const updated = await invoke('toggle_p2p_sync', { enabled });
       setStatus(updated);
       setError(null);
+
+      if (enabled) {
+        const fw = await checkFirewall();
+        if (fw && !fw.isOpen && fw.firewallType !== 'none') {
+          // Abrir automáticamente la terminal configurada para ejecutar el comando
+          await openFirewallTerminal();
+        }
+      }
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Error al cambiar estado P2P');
     } finally {
@@ -129,6 +161,9 @@ export function useP2pSync() {
     syncingPeerIp,
     lastSyncResult,
     error,
+    firewallStatus,
+    checkFirewall,
+    openFirewallTerminal,
     refreshStatus: fetchStatus,
     toggleSync,
     updateDeviceName,

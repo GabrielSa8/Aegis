@@ -38,9 +38,54 @@ fn get_local_ip() -> String {
 }
 
 fn get_unique_device_id() -> String {
-    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "host".to_string());
-    let user = std::env::var("USER").unwrap_or_else(|_| "operator".to_string());
-    format!("aegis-{}-{}", user, hostname)
+    if let Ok(mut cfg) = get_aegis_config() {
+        if !cfg.p2p_sync.device_id.trim().is_empty() {
+            return cfg.p2p_sync.device_id.clone();
+        }
+        let user = std::env::var("USER").unwrap_or_else(|_| "operator".to_string());
+        let new_id = format!("aegis-{}-{}", user, hex::encode(&rand::random::<[u8; 4]>()));
+        cfg.p2p_sync.device_id = new_id.clone();
+        let _ = save_aegis_config(cfg);
+        new_id
+    } else {
+        let user = std::env::var("USER").unwrap_or_else(|_| "operator".to_string());
+        format!("aegis-{}-{}", user, hex::encode(&rand::random::<[u8; 4]>()))
+    }
+}
+
+fn get_subnet_broadcast_ip(local_ip: &str) -> Option<String> {
+    if let Ok(ip) = local_ip.parse::<std::net::Ipv4Addr>() {
+        let o = ip.octets();
+        if o[0] != 127 {
+            return Some(format!("{}.{}.{}.255", o[0], o[1], o[2]));
+        }
+    }
+    None
+}
+
+fn create_reusable_udp_socket(port: u16) -> Result<tokio::net::UdpSocket, String> {
+    use socket2::{Domain, Protocol, Socket, Type};
+
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))
+        .map_err(|e| format!("Error creando socket2 UDP: {}", e))?;
+
+    let _ = socket.set_reuse_address(true);
+    #[cfg(all(unix, not(target_os = "solaris"), not(target_os = "illumos")))]
+    let _ = socket.set_reuse_port(true);
+    let _ = socket.set_broadcast(true);
+    let _ = socket.set_nonblocking(true);
+
+    let bind_addr: SocketAddr = format!("0.0.0.0:{}", port)
+        .parse()
+        .map_err(|e| format!("Error parseando dirección: {}", e))?;
+
+    socket
+        .bind(&bind_addr.into())
+        .map_err(|e| format!("Error enlazando UDP {}: {}", port, e))?;
+
+    let std_socket: std::net::UdpSocket = socket.into();
+    tokio::net::UdpSocket::from_std(std_socket)
+        .map_err(|e| format!("Error convirtiendo a Tokio UdpSocket: {}", e))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,7 +149,7 @@ pub fn init_p2p_background_services() {
 
             rt.block_on(async move {
                 // 1. Iniciar loop de fondo para broadcast y descubrimiento UDP
-                let notify_clone = notify.clone();
+                let notify_udp = notify.clone();
                 let peers_map_clone = peers_map.clone();
                 tokio::spawn(async move {
                     loop {
@@ -113,7 +158,7 @@ pub fn init_p2p_background_services() {
                             P2P_ACTIVE.store(false, Ordering::Relaxed);
                             tokio::select! {
                                 _ = tokio::time::sleep(Duration::from_secs(3)) => {},
-                                _ = notify_clone.notified() => {},
+                                _ = notify_udp.notified() => {},
                             }
                             continue;
                         }
@@ -124,15 +169,15 @@ pub fn init_p2p_background_services() {
                         let my_id = get_unique_device_id();
                         let my_name = config.p2p_sync.device_name.clone();
 
-                        // Bind UDP socket para broadcast y escucha
-                        let socket = match tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", disc_port)).await {
-                            Ok(s) => {
-                                let _ = s.set_broadcast(true);
-                                Arc::new(s)
-                            }
+                        // Socket UDP con SO_REUSEADDR y SO_REUSEPORT
+                        let socket = match create_reusable_udp_socket(disc_port) {
+                            Ok(s) => Arc::new(s),
                             Err(e) => {
-                                log::warn!("[Aegis P2P] No se pudo enlazar UDP {}: {}", disc_port, e);
-                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                log::warn!("[Aegis P2P] Reutilización UDP {}: {}", disc_port, e);
+                                tokio::select! {
+                                    _ = tokio::time::sleep(Duration::from_secs(3)) => {},
+                                    _ = notify_udp.notified() => {},
+                                }
                                 continue;
                             }
                         };
@@ -140,10 +185,15 @@ pub fn init_p2p_background_services() {
                         let socket_sender = socket.clone();
                         let my_id_send = my_id.clone();
                         let my_name_send = my_name.clone();
+                        let local_ip = get_local_ip();
+                        let subnet_broadcast = get_subnet_broadcast_ip(&local_ip);
 
-                        // Tarea emisora de beacon cada 3 segundos
+                        // Tarea emisora de beacon dual (255.255.255.255 + Subnet Directed Broadcast)
                         let beacon_handle = tokio::spawn(async move {
-                            let target: SocketAddr = format!("255.255.255.255:{}", disc_port).parse().unwrap();
+                            let limited_target: SocketAddr = format!("255.255.255.255:{}", disc_port).parse().unwrap();
+                            let subnet_target: Option<SocketAddr> = subnet_broadcast
+                                .and_then(|ip| format!("{}:{}", ip, disc_port).parse().ok());
+
                             while P2P_ACTIVE.load(Ordering::Relaxed) {
                                 let beacon = BeaconPayload {
                                     protocol: "aegis-p2p-v1".to_string(),
@@ -153,14 +203,17 @@ pub fn init_p2p_background_services() {
                                     version: env!("CARGO_PKG_VERSION").to_string(),
                                 };
                                 if let Ok(bytes) = serde_json::to_vec(&beacon) {
-                                    let _ = socket_sender.send_to(&bytes, target).await;
+                                    let _ = socket_sender.send_to(&bytes, limited_target).await;
+                                    if let Some(target) = subnet_target {
+                                        let _ = socket_sender.send_to(&bytes, target).await;
+                                    }
                                 }
                                 tokio::time::sleep(Duration::from_secs(3)).await;
                             }
                         });
 
                         // Tarea receptora de beacons
-                        let mut buf = [0u8; 1024];
+                        let mut buf = [0u8; 2048];
                         while P2P_ACTIVE.load(Ordering::Relaxed) {
                             tokio::select! {
                                 recv_res = socket.recv_from(&mut buf) => {
@@ -192,7 +245,7 @@ pub fn init_p2p_background_services() {
                                         }
                                     }
                                 }
-                                _ = notify_clone.notified() => {
+                                _ = notify_udp.notified() => {
                                     break;
                                 }
                             }
@@ -203,33 +256,55 @@ pub fn init_p2p_background_services() {
                 });
 
                 // 2. Iniciar servidor TCP/HTTP ligero para transferencias P2P
-                loop {
-                    let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-                    if !config.p2p_sync.enabled {
-                        tokio::time::sleep(Duration::from_secs(3)).await;
-                        continue;
-                    }
-
-                    let sync_port = config.p2p_sync.sync_port;
-                    let listener = match TcpListener::bind(format!("0.0.0.0:{}", sync_port)).await {
-                        Ok(l) => l,
-                        Err(e) => {
-                            log::warn!("[Aegis P2P Server] Error bind TCP {}: {}", sync_port, e);
-                            tokio::time::sleep(Duration::from_secs(5)).await;
+                let notify_tcp = notify.clone();
+                tokio::spawn(async move {
+                    loop {
+                        let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                        if !config.p2p_sync.enabled {
+                            tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_secs(3)) => {},
+                                _ = notify_tcp.notified() => {},
+                            }
                             continue;
                         }
-                    };
 
-                    log::info!("[Aegis P2P Server] Escuchando en 0.0.0.0:{}", sync_port);
+                        let sync_port = config.p2p_sync.sync_port;
+                        let listener = match TcpListener::bind(format!("0.0.0.0:{}", sync_port)).await {
+                            Ok(l) => l,
+                            Err(e) => {
+                                log::warn!("[Aegis P2P Server] Error bind TCP {}: {}", sync_port, e);
+                                tokio::select! {
+                                    _ = tokio::time::sleep(Duration::from_secs(5)) => {},
+                                    _ = notify_tcp.notified() => {},
+                                }
+                                continue;
+                            }
+                        };
 
-                    while P2P_ACTIVE.load(Ordering::Relaxed) {
-                        if let Ok((mut stream, addr)) = listener.accept().await {
-                            tokio::spawn(async move {
-                                let _ = handle_peer_connection(&mut stream, addr).await;
-                            });
+                        log::info!("[Aegis P2P Server] Escuchando en 0.0.0.0:{}", sync_port);
+
+                        loop {
+                            tokio::select! {
+                                accept_res = listener.accept() => {
+                                    match accept_res {
+                                        Ok((mut stream, addr)) => {
+                                            tokio::spawn(async move {
+                                                let _ = handle_peer_connection(&mut stream, addr).await;
+                                            });
+                                        }
+                                        Err(e) => {
+                                            log::warn!("[Aegis P2P Server] Error en accept: {}", e);
+                                        }
+                                    }
+                                }
+                                _ = notify_tcp.notified() => {
+                                    log::info!("[Aegis P2P Server] Notificación recibida, reevaluando listener...");
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
+                });
             });
         });
 }
@@ -317,7 +392,24 @@ async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Re
             let req_name = body.get("requesterName").and_then(|v| v.as_str()).unwrap_or("Dispositivo Remoto");
 
             let mut cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
-            if req_pin == cfg.p2p_sync.pairing_pin && !req_pin.is_empty() {
+            let now_secs = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+
+            let is_expired = cfg
+                .p2p_sync
+                .pairing_pin_expires_at
+                .map(|exp| now_secs > exp)
+                .unwrap_or(false);
+
+            if is_expired {
+                let res = serde_json::json!({
+                    "success": false,
+                    "error": "El PIN ha expirado. Genera uno nuevo en el dispositivo destino."
+                });
+                send_http_json_response(stream, 401, &res).await?;
+            } else if req_pin == cfg.p2p_sync.pairing_pin && !req_pin.is_empty() {
                 // Agregar a dispositivos de confianza
                 if !cfg.p2p_sync.trusted_devices.iter().any(|d| d.id == req_id) {
                     cfg.p2p_sync.trusted_devices.push(TrustedDevice {
@@ -337,7 +429,10 @@ async fn handle_peer_connection(stream: &mut TcpStream, _addr: SocketAddr) -> Re
                 });
                 send_http_json_response(stream, 200, &res).await?;
             } else {
-                let res = serde_json::json!({ "success": false, "error": "PIN inválido" });
+                let res = serde_json::json!({
+                    "success": false,
+                    "error": "PIN inválido. Verifica el código de 6 dígitos que muestra el otro dispositivo."
+                });
                 send_http_json_response(stream, 401, &res).await?;
             }
         }
@@ -561,22 +656,53 @@ pub struct P2pStatusReport {
     pub discovery_port: u16,
     pub sync_port: u16,
     pub pairing_pin: String,
+    pub pairing_pin_expires_at: u64,
+    pub pin_remaining_secs: u64,
     pub discovered_peers: Vec<PeerInfo>,
     pub trusted_devices: Vec<TrustedDevice>,
 }
 
 #[tauri::command]
 pub fn get_p2p_sync_status() -> Result<P2pStatusReport, String> {
-    let cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let now_secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let mut cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    let mut needs_save = false;
+
+    if cfg.p2p_sync.device_id.trim().is_empty() {
+        cfg.p2p_sync.device_id = get_unique_device_id();
+        needs_save = true;
+    }
+
+    let is_pin_expired = cfg
+        .p2p_sync
+        .pairing_pin_expires_at
+        .map(|exp| now_secs >= exp)
+        .unwrap_or(true);
+
+    if is_pin_expired || cfg.p2p_sync.pairing_pin.trim().is_empty() {
+        let (new_pin, new_exp) = crate::config::generate_random_pin_with_ttl();
+        cfg.p2p_sync.pairing_pin = new_pin;
+        cfg.p2p_sync.pairing_pin_expires_at = Some(new_exp);
+        needs_save = true;
+    }
+
+    if needs_save {
+        let _ = save_aegis_config(cfg.clone());
+    }
+
     let peers_map = get_peers_map();
     let map = peers_map.lock().unwrap();
 
-    let now = Instant::now();
+    let now_instant = Instant::now();
     let mut discovered: Vec<PeerInfo> = Vec::new();
 
     for (_id, internal) in map.iter() {
-        let elapsed = now.duration_since(internal.last_seen_instant).as_secs();
-        if elapsed < 30 {
+        let elapsed = now_instant.duration_since(internal.last_seen_instant).as_secs();
+        if elapsed < 60 {
             let mut info = internal.info.clone();
             info.last_seen_secs_ago = elapsed;
             info.is_paired = cfg
@@ -588,15 +714,20 @@ pub fn get_p2p_sync_status() -> Result<P2pStatusReport, String> {
         }
     }
 
+    let exp_at = cfg.p2p_sync.pairing_pin_expires_at.unwrap_or(now_secs + 600);
+    let remaining = exp_at.saturating_sub(now_secs);
+
     Ok(P2pStatusReport {
         enabled: cfg.p2p_sync.enabled,
         is_active: P2P_ACTIVE.load(Ordering::Relaxed),
         local_ip: get_local_ip(),
-        device_id: get_unique_device_id(),
+        device_id: cfg.p2p_sync.device_id,
         device_name: cfg.p2p_sync.device_name,
         discovery_port: cfg.p2p_sync.discovery_port,
         sync_port: cfg.p2p_sync.sync_port,
         pairing_pin: cfg.p2p_sync.pairing_pin,
+        pairing_pin_expires_at: exp_at,
+        pin_remaining_secs: remaining,
         discovered_peers: discovered,
         trusted_devices: cfg.p2p_sync.trusted_devices,
     })
@@ -624,15 +755,10 @@ pub fn update_p2p_device_name(name: String) -> Result<P2pStatusReport, String> {
 
 #[tauri::command]
 pub fn generate_new_pairing_pin() -> Result<String, String> {
-    use std::time::SystemTime;
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-    let pin = format!("{:06}", (seed % 900_000) + 100_000);
-
+    let (pin, expires_at) = crate::config::generate_random_pin_with_ttl();
     let mut cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
     cfg.p2p_sync.pairing_pin = pin.clone();
+    cfg.p2p_sync.pairing_pin_expires_at = Some(expires_at);
     save_aegis_config(cfg)?;
 
     Ok(pin)
@@ -656,16 +782,19 @@ pub async fn pair_with_remote_peer(
     });
 
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(6))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let res = client
-        .post(&target_url)
-        .json(&payload)
-        .send()
-        .await
-        .map_err(|e| format!("Error conectando con {}: {}", target_url, e))?;
+    let res = match client.post(&target_url).json(&payload).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(format!(
+                "Error conectando con {}: {}. Verifica que ambos equipos estén en la misma red y que el puerto TCP {} no esté bloqueado en el firewall (ej. sudo firewall-cmd --add-port={}/tcp --permanent && sudo firewall-cmd --reload)",
+                target_url, e, peer_port, peer_port
+            ));
+        }
+    };
 
     if res.status().is_success() {
         let resp_json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
@@ -689,7 +818,11 @@ pub async fn pair_with_remote_peer(
 
         Ok(format!("Dispositivo {} emparejado con éxito", remote_device_id))
     } else {
-        Err(format!("Error de emparejamiento. Verifica que el PIN coincida."))
+        let error_body = res.json::<serde_json::Value>().await.ok();
+        let error_detail = error_body
+            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(|s| s.to_string()))
+            .unwrap_or_else(|| "PIN incorrecto o expirado.".to_string());
+        Err(format!("Fallo de emparejamiento: {}", error_detail))
     }
 }
 
@@ -765,6 +898,96 @@ pub async fn trigger_p2p_replicate(
         items_sent,
         duration_ms: elapsed,
     })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P2pFirewallStatus {
+    pub is_open: bool,
+    pub firewall_type: String, // "firewalld" | "ufw" | "none"
+    pub message: String,
+}
+
+#[tauri::command]
+pub fn check_p2p_firewall_status() -> Result<P2pFirewallStatus, String> {
+    // 1. Probar firewalld (Fedora / RHEL / openSUSE)
+    let fw_active = std::process::Command::new("systemctl")
+        .args(["is-active", "firewalld"])
+        .output();
+    if let Ok(out) = fw_active {
+        if String::from_utf8_lossy(&out.stdout).trim() == "active" {
+            let q_udp = std::process::Command::new("firewall-cmd")
+                .args(["--query-port=53317/udp"])
+                .status();
+            let q_tcp = std::process::Command::new("firewall-cmd")
+                .args(["--query-port=53318/tcp"])
+                .status();
+            let is_open = q_udp.map(|s| s.success()).unwrap_or(false)
+                && q_tcp.map(|s| s.success()).unwrap_or(false);
+            return Ok(P2pFirewallStatus {
+                is_open,
+                firewall_type: "firewalld".to_string(),
+                message: if is_open {
+                    "Puertos 53317 (UDP) y 53318 (TCP) autorizados en firewalld".to_string()
+                } else {
+                    "Puertos 53317 (UDP) y 53318 (TCP) cerrados en firewalld".to_string()
+                },
+            });
+        }
+    }
+
+    // 2. Probar ufw (Ubuntu / Debian / Mint)
+    let ufw_status = std::process::Command::new("ufw")
+        .arg("status")
+        .output();
+    if let Ok(out) = ufw_status {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if text.contains("Status: active") {
+            let is_open = text.contains("53317/udp") && text.contains("53318/tcp");
+            return Ok(P2pFirewallStatus {
+                is_open,
+                firewall_type: "ufw".to_string(),
+                message: if is_open {
+                    "Puertos 53317 (UDP) y 53318 (TCP) autorizados en ufw".to_string()
+                } else {
+                    "Puertos 53317 (UDP) y 53318 (TCP) cerrados en ufw".to_string()
+                },
+            });
+        }
+    }
+
+    // Sin firewall activo detectado
+    Ok(P2pFirewallStatus {
+        is_open: true,
+        firewall_type: "none".to_string(),
+        message: "No se detectó un firewall activo que bloquee los puertos".to_string(),
+    })
+}
+
+#[tauri::command]
+pub fn open_p2p_firewall_terminal() -> Result<String, String> {
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+    let script = "echo -e \"\\033[1;36m🛡️  Aegis P2P · Configuración de Firewall LAN\\033[0m\"; \
+echo \"Habilitando puertos 53317/UDP y 53318/TCP en el firewall del sistema...\"; \
+echo \"\"; \
+if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active firewalld >/dev/null 2>&1; then \
+    sudo firewall-cmd --add-port=53317/udp --add-port=53318/tcp --permanent && sudo firewall-cmd --reload; \
+elif command -v ufw >/dev/null 2>&1; then \
+    sudo ufw allow 53317/udp && sudo ufw allow 53318/tcp; \
+else \
+    echo \"No se detectó un firewall activo que requiera configuración.\"; \
+fi; \
+echo \"\"; \
+echo -e \"\\033[1;32m✓ Puertos de red listos para sincronización P2P.\\033[0m Presiona ENTER para salir.\"; \
+read -r";
+
+    crate::environment::launch_terminal_in_dir(
+        &home_dir,
+        Some(script),
+        Some("Aegis P2P Firewall Setup"),
+        None,
+        None,
+    )
 }
 
 #[tauri::command]

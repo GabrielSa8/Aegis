@@ -171,6 +171,8 @@ pub struct TrustedDevice {
 pub struct P2pSyncConfig {
     #[serde(default = "default_false")]
     pub enabled: bool,
+    #[serde(default)]
+    pub device_id: String,
     #[serde(default = "default_device_name")]
     pub device_name: String,
     #[serde(default = "default_discovery_port")]
@@ -180,6 +182,8 @@ pub struct P2pSyncConfig {
     #[serde(default)]
     pub pairing_pin: String,
     #[serde(default)]
+    pub pairing_pin_expires_at: Option<u64>,
+    #[serde(default)]
     pub trusted_devices: Vec<TrustedDevice>,
     #[serde(default = "default_true")]
     pub sync_database: bool,
@@ -187,14 +191,30 @@ pub struct P2pSyncConfig {
     pub sync_vault: bool,
 }
 
+pub fn generate_random_pin_with_ttl() -> (String, u64) {
+    let pin_num: u32 = (rand::random::<u32>() % 900_000) + 100_000;
+    let pin = format!("{:06}", pin_num);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let expires_at = now + 600; // 10 minutos TTL
+    (pin, expires_at)
+}
+
 impl Default for P2pSyncConfig {
     fn default() -> Self {
+        let (pin, expires_at) = generate_random_pin_with_ttl();
+        let user = std::env::var("USER").unwrap_or_else(|_| "operator".to_string());
+        let device_id = format!("aegis-{}-{}", user, hex::encode(&rand::random::<[u8; 4]>()));
         Self {
             enabled: false,
+            device_id,
             device_name: default_device_name(),
             discovery_port: default_discovery_port(),
             sync_port: default_sync_port(),
-            pairing_pin: "749201".to_string(),
+            pairing_pin: pin,
+            pairing_pin_expires_at: Some(expires_at),
             trusted_devices: Vec::new(),
             sync_database: true,
             sync_vault: false,

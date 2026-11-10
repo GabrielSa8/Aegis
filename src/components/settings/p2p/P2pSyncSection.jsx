@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wifi, Radio, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Wifi, Radio, RefreshCw, CheckCircle2, AlertCircle, Copy, Check, Terminal, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useP2pSync } from './useP2pSync';
 import PeerDeviceCard from './PeerDeviceCard';
 import LocalDevicePinDeck from './LocalDevicePinDeck';
@@ -13,6 +13,8 @@ export default function P2pSyncSection() {
     loading,
     syncingPeerIp,
     lastSyncResult,
+    firewallStatus,
+    openFirewallTerminal,
     error,
     toggleSync,
     updateDeviceName,
@@ -24,7 +26,15 @@ export default function P2pSyncSection() {
   } = useP2pSync();
 
   const [pairModalPeer, setPairModalPeer] = useState(null);
+  const [copiedCmd, setCopiedCmd] = useState(false);
   const isEnabled = status?.enabled ?? false;
+
+  const firewallCmd = 'sudo firewall-cmd --add-port=53317/udp --add-port=53318/tcp --permanent && sudo firewall-cmd --reload';
+  const handleCopyCmd = () => {
+    navigator.clipboard.writeText(firewallCmd);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -72,14 +82,49 @@ export default function P2pSyncSection() {
           </div>
         </div>
 
-        <label className="tactical-switch" style={{ cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={isEnabled}
-            disabled={loading}
-            onChange={(e) => toggleSync(e.target.checked)}
-          />
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {firewallStatus && isEnabled && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <TacticalBadge
+                variant={firewallStatus.portsOpen ? 'success' : 'warning'}
+                size="sm"
+                title={firewallStatus.details}
+              >
+                {firewallStatus.portsOpen ? (
+                  <>
+                    <ShieldCheck size={11} style={{ marginRight: '4px' }} />
+                    PUERTOS OK
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert size={11} style={{ marginRight: '4px' }} />
+                    PUERTOS BLOQUEADOS
+                  </>
+                )}
+              </TacticalBadge>
+              {!firewallStatus.portsOpen && (
+                <TacticalButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={openFirewallTerminal}
+                  title="Abrir terminal para autorizar puertos UDP 53317 y TCP 53318 en firewall"
+                >
+                  <Terminal size={11} style={{ marginRight: '4px' }} />
+                  Abrir Puertos
+                </TacticalButton>
+              )}
+            </div>
+          )}
+
+          <label className="tactical-switch" style={{ cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={isEnabled}
+              disabled={loading}
+              onChange={(e) => toggleSync(e.target.checked)}
+            />
+          </label>
+        </div>
       </div>
 
       {isEnabled && (
@@ -114,17 +159,40 @@ export default function P2pSyncSection() {
           {error && (
             <div style={{
               display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.6rem 0.85rem',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              padding: '0.75rem 0.9rem',
               borderRadius: 'var(--radius-sm)',
               background: 'color-mix(in srgb, var(--danger) 10%, transparent)',
               border: '1px solid var(--danger)',
               color: 'var(--danger)',
               fontSize: '0.75rem'
             }}>
-              <AlertCircle size={16} />
-              <span>{error}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+              {error.includes('firewall') && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                  gap: '0.5rem',
+                  marginTop: '2px'
+                }}>
+                  <code style={{ fontSize: '0.68rem', color: 'var(--text-high)', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+                    {firewallCmd}
+                  </code>
+                  <TacticalButton variant="ghost" size="sm" onClick={handleCopyCmd} title="Copiar comando al portapapeles">
+                    {copiedCmd ? <Check size={12} color="var(--primary)" /> : <Copy size={12} />}
+                    {copiedCmd ? 'Copiado' : 'Copiar'}
+                  </TacticalButton>
+                </div>
+              )}
             </div>
           )}
 

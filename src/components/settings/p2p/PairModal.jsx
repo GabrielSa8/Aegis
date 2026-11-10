@@ -59,7 +59,7 @@ export default function PairModal({ peer, isOpen, onClose, onConfirmPair }) {
               type="text"
               maxLength={8}
               autoFocus
-              placeholder="Ej: 749201"
+              placeholder="Código de 6 dígitos"
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
               style={{

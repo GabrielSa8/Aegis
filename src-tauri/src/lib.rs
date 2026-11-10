@@ -182,6 +182,8 @@ pub fn run() {
             sync::pair_with_remote_peer,
             sync::trigger_p2p_replicate,
             sync::unpair_peer_device,
+            sync::check_p2p_firewall_status,
+            sync::open_p2p_firewall_terminal,
             plugins::list_installed_community_plugins,
             plugins::install_plugin_package,
             plugins::install_plugin_from_url,
