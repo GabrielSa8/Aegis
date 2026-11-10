@@ -9,6 +9,7 @@ export function useModpacks({ showToast }) {
   const [modpacks, setModpacks] = useState(() => loadStoredModpacks());
   const [isModpackModalOpen, setIsModpackModalOpen] = useState(false);
   const [editingModpack, setEditingModpack] = useState(null);
+  const [modpackToDelete, setModpackToDelete] = useState(null);
 
   // Sincronización reactiva en vivo cuando se crean o activan modpacks desde el Agente (/pack)
   useEffect(() => {
@@ -59,15 +60,28 @@ export function useModpacks({ showToast }) {
     showToast(`Modpack '${modpackData.name}' guardado`);
   }, [showToast]);
 
-  // Eliminar modpack personalizado
-  const handleDeleteModpack = useCallback((modpackId) => {
+  // Solicitar confirmación de eliminación
+  const handleRequestDeleteModpack = useCallback((modpackId) => {
+    const target = modpacks.find((m) => m.id === modpackId) || { id: modpackId, name: 'Modpack' };
+    setModpackToDelete(target);
+  }, [modpacks]);
+
+  // Confirmar eliminación de modpack
+  const handleConfirmDeleteModpack = useCallback((modpackId) => {
+    const id = modpackId || modpackToDelete?.id;
+    if (!id) return;
     setModpacks((prev) => {
-      const updated = prev.filter((m) => m.id !== modpackId);
+      const updated = prev.filter((m) => m.id !== id);
       saveStoredModpacks(updated);
       return updated;
     });
+    setModpackToDelete(null);
     showToast('Modpack eliminado');
-  }, [showToast]);
+  }, [modpackToDelete, showToast]);
+
+  const handleCancelDeleteModpack = useCallback(() => {
+    setModpackToDelete(null);
+  }, []);
 
   // Sincronizar y activar en Pestaña 1 (Agente IA)
   const handleActivateInAgent = useCallback((modpack) => {
@@ -106,10 +120,13 @@ export function useModpacks({ showToast }) {
     modpacks,
     isModpackModalOpen,
     editingModpack,
+    modpackToDelete,
     handleToggleMaster,
     handleToggleSubSkill,
     handleSaveModpack,
-    handleDeleteModpack,
+    handleDeleteModpack: handleRequestDeleteModpack,
+    handleConfirmDeleteModpack,
+    handleCancelDeleteModpack,
     handleActivateInAgent,
     handleOpenCreateModal,
     handleOpenEditModal,

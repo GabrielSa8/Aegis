@@ -20,6 +20,7 @@ export { SkillsArsenalSection } from './SkillsArsenalSection';
 export { SkillManualModal } from './SkillManualModal';
 export { ModpackCard } from './ModpackCard';
 export { ModpackManagerModal } from './ModpackManagerModal';
+export { ModpackDeleteModal } from './ModpackDeleteModal';
 export { InstallSkillModal } from './InstallSkillModal';
 export { RepoDiffViewer } from './RepoDiffViewer';
 export { RepoCommitsViewer } from './RepoCommitsViewer';

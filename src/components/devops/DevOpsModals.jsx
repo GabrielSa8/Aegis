@@ -4,6 +4,7 @@ import { RepoInspectorModal } from './RepoInspectorModal';
 import { AddRepoModal } from './AddRepoModal';
 import { RepoDeleteModal } from './RepoDeleteModal';
 import { ModpackManagerModal } from './ModpackManagerModal';
+import { ModpackDeleteModal } from './ModpackDeleteModal';
 import { InstallSkillModal } from './InstallSkillModal';
 import { CreateContainerModal } from './daemons/CreateContainerModal';
 import { ContainerLogsModal } from './daemons/ContainerLogsModal';
@@ -32,6 +33,14 @@ export function DevOpsModals({ devops, modpacks, daemons }) {
         initialData={modpacks.editingModpack}
         availableSkills={devops.skills}
         onSave={modpacks.handleSaveModpack}
+      />
+
+      {/* 🗑️ MODAL: Confirmación de Eliminación de Modpack */}
+      <ModpackDeleteModal
+        isOpen={Boolean(modpacks.modpackToDelete)}
+        onClose={modpacks.handleCancelDeleteModpack}
+        modpack={modpacks.modpackToDelete}
+        onConfirmDelete={modpacks.handleConfirmDeleteModpack}
       />
 
       {/* 📥 MODAL: Instalar Skill del Ecosistema */}
