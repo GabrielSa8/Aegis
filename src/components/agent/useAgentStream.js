@@ -338,6 +338,9 @@ export function useAgentStream({
       })
       .catch(() => {});
 
+    const currentSessionObj = sessions.find((s) => s.id === targetSessionId);
+    const existingConvId = currentSessionObj?.conversationId || null;
+
     try {
       await invoke('execute_agent_prompt', {
         prompt: textToSend,
@@ -346,7 +349,9 @@ export function useAgentStream({
         skills: activeContext.skills || [],
         streamId,
         effort: sendEffort,
-        model: activeModel || null
+        model: activeModel || null,
+        conversationId: existingConvId,
+        sessionId: targetSessionId
       });
     } catch (err) {
       setMessages((prev) =>

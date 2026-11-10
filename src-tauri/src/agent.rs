@@ -180,6 +180,8 @@ pub async fn execute_agent_prompt(
     stream_id: String,
     effort: Option<String>,
     model: Option<String>,
+    conversation_id: Option<String>,
+    session_id: Option<String>,
 ) -> Result<String, String> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let cfg = crate::config::get_aegis_config().ok();
@@ -206,6 +208,25 @@ pub async fn execute_agent_prompt(
     };
 
     let ctx_name = context_id.unwrap_or_else(|| "general".to_string());
+
+    // Obtener conversation_id previo directamente desde SQLite si no vino en el request
+    let resolved_conversation_id = conversation_id.or_else(|| {
+        if let Some(ref sid) = session_id {
+            if let Ok(conn) = crate::db::get_db_connection() {
+                conn.query_row(
+                    "SELECT conversation_id FROM chat_sessions WHERE id = ?1",
+                    rusqlite::params![sid],
+                    |row| row.get::<_, Option<String>>(0),
+                )
+                .ok()
+                .flatten()
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    });
 
     // Crear workspace aislado para el contexto de Aegis (~/.local/share/aegis/contexts/<id>)
     let ctx_workspace = Path::new(&home)
@@ -386,6 +407,8 @@ pub async fn execute_agent_prompt(
         harness_steps: harness_plan.steps,
         dynamic_scaling_enabled: harness_cfg.enabled && harness_cfg.dynamic_step_scaling && is_auto_effort,
         auto_heal_enabled: harness_cfg.enabled && harness_cfg.auto_heal_escalation,
+        conversation_id: resolved_conversation_id,
+        session_id,
     };
     spawn_attempt(ctx, resolved_model, chain).await?;
     Ok(format!("Stream iniciado ({})", stream_id))
@@ -409,6 +432,8 @@ struct AttemptCtx {
     harness_steps: Vec<crate::harness::HarnessStep>,
     dynamic_scaling_enabled: bool,
     auto_heal_enabled: bool,
+    conversation_id: Option<String>,
+    session_id: Option<String>,
 }
 
 /// Detecta errores de cuota/rate-limit (429) del proveedor en un fragmento de salida.
@@ -447,10 +472,33 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     let stream_id = ctx.stream_id.clone();
 
     let mut cmd = Command::new(&agent_binary);
-    cmd.arg("-p")
-        .arg(&prompt)
-        .arg("--output-format")
-        .arg("stream-json");
+
+    // Persistencia y enlace de conversación multironda según CLI del proveedor
+    let clean_conv = ctx.conversation_id.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    if agent_binary.ends_with("codex") {
+        if let Some(cid) = clean_conv {
+            cmd.arg("exec")
+                .arg("resume")
+                .arg(cid)
+                .arg(&prompt)
+                .arg("--skip-git-repo-check");
+        } else {
+            cmd.arg("exec")
+                .arg("--skip-git-repo-check")
+                .arg(&prompt);
+        }
+    } else {
+        // agy y claude
+        cmd.arg("-p").arg(&prompt);
+        if let Some(cid) = clean_conv {
+            if agent_binary.ends_with("claude") {
+                cmd.arg("--resume").arg(cid);
+            } else {
+                cmd.arg("--conversation").arg(cid);
+            }
+        }
+        cmd.arg("--output-format").arg("stream-json");
+    }
 
     // Inyección de modelo específico del proveedor si está seleccionado
     if let Some(ref m) = model {
@@ -583,6 +631,7 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     let runtime_state_stdout = Arc::clone(&runtime_state);
     let hot_handoff_stdout = Arc::clone(&hot_handoff_requested);
     let auto_heal_stdout = ctx.auto_heal_enabled;
+    let session_id_stdout = ctx.session_id.clone();
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout).lines();
         let mut captured_conv_id: Option<String> = None;
@@ -605,6 +654,15 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
                         "init" => {
                             if let Some(cid) = val.get("conversation_id").and_then(|c| c.as_str()) {
                                 captured_conv_id = Some(cid.to_string());
+                                // Guardar o actualizar conversation_id en la sesión activa de SQLite
+                                if let Some(ref sid) = session_id_stdout {
+                                    if let Ok(conn) = crate::db::get_db_connection() {
+                                        let _ = conn.execute(
+                                            "UPDATE chat_sessions SET conversation_id = ?1 WHERE id = ?2",
+                                            rusqlite::params![cid, sid],
+                                        );
+                                    }
+                                }
                             }
                         }
                         "step_update" => {
@@ -1059,6 +1117,7 @@ pub struct ChatSession {
     pub created_at: String,
     pub updated_at: String,
     pub message_count: Option<u32>,
+    pub conversation_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -1082,7 +1141,7 @@ pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
     let conn = crate::db::get_db_connection()?;
     let mut stmt = conn
         .prepare(
-            "SELECT s.id, s.title, s.context_id, s.effort, s.created_at, s.updated_at, COUNT(m.id) as message_count
+            "SELECT s.id, s.title, s.context_id, s.effort, s.created_at, s.updated_at, COUNT(m.id) as message_count, s.conversation_id
              FROM chat_sessions s
              LEFT JOIN chat_messages m ON s.id = m.session_id
              GROUP BY s.id
@@ -1101,6 +1160,7 @@ pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
                 created_at: r.get(4)?,
                 updated_at: r.get(5)?,
                 message_count: Some(count),
+                conversation_id: r.get(7).unwrap_or(None),
             })
         })
         .map_err(|e| e.to_string())?;
@@ -1118,20 +1178,22 @@ pub fn sqlite_get_chat_sessions() -> Result<Vec<ChatSession>, String> {
 pub fn sqlite_save_chat_session(session: ChatSession) -> Result<ChatSession, String> {
     let conn = crate::db::get_db_connection()?;
     conn.execute(
-        "INSERT INTO chat_sessions (id, title, context_id, effort, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        "INSERT INTO chat_sessions (id, title, context_id, effort, created_at, updated_at, conversation_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
          ON CONFLICT(id) DO UPDATE SET
             title = excluded.title,
             context_id = excluded.context_id,
             effort = excluded.effort,
-            updated_at = excluded.updated_at",
+            updated_at = excluded.updated_at,
+            conversation_id = COALESCE(excluded.conversation_id, chat_sessions.conversation_id)",
         rusqlite::params![
             session.id,
             session.title,
             session.context_id,
             session.effort,
             session.created_at,
-            session.updated_at
+            session.updated_at,
+            session.conversation_id
         ],
     )
     .map_err(|e| format!("Error guardando sesión de chat: {}", e))?;

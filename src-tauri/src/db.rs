@@ -90,7 +90,8 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
             context_id TEXT NOT NULL,
             effort TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            updated_at TEXT NOT NULL,
+            conversation_id TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated ON chat_sessions(updated_at DESC);
 
@@ -288,6 +289,12 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
     );
     let _ = conn.execute(
         "UPDATE transactions SET category = 'Planes MSI' WHERE category = 'Educación & Certs' AND description LIKE 'Mensualidad MSI%'",
+        [],
+    );
+
+    // Migración v2.18.4: Agregar conversation_id a chat_sessions si no existe
+    let _ = conn.execute(
+        "ALTER TABLE chat_sessions ADD COLUMN conversation_id TEXT",
         [],
     );
 

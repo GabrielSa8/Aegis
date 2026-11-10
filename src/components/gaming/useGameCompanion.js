@@ -146,7 +146,9 @@ export function useGameCompanion({ gameId, gameTitle, isSteam }) {
         skills: ['obsidian-vault-architect'],
         streamId,
         effort: 'low',
-        model: null
+        model: null,
+        conversationId: null,
+        sessionId: 'session_gaming'
       });
     } catch (err) {
       setMessages((prev) =>
