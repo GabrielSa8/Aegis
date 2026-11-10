@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpStream;
 use tokio::sync::Notify;
 
 use crate::config::{get_aegis_config, save_aegis_config, TrustedDevice};
@@ -86,6 +86,34 @@ fn create_reusable_udp_socket(port: u16) -> Result<tokio::net::UdpSocket, String
     let std_socket: std::net::UdpSocket = socket.into();
     tokio::net::UdpSocket::from_std(std_socket)
         .map_err(|e| format!("Error convirtiendo a Tokio UdpSocket: {}", e))
+}
+
+fn create_reusable_tcp_listener(port: u16) -> Result<tokio::net::TcpListener, String> {
+    use socket2::{Domain, Protocol, Socket, Type};
+
+    let socket = Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+        .map_err(|e| format!("Error creando socket2 TCP: {}", e))?;
+
+    let _ = socket.set_reuse_address(true);
+    #[cfg(all(unix, not(target_os = "solaris"), not(target_os = "illumos")))]
+    let _ = socket.set_reuse_port(true);
+    let _ = socket.set_nonblocking(true);
+
+    let bind_addr: SocketAddr = format!("0.0.0.0:{}", port)
+        .parse()
+        .map_err(|e| format!("Error parseando dirección: {}", e))?;
+
+    socket
+        .bind(&bind_addr.into())
+        .map_err(|e| format!("Error enlazando TCP {}: {}", port, e))?;
+
+    socket
+        .listen(128)
+        .map_err(|e| format!("Error en listen TCP {}: {}", port, e))?;
+
+    let std_listener: std::net::TcpListener = socket.into();
+    tokio::net::TcpListener::from_std(std_listener)
+        .map_err(|e| format!("Error convirtiendo a Tokio TcpListener: {}", e))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -269,7 +297,7 @@ pub fn init_p2p_background_services() {
                         }
 
                         let sync_port = config.p2p_sync.sync_port;
-                        let listener = match TcpListener::bind(format!("0.0.0.0:{}", sync_port)).await {
+                        let listener = match create_reusable_tcp_listener(sync_port) {
                             Ok(l) => l,
                             Err(e) => {
                                 log::warn!("[Aegis P2P Server] Error bind TCP {}: {}", sync_port, e);
@@ -1166,6 +1194,12 @@ mod tests {
         assert!(val.get("recurringExpenses").is_some());
         assert!(val.get("gameSaves").is_some());
         assert!(val.get("settings").is_none(), "Settings de entorno local no deben ser exportados en P2P");
+    }
+
+    #[tokio::test]
+    async fn test_create_reusable_tcp_listener() {
+        let listener = create_reusable_tcp_listener(53398);
+        assert!(listener.is_ok(), "TCP listener creation failed: {:?}", listener.err());
     }
 
     #[tokio::test]

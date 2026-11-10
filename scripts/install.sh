@@ -101,7 +101,7 @@ if command -v curl >/dev/null 2>&1; then
 fi
 
 if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "latest" || "$LATEST_TAG" == "releases" ]]; then
-    LATEST_TAG="v2.19.3"
+    LATEST_TAG="v2.19.6"
 fi
 
 echo -e "${GREEN}✓ Versión objetivo detectada:${NC} ${BOLD}$LATEST_TAG${NC}"
@@ -111,14 +111,17 @@ mkdir -p "$INSTALL_DIR" "$APPLICATIONS_DIR" "$ICONS_DIR"
 
 # 5. Download Release Binary
 BINARY_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/aegis-linux-x86_64"
+FALLBACK_BINARY_URL="https://github.com/$REPO/releases/download/$LATEST_TAG/aegis"
 echo -e "${BLUE}📦 Descargando binario ejecutable ($LATEST_TAG)...${NC}"
 
 TMP_BIN="$(mktemp)"
-if ! curl -fSL --progress-bar "$BINARY_URL" -o "$TMP_BIN"; then
-    echo -e "${RED}❌ Error: No se pudo descargar el binario desde $BINARY_URL.${NC}"
-    echo -e "${YELLOW}Verifica tu conexión o si el release $LATEST_TAG cuenta con assets públicos cargados.${NC}"
-    rm -f "$TMP_BIN"
-    exit 1
+if ! curl -fSL --progress-bar "$BINARY_URL" -o "$TMP_BIN" 2>/dev/null; then
+    if ! curl -fSL --progress-bar "$FALLBACK_BINARY_URL" -o "$TMP_BIN"; then
+        echo -e "${RED}❌ Error: No se pudo descargar el binario desde $BINARY_URL ni desde $FALLBACK_BINARY_URL.${NC}"
+        echo -e "${YELLOW}Verifica tu conexión o si el release $LATEST_TAG cuenta con assets públicos cargados.${NC}"
+        rm -f "$TMP_BIN"
+        exit 1
+    fi
 fi
 
 mv "$TMP_BIN" "$TARGET_BIN"
