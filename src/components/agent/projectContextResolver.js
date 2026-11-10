@@ -299,7 +299,8 @@ export async function resolveOrCreateProjectModpack(themeQuery) {
       : `Modpack temático para ${clean} (${skills.length} skills optimizadas)`,
     enabled: true,
     skills,
-    disabledSubSkills: []
+    disabledSubSkills: [],
+    isCustom: true
   };
 
   return {

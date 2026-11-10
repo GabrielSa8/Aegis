@@ -161,7 +161,7 @@ export default function AccountsSection({
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-                      {isCredit ? 'Límite Crédito' : 'Saldo Base'}
+                      {isCredit ? 'Límite Crédito' : 'Saldo Disponible'}
                     </span>
                     {isCredit && (pm.cutoffDay || pm.paymentDay) ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.68rem', color: 'var(--text-muted)' }}>

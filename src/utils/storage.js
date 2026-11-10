@@ -93,6 +93,7 @@ export const saveTransaction = async (transaction) => {
     try {
       result = await invoke('sqlite_save_transaction', { tx: normalized });
       window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: result }));
+      window.dispatchEvent(new CustomEvent('aegis:payment-methods-changed'));
       return result;
     } catch (e) {
       console.error('[Storage SQLite] Error guardando transacción:', e);
@@ -114,6 +115,7 @@ export const deleteTransaction = async (id, txRecord) => {
     try {
       const res = await invoke('sqlite_delete_transaction', { id: String(id) });
       window.dispatchEvent(new CustomEvent('aegis:transactions-changed', { detail: res }));
+      window.dispatchEvent(new CustomEvent('aegis:payment-methods-changed'));
       return res;
     } catch (e) {
       console.error('[Storage SQLite] Error eliminando transacción:', e);
@@ -644,27 +646,12 @@ export const payCreditCard = async ({ card, debitAccount, amount, date, descript
     description: `Abono liquidación TDC ${cardName}`
   };
 
-  // Guardar ambas operaciones
+  // Guardar ambas operaciones (el backend actualiza atómicamente el saldo del método de débito/fondos)
   await saveTransaction(debitExpense);
   await saveTransaction(cardIncome);
 
-  // 3. Si la cuenta de débito tiene saldo registrado, descontar el monto pagado
-  try {
-    const methods = await getPaymentMethods();
-    if (Array.isArray(methods)) {
-      const matchDebit = methods.find(
-        (m) => m.name.toLowerCase() === fromDebit.toLowerCase() || String(m.id) === String(fromDebit)
-      );
-      if (matchDebit && typeof matchDebit.balance === 'number') {
-        matchDebit.balance = Math.max(0, matchDebit.balance - parsedAmount);
-        await savePaymentMethod(matchDebit);
-      }
-    }
-  } catch (err) {
-    console.warn('[Storage] No se pudo actualizar balance de débito tras pago TDC:', err);
-  }
-
   window.dispatchEvent(new CustomEvent('aegis:transactions-changed'));
+  window.dispatchEvent(new CustomEvent('aegis:payment-methods-changed'));
   return true;
 };
 

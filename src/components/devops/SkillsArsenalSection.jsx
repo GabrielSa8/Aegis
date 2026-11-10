@@ -215,8 +215,8 @@ export function SkillsArsenalSection({
               onToggleMaster={onToggleModpackMaster}
               onToggleSubSkill={onToggleModpackSubSkill}
               onActivateInAgent={onActivateModpackInAgent}
-              onEdit={pack.isCustom ? onEditModpack : null}
-              onDelete={pack.isCustom ? onDeleteModpack : null}
+              onEdit={onEditModpack}
+              onDelete={onDeleteModpack}
             />
           ))}
         </div>

@@ -82,10 +82,11 @@ export default function QuickAccountsSummary({ monthlyTxs = [] }) {
       const spent = isCredit ? revolvingSpent + msiDebt : exp;
 
       // Saldo total / límite según el tipo
-      const total = Number(isCredit ? pm.creditLimit || pm.balance || 0 : pm.balance || 0);
+      const total = Number(isCredit ? pm.creditLimit || pm.balance || 0 : 0);
+      const balance = Number(pm.balance || 0);
 
-      // Porcentaje de uso sobre el total
-      const pct = total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
+      // Porcentaje de uso sobre el total (solo aplicable a crédito)
+      const pct = isCredit && total > 0 ? Math.min(100, Math.round((spent / total) * 100)) : 0;
 
       return {
         id: pm.id || name,
@@ -93,6 +94,7 @@ export default function QuickAccountsSummary({ monthlyTxs = [] }) {
         type: pm.type || 'debit',
         isCredit,
         total,
+        balance,
         spent,
         pct
       };
@@ -185,53 +187,63 @@ export default function QuickAccountsSummary({ monthlyTxs = [] }) {
                     </span>
                   </div>
 
-                  {/* Cifras: Gastado / Total y % */}
+                  {/* Cifras: En crédito Gastado / Límite (%) — En Débito/Efectivo Saldo Actual */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.68rem' }}>
-                    <span style={{ color: card.spent > 0 ? 'var(--text-high)' : 'var(--text-muted)', fontWeight: 600 }}>
-                      ${card.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    {card.isCredit ? (
+                      <>
+                        <span style={{ color: card.spent > 0 ? 'var(--text-high)' : 'var(--text-muted)', fontWeight: 600 }}>
+                          ${card.spent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', opacity: 0.6 }}>/</span>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          {card.total > 0 
+                            ? `$${card.total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` 
+                            : 'S/L'}
+                        </span>
+                        {card.total > 0 && (
+                          <span 
+                            style={{ 
+                            fontSize: '0.62rem', 
+                            fontWeight: 700, 
+                            color: barColor,
+                            marginLeft: '2px'
+                          }}
+                        >
+                          {card.pct}%
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span style={{ color: card.balance >= 0 ? 'var(--primary, #10b981)' : 'var(--danger, #ef4444)', fontWeight: 700 }}>
+                      ${card.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <span style={{ color: 'var(--text-muted)', opacity: 0.6 }}>/</span>
-                    <span style={{ color: 'var(--text-muted)' }}>
-                      {card.total > 0 
-                        ? `$${card.total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` 
-                        : 'S/L'}
-                    </span>
-                    {card.total > 0 && (
-                      <span 
-                        style={{ 
-                          fontSize: '0.62rem', 
-                          fontWeight: 700, 
-                          color: barColor,
-                          marginLeft: '2px'
-                        }}
-                      >
-                        {card.pct}%
-                      </span>
-                    )}
+                  )}
                   </div>
                 </div>
 
-                {/* Línea de Porcentaje de Uso sobre Total */}
-                <div
-                  style={{
-                    width: '100%',
-                    height: '4px',
-                    borderRadius: '2px',
-                    background: 'color-mix(in srgb, var(--border-color) 85%, transparent)',
-                    overflow: 'hidden'
-                  }}
-                  title={card.total > 0 ? `Uso: ${card.pct}% ($${card.spent} de $${card.total})` : `Gastado: $${card.spent}`}
-                >
+                {/* Barra de progreso: Exclusiva para tarjetas de Crédito */}
+                {card.isCredit && (
                   <div
                     style={{
-                      width: `${card.total > 0 ? card.pct : (card.spent > 0 ? 100 : 0)}%`,
-                      height: '100%',
+                      width: '100%',
+                      height: '4px',
                       borderRadius: '2px',
-                      background: card.total > 0 ? barColor : 'color-mix(in srgb, var(--text-muted) 40%, transparent)',
-                      transition: 'width 0.3s ease'
+                      background: 'color-mix(in srgb, var(--border-color) 85%, transparent)',
+                      overflow: 'hidden'
                     }}
-                  />
-                </div>
+                    title={card.total > 0 ? `Uso: ${card.pct}% ($${card.spent} de $${card.total})` : `Gastado: $${card.spent}`}
+                  >
+                    <div
+                      style={{
+                        width: `${card.total > 0 ? card.pct : (card.spent > 0 ? 100 : 0)}%`,
+                        height: '100%',
+                        borderRadius: '2px',
+                        background: card.total > 0 ? barColor : 'color-mix(in srgb, var(--text-muted) 40%, transparent)',
+                        transition: 'width 0.3s ease'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

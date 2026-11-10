@@ -89,6 +89,14 @@ export function useAccountsMsi(onTransactionCreated) {
 
   useEffect(() => {
     loadAllData();
+
+    const handleUpdate = () => {
+      loadAllData();
+    };
+    window.addEventListener('aegis:payment-methods-changed', handleUpdate);
+    return () => {
+      window.removeEventListener('aegis:payment-methods-changed', handleUpdate);
+    };
   }, []);
 
   // Handlers Cuentas

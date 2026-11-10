@@ -126,7 +126,7 @@ export default function AccountModal({
         ) : (
           <div>
             <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              {isEditing ? 'Saldo Total / Base ($)' : 'Saldo Inicial ($)'}
+              {isEditing ? 'Saldo Disponible ($)' : 'Saldo Inicial ($)'}
             </label>
             <input
               type="number"

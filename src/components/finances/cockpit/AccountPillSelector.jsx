@@ -25,7 +25,16 @@ export default function AccountPillSelector({ value, onChange }) {
       }
     };
     loadMethods();
-    return () => { mounted = false; };
+
+    const handleUpdate = () => {
+      loadMethods();
+    };
+    window.addEventListener('aegis:payment-methods-changed', handleUpdate);
+
+    return () => { 
+      mounted = false; 
+      window.removeEventListener('aegis:payment-methods-changed', handleUpdate);
+    };
   }, []);
 
   return (

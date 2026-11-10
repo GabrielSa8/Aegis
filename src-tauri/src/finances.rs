@@ -129,15 +129,59 @@ pub fn sqlite_get_transactions() -> Result<Vec<Transaction>, String> {
     Ok(list)
 }
 
+// Helper interno para ajustar saldo de cuenta de débito / efectivo
+fn adjust_payment_method_balance(conn: &rusqlite::Connection, method_name_or_id: &str, delta: f64) {
+    if delta.abs() < 0.000001 || method_name_or_id.trim().is_empty() {
+        return;
+    }
+    let lower_key = method_name_or_id.trim().to_lowercase();
+    // Solo modificar balance si la cuenta es de tipo distinto a 'credit' (ej. debit, cash, crypto)
+    let _ = conn.execute(
+        "UPDATE payment_methods 
+         SET balance = balance + ?1 
+         WHERE type != 'credit' AND (LOWER(id) = ?2 OR LOWER(name) = ?2)",
+        params![delta, lower_key],
+    );
+}
+
 #[tauri::command]
 pub fn sqlite_save_transaction(mut tx: Transaction) -> Result<Vec<Transaction>, String> {
-    let conn = get_db_connection()?;
+    let mut conn = get_db_connection()?;
     if tx.id.trim().is_empty() {
         tx.id = format!("tx_{}_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis(), fastrand_suffix());
     }
     let created_at = tx.created_at.clone().unwrap_or_else(|| chrono_like_now());
 
-    conn.execute(
+    // Consultar transacción previa si ya existía (para revertir delta)
+    let old_tx: Option<(f64, String, String)> = conn
+        .query_row(
+            "SELECT amount, type, payment_method FROM transactions WHERE id = ?1",
+            params![tx.id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .ok();
+
+    let tx_handle = conn.transaction().map_err(|e| e.to_string())?;
+
+    // Si existía, revertir efecto previo en el balance
+    if let Some((old_amt, old_type, old_pm)) = old_tx {
+        let revert_delta = if old_type == "income" {
+            -old_amt.abs()
+        } else {
+            old_amt.abs()
+        };
+        adjust_payment_method_balance(&tx_handle, &old_pm, revert_delta);
+    }
+
+    // Aplicar nuevo impacto en el balance
+    let new_delta = if tx.r#type == "income" {
+        tx.amount.abs()
+    } else {
+        -tx.amount.abs()
+    };
+    adjust_payment_method_balance(&tx_handle, &tx.payment_method, new_delta);
+
+    tx_handle.execute(
         "INSERT INTO transactions (id, amount, type, category, payment_method, date, description, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
          ON CONFLICT(id) DO UPDATE SET
@@ -160,14 +204,38 @@ pub fn sqlite_save_transaction(mut tx: Transaction) -> Result<Vec<Transaction>, 
     )
     .map_err(|e| format!("Error guardando transacción {}: {}", tx.id, e))?;
 
+    tx_handle.commit().map_err(|e| format!("Error consolidando transacción: {}", e))?;
+
     sqlite_get_transactions()
 }
 
 #[tauri::command]
 pub fn sqlite_delete_transaction(id: String) -> Result<Vec<Transaction>, String> {
-    let conn = get_db_connection()?;
-    conn.execute("DELETE FROM transactions WHERE id = ?1", params![id])
+    let mut conn = get_db_connection()?;
+    let old_tx: Option<(f64, String, String)> = conn
+        .query_row(
+            "SELECT amount, type, payment_method FROM transactions WHERE id = ?1",
+            params![id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .ok();
+
+    let tx_handle = conn.transaction().map_err(|e| e.to_string())?;
+
+    if let Some((old_amt, old_type, old_pm)) = old_tx {
+        let revert_delta = if old_type == "income" {
+            -old_amt.abs()
+        } else {
+            old_amt.abs()
+        };
+        adjust_payment_method_balance(&tx_handle, &old_pm, revert_delta);
+    }
+
+    tx_handle.execute("DELETE FROM transactions WHERE id = ?1", params![id])
         .map_err(|e| format!("Error eliminando transacción {}: {}", id, e))?;
+
+    tx_handle.commit().map_err(|e| format!("Error consolidando eliminación: {}", e))?;
+
     sqlite_get_transactions()
 }
 
