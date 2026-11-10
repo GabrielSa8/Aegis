@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RefreshCw, CheckCircle, Sparkles, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { TacticalButton } from '../ui';
 import { useAppUpdater, UpdateModal } from '../updater';
+import { AEGIS_VERSION } from './settingsHelpers';
 
 export default function UpdateSettingsCard() {
   const {
@@ -112,7 +113,7 @@ export default function UpdateSettingsCard() {
             <>
               <CheckCircle size={13} color="var(--primary)" />
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Aegis está al día con la última versión instalada (v2.8.0 · GitHub conectado).
+                Aegis está al día con la versión instalada ({AEGIS_VERSION} · GitHub conectado).
               </span>
             </>
           )}
