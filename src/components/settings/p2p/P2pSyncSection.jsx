@@ -86,11 +86,11 @@ export default function P2pSyncSection() {
           {firewallStatus && isEnabled && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <TacticalBadge
-                variant={firewallStatus.portsOpen ? 'success' : 'warning'}
+                variant={firewallStatus.isOpen ? 'success' : 'warning'}
                 size="sm"
-                title={firewallStatus.details}
+                title={firewallStatus.message}
               >
-                {firewallStatus.portsOpen ? (
+                {firewallStatus.isOpen ? (
                   <>
                     <ShieldCheck size={11} style={{ marginRight: '4px' }} />
                     PUERTOS OK
@@ -102,7 +102,7 @@ export default function P2pSyncSection() {
                   </>
                 )}
               </TacticalBadge>
-              {!firewallStatus.portsOpen && (
+              {!firewallStatus.isOpen && (
                 <TacticalButton
                   variant="ghost"
                   size="sm"

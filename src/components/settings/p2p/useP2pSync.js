@@ -41,9 +41,10 @@ export function useP2pSync() {
     fetchStatus();
     checkFirewall();
 
-    // Polling regular cada 3.5s para mantener el radar de la LAN al día
+    // Polling regular cada 3.5s para mantener el radar de la LAN y el firewall al día
     const interval = setInterval(() => {
       fetchStatus();
+      checkFirewall();
     }, 3500);
 
     return () => {
