@@ -305,6 +305,33 @@ pub fn init_p2p_background_services() {
                         }
                     }
                 });
+
+                // 3. Iniciar loop de sondeo Unicast LAN (evade AP isolation / bloqueo broadcast de routers Wi-Fi)
+                let notify_sweep = notify.clone();
+                let peers_map_sweep = peers_map.clone();
+                tokio::spawn(async move {
+                    loop {
+                        let config = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                        if !config.p2p_sync.enabled {
+                            tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_secs(3)) => {},
+                                _ = notify_sweep.notified() => {},
+                            }
+                            continue;
+                        }
+
+                        let local_ip = get_local_ip();
+                        let sync_port = config.p2p_sync.sync_port;
+                        let my_id = get_unique_device_id();
+
+                        sweep_subnet_lan(peers_map_sweep.clone(), &local_ip, sync_port, &my_id).await;
+
+                        tokio::select! {
+                            _ = tokio::time::sleep(Duration::from_secs(12)) => {},
+                            _ = notify_sweep.notified() => {},
+                        }
+                    }
+                });
             });
         });
 }
@@ -733,6 +760,114 @@ pub fn get_p2p_sync_status() -> Result<P2pStatusReport, String> {
     })
 }
 
+async fn sweep_subnet_lan(peers_map: PeersMap, local_ip: &str, sync_port: u16, my_id: &str) {
+    if local_ip == "127.0.0.1" || local_ip.is_empty() {
+        return;
+    }
+    let parts: Vec<&str> = local_ip.split('.').collect();
+    if parts.len() != 4 {
+        return;
+    }
+    let subnet_prefix = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
+
+    let mut target_ips = Vec::new();
+
+    // 1. Priorizar tabla ARP (IPs conocidas activas en la interfaz de red)
+    if let Ok(arp_content) = std::fs::read_to_string("/proc/net/arp") {
+        for line in arp_content.lines().skip(1) {
+            if let Some(ip) = line.split_whitespace().next() {
+                if ip.starts_with(&subnet_prefix) && ip != local_ip && !target_ips.contains(&ip.to_string()) {
+                    target_ips.push(ip.to_string());
+                }
+            }
+        }
+    }
+
+    // 2. Barredor sobre el rango de subred /24
+    for i in 1..=254 {
+        let ip_str = format!("{}.{}", subnet_prefix, i);
+        if ip_str != local_ip && !target_ips.contains(&ip_str) {
+            target_ips.push(ip_str);
+        }
+    }
+
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_millis(450))
+        .connect_timeout(Duration::from_millis(300))
+        .build()
+    {
+        Ok(c) => Arc::new(c),
+        Err(_) => return,
+    };
+
+    let sem = Arc::new(tokio::sync::Semaphore::new(32));
+    let mut join_set = tokio::task::JoinSet::new();
+
+    for ip in target_ips {
+        let sem_clone = sem.clone();
+        let client = client.clone();
+        let peers_map = peers_map.clone();
+        let my_id = my_id.to_string();
+
+        join_set.spawn(async move {
+            let _permit = match sem_clone.acquire().await {
+                Ok(p) => p,
+                Err(_) => return,
+            };
+            let url = format!("http://{}:{}/api/ping", ip, sync_port);
+            if let Ok(res) = client.get(&url).send().await {
+                if res.status().is_success() {
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                        let dev_id = json.get("deviceId").and_then(|v| v.as_str()).unwrap_or("");
+                        let dev_name = json.get("deviceName").and_then(|v| v.as_str()).unwrap_or("Aegis Peer");
+                        let version = json.get("version").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                        if !dev_id.is_empty() && dev_id != my_id {
+                            let is_trusted = {
+                                let cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+                                cfg.p2p_sync.trusted_devices.iter().any(|d| d.id == dev_id && d.approved)
+                            };
+
+                            let mut map = peers_map.lock().unwrap();
+                            map.insert(
+                                dev_id.to_string(),
+                                DiscoveredPeerInternal {
+                                    info: PeerInfo {
+                                        id: dev_id.to_string(),
+                                        name: dev_name.to_string(),
+                                        ip: ip.clone(),
+                                        sync_port,
+                                        version: version.to_string(),
+                                        last_seen_secs_ago: 0,
+                                        is_paired: is_trusted,
+                                    },
+                                    last_seen_instant: Instant::now(),
+                                },
+                            );
+                            log::info!("[Aegis P2P Sweep] Par LAN detectado por Unicast: {} ({}) en {}", dev_name, dev_id, ip);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    while let Some(_) = join_set.join_next().await {}
+}
+
+#[tauri::command]
+pub async fn scan_lan_peers() -> Result<P2pStatusReport, String> {
+    let cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
+    if cfg.p2p_sync.enabled {
+        let peers_map = get_peers_map();
+        let local_ip = get_local_ip();
+        let sync_port = cfg.p2p_sync.sync_port;
+        let my_id = get_unique_device_id();
+        sweep_subnet_lan(peers_map, &local_ip, sync_port, &my_id).await;
+    }
+    get_p2p_sync_status()
+}
+
 #[tauri::command]
 pub fn toggle_p2p_sync(enabled: bool) -> Result<P2pStatusReport, String> {
     let mut cfg = get_aegis_config().unwrap_or_else(|_| crate::config::default_config());
@@ -1031,5 +1166,13 @@ mod tests {
         assert!(val.get("recurringExpenses").is_some());
         assert!(val.get("gameSaves").is_some());
         assert!(val.get("settings").is_none(), "Settings de entorno local no deben ser exportados en P2P");
+    }
+
+    #[tokio::test]
+    async fn test_sweep_subnet_lan_loopback() {
+        let peers_map = Arc::new(Mutex::new(HashMap::new()));
+        sweep_subnet_lan(peers_map.clone(), "127.0.0.1", 53318, "test-my-id").await;
+        let map = peers_map.lock().unwrap();
+        assert_eq!(map.len(), 0);
     }
 }

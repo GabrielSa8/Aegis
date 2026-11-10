@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 export function useP2pSync() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
   const [syncingPeerIp, setSyncingPeerIp] = useState(null);
   const [lastSyncResult, setLastSyncResult] = useState(null);
   const [firewallStatus, setFirewallStatus] = useState(null);
@@ -147,6 +148,23 @@ export function useP2pSync() {
     }
   };
 
+  const scanPeers = useCallback(async () => {
+    setScanning(true);
+    try {
+      const data = await invoke('scan_lan_peers');
+      if (isMountedRef.current) {
+        setStatus(data);
+        setError(null);
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(typeof err === 'string' ? err : 'Error al escanear la subred LAN');
+      }
+    } finally {
+      if (isMountedRef.current) setScanning(false);
+    }
+  }, []);
+
   const unpairDevice = async (deviceId) => {
     try {
       const updated = await invoke('unpair_peer_device', { peerId: deviceId });
@@ -159,6 +177,7 @@ export function useP2pSync() {
   return {
     status,
     loading,
+    scanning,
     syncingPeerIp,
     lastSyncResult,
     error,
@@ -166,6 +185,7 @@ export function useP2pSync() {
     checkFirewall,
     openFirewallTerminal,
     refreshStatus: fetchStatus,
+    scanPeers,
     toggleSync,
     updateDeviceName,
     generatePin,

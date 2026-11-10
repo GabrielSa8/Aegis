@@ -176,6 +176,7 @@ pub fn run() {
             backup::list_system_backups,
             backup::restore_system_backup,
             sync::get_p2p_sync_status,
+            sync::scan_lan_peers,
             sync::toggle_p2p_sync,
             sync::update_p2p_device_name,
             sync::generate_new_pairing_pin,

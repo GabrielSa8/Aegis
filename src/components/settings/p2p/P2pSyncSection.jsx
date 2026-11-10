@@ -4,6 +4,7 @@ import { useP2pSync } from './useP2pSync';
 import PeerDeviceCard from './PeerDeviceCard';
 import LocalDevicePinDeck from './LocalDevicePinDeck';
 import PairModal from './PairModal';
+import ManualPeerConnect from './ManualPeerConnect';
 import TacticalButton from '../../ui/TacticalButton';
 import TacticalBadge from '../../ui/TacticalBadge';
 
@@ -11,6 +12,7 @@ export default function P2pSyncSection() {
   const {
     status,
     loading,
+    scanning,
     syncingPeerIp,
     lastSyncResult,
     firewallStatus,
@@ -22,7 +24,8 @@ export default function P2pSyncSection() {
     pairDevice,
     replicateWithPeer,
     unpairDevice,
-    refreshStatus
+    refreshStatus,
+    scanPeers
   } = useP2pSync();
 
   const [pairModalPeer, setPairModalPeer] = useState(null);
@@ -205,11 +208,23 @@ export default function P2pSyncSection() {
                   DISPOSITIVOS DESCUBIERTOS EN LA LAN ({status?.discoveredPeers?.length || 0})
                 </span>
               </div>
-              <TacticalButton variant="ghost" size="sm" onClick={refreshStatus}>
-                <RefreshCw size={11} style={{ marginRight: '4px' }} />
-                Escanear Ahora
+              <TacticalButton variant="ghost" size="sm" onClick={scanPeers} disabled={scanning}>
+                <RefreshCw
+                  size={11}
+                  style={{
+                    marginRight: '4px',
+                    animation: scanning ? 'spin 1s linear infinite' : 'none'
+                  }}
+                />
+                {scanning ? 'Escaneando...' : 'Escanear Ahora'}
               </TacticalButton>
             </div>
+
+            {/* Conexión manual directa por IP */}
+            <ManualPeerConnect
+              defaultPort={status?.syncPort || 53318}
+              onConnect={(manualPeer) => setPairModalPeer(manualPeer)}
+            />
 
             {status?.discoveredPeers?.length === 0 ? (
               <div style={{
