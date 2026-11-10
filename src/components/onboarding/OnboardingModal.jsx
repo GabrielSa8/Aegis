@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, ArrowRight, ArrowLeft, Check, Sparkles, X } from 'lucide-react';
 import { ModalWrapper, TacticalButton, TacticalBadge } from '../ui';
+import { AEGIS_VERSION } from '../settings/settingsHelpers';
 import { useOnboarding } from './useOnboarding';
 import { OnboardingStepIdentity } from './OnboardingStepIdentity';
 import { OnboardingStepDiscovery } from './OnboardingStepDiscovery';
@@ -66,7 +67,7 @@ export function OnboardingModal({ isOpen, onClose, onComplete }) {
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
               Paso {step} de 3
             </span>
-            <TacticalBadge variant="primary">v2.14.1</TacticalBadge>
+            <TacticalBadge variant="primary">{AEGIS_VERSION}</TacticalBadge>
           </div>
         </div>
 
