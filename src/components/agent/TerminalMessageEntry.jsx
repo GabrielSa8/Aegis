@@ -77,7 +77,7 @@ function TerminalMessageEntry({
 
           {!isUser && m.effort && (
             <span className="zen-meta-tag zen-tag-effort">
-              {m.effort === 'high' ? 'profundo' : 'flash'}
+              {m.effort === 'high' ? 'profundo' : m.effort === 'low' ? 'flash' : 'auto'}
             </span>
           )}
 

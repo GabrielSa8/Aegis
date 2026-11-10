@@ -20,7 +20,7 @@ fn get_global_skills_dir() -> PathBuf {
 
 /// Contrato estático ultracompacto alineado para KV-Cache en `harness.rs`.
 pub fn get_compact_brain_contract() -> &'static str {
-    "- Brain Engineering Contract: SDD/TDD, Jidoka (raíz antes de parchar), Módulos Profundos (≤300 líneas/archivo, DRY, cero #hex fijos -> var(--*)), Skill-First + Subagentes comprimidos, Git quirúrgico por ruta (Conventional Commits en inglés), SemVer por Hitos (PATCH 1.0.1 fixes | MINOR 1.1.0 features/hitos | MAJOR 2.0.0 breaking) y Visto Bueno explícito antes de commit/release.\n"
+    "- Brain Engineering Contract: SDD/TDD, Jidoka (raíz antes de parchar), Módulos Profundos (≤300 líneas/archivo, DRY, cero #hex fijos -> var(--*)), Skill-First + Subagentes comprimidos, Git quirúrgico por ruta (Conventional Commits en inglés), SemVer por Hitos (PATCH 1.0.1 fixes | MINOR 1.1.0 features/hitos | MAJOR 2.0.0 breaking), Cero Respuestas Declarativas Vacías (órdenes de acción exigen invocar tools en el mismo turno) y Visto Bueno explícito antes de commit/release.\n"
 }
 
 /// Contenido íntegro de fábrica para `~/.config/aegis/BRAIN.md` (Nivel Principal Engineer).
@@ -56,6 +56,7 @@ pub const FACTORY_BRAIN_MARKDOWN: &str = r#"# 🛡️ Aegis Sovereign Brain — 
 
 ## 7. Memoria Viva en Bóveda & Regla de Visto Bueno
 - **Cero Conocimiento Volátil (`obsidian-vault-architect`):** Toda decisión arquitectónica, bug resuelto o avance de hito se documenta en la bóveda Markdown (bitácora y nota del proyecto).
+- **Prohibición de Respuestas Declarativas Vacías:** Ante verbos de acción ("ejecuta", "aplica", "escribe", "corrige", "modifica"), el agente DEBE invocar las herramientas de edición o terminal (`edit_file`, `write_file`, `run_command`) en ese mismo turno. Prohibido responder con mensajes pasivos ("Listo", "Contrato activo", "Esperando instrucciones") sin ejecutar la acción solicitada.
 - **Compuerta de Visto Bueno y Desarrollo Ágil:** Iterar siempre en caliente (HMR / dev server). **Prohibido ejecutar commits en Git, cerrar tareas o lanzar compilaciones release pesadas hasta recibir el visto bueno explícito del operador.**
 "#;
 

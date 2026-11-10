@@ -407,6 +407,55 @@ pub fn test_environment_tool(
     }
 }
 
+/// Selector nativo de directorio para el sistema operativo (vía zenity / kdialog o fallback)
+#[tauri::command]
+pub fn pick_directory(title: Option<String>, default_path: Option<String>) -> Result<Option<String>, String> {
+    let dialog_title = title.unwrap_or_else(|| "Seleccionar Directorio de Trabajo".to_string());
+    let initial = default_path
+        .filter(|p| !p.trim().is_empty() && Path::new(p).exists())
+        .unwrap_or_else(|| std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+
+    // 1. Probar zenity (estándar en GNOME / Fedora)
+    if find_binary_in_path("zenity").is_some() {
+        let mut cmd = Command::new("zenity");
+        cmd.arg("--file-selection")
+            .arg("--directory")
+            .arg(format!("--title={}", dialog_title))
+            .arg(format!("--filename={}/", initial.trim_end_matches('/')));
+
+        if let Ok(output) = cmd.output() {
+            if output.status.success() {
+                let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path_str.is_empty() {
+                    return Ok(Some(path_str));
+                }
+            }
+            // Código 1 en zenity suele ser Cancelar
+            return Ok(None);
+        }
+    }
+
+    // 2. Probar kdialog (KDE Plasma)
+    if find_binary_in_path("kdialog").is_some() {
+        let mut cmd = Command::new("kdialog");
+        cmd.arg("--getexistingdirectory")
+            .arg(&initial)
+            .arg(format!("--title={}", dialog_title));
+
+        if let Ok(output) = cmd.output() {
+            if output.status.success() {
+                let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path_str.is_empty() {
+                    return Ok(Some(path_str));
+                }
+            }
+            return Ok(None);
+        }
+    }
+
+    Err("No se detectó un selector de archivos compatible (zenity o kdialog). Ingresa la ruta manualmente.".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

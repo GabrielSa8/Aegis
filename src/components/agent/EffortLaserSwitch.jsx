@@ -1,9 +1,9 @@
 import { Shield, Zap, Brain } from 'lucide-react';
 
 export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode }) {
-  const modeIndex = effortMode === 'auto' ? 0 : effortMode === 'high' ? 2 : 1;
-  const beamLeft = modeIndex === 0 ? '4px' : modeIndex === 1 ? 'calc(33.33% + 2px)' : 'calc(66.66% + 2px)';
-  const beamRight = modeIndex === 0 ? 'calc(66.66% + 2px)' : modeIndex === 1 ? 'calc(33.33% + 2px)' : '4px';
+  const modeIndex = effortMode === 'auto' ? 0 : effortMode === 'low' ? 1 : 2;
+  const beamLeft = `calc(${modeIndex * 33.333}% + 3px)`;
+  const beamRight = `calc(${(2 - modeIndex) * 33.333}% + 3px)`;
 
   return (
     <div className="effort-switch-container">

@@ -60,6 +60,11 @@ const STOPWORDS: &[&str] = &[
     "estoy", "estas", "estamos", "estan", "seria", "tener", "vamos", "puedo", "quieres",
     "buen", "buena", "buenos", "buenas", "viable", "duda", "paso", "pudiste", "nueva", "nuevo",
     "cuales", "como", "cuando", "donde", "quien", "hola", "tarde", "noche", "noches", "dias",
+    // Términos conversacionales genéricos que NUNCA deben crear skills autónomas:
+    "perfil", "plantilla", "plantillas", "sesion", "sesión", "instruccion", "instrucción",
+    "instrucciones", "prompt", "prompts", "comando", "comandos", "herramienta", "herramientas",
+    "cambio", "cambios", "mensaje", "mensajes", "convo", "conversacion", "conversación",
+    "pregunta", "preguntas", "respuesta", "respuestas", "intencion", "intención", "accion", "acción",
 ];
 
 /// Verbos comunes de acción/intención que acompañan al tema pero NO son el tema en sí.
@@ -393,7 +398,7 @@ fn build_skill_draft(
             )
         };
         let md = format!(
-            "---\nname: {slug}\ndescription: Contexto acumulado y directrices de Hermes Cortex para {topic} ({category}). Activar siempre que el usuario consulte o trabaje sobre {topic}.\n---\n\n# {t}\n\n## 1. Intención y Consultas Recurrentes del Usuario\n- **Dominio:** {category} ({hits} interacciones registradas, {errors} fricciones)\n{queries_md}\n\n## 2. Base de Conocimiento y Acuerdos Previos (Síntesis SQLite)\n{takeaways_md}\n\n## 3. Reglas de Ejecución al Activar esta Skill\n1. **Continuidad sin repetir lo básico:** Tomar como base los acuerdos de la sección 2 sin volver a explicar desde cero lo ya respondido.\n2. **Acción directa al dominio (`{topic}`):** Entregar ejercicios, plantillas, tarjetas Anki (`Q::A`), esquemas o soluciones ejecutables alineadas al objetivo del usuario.\n3. **Memoria en Bóveda:** Si se definen nuevos planes, recursos o avances sobre `{topic}`, documentarlos en la nota correspondiente de Obsidian.\n"
+            "---\nname: {slug}\ndescription: Contexto acumulado y directrices de Hermes Cortex para {topic} ({category}). Activar siempre que el usuario consulte o trabaje sobre {topic}.\n---\n\n# {t}\n\n## 1. Intención y Consultas Recurrentes del Usuario\n- **Dominio:** {category} ({hits} interacciones registradas, {errors} fricciones)\n{queries_md}\n\n## 2. Base de Conocimiento y Acuerdos Previos (Síntesis SQLite)\n{takeaways_md}\n\n## 3. Reglas de Ejecución al Activar esta Skill\n1. **Continuidad sin repetir lo básico:** Tomar como base los acuerdos de la sección 2 sin volver a explicar desde cero lo ya acordado.\n2. **Acción directa al dominio (`{topic}`):** Entregar implementaciones limpias, directrices técnicas, esquemas o soluciones ejecutables alineadas al objetivo del usuario.\n3. **Memoria en Bóveda:** Si se definen nuevos planes, recursos o avances sobre `{topic}`, documentarlos en la nota correspondiente de Obsidian.\n"
         );
         (t, r, md)
     };

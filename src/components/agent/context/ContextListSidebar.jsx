@@ -70,7 +70,7 @@ export function ContextListSidebar({
                     {ctx.label}
                   </span>
                   <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                    {ctx.effort === 'high' ? '🧠 Profundo' : '⚡ Flash'}
+                    {ctx.effort === 'high' ? '🧠 Profundo' : ctx.effort === 'low' ? '⚡ Flash' : '🛡️ Auto'}
                   </span>
                 </div>
               </div>
