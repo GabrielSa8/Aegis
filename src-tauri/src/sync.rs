@@ -397,6 +397,7 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
     let game_catalog = crate::leisure::sqlite_export_game_catalog().unwrap_or_default();
     let game_stats = crate::leisure::sqlite_export_game_stats().unwrap_or_default();
     let game_sessions = crate::leisure::sqlite_export_game_sessions().unwrap_or_default();
+    let game_saves = crate::leisure::sqlite_export_game_saves().unwrap_or_default();
     let timeline = crate::finances::sqlite_get_timeline_events().unwrap_or_default();
 
     // NOTA DE ARQUITECTURA P2P (Doctrina Desacoplamiento Estricto):
@@ -419,6 +420,7 @@ fn export_sync_database_payload() -> Result<serde_json::Value, String> {
         "gameCatalog": game_catalog,
         "gameStats": game_stats,
         "gameSessions": game_sessions,
+        "gameSaves": game_saves,
         "timelineEvents": timeline,
         "communityPlugins": community_plugins
     }))
@@ -514,6 +516,13 @@ fn import_sync_database_payload(payload: serde_json::Value) -> Result<usize, Str
     // Sesiones de Juego
     if let Some(arr) = payload.get("gameSessions").and_then(|v| v.as_array()) {
         if let Ok(c) = crate::leisure::sqlite_import_game_sessions(arr.clone()) {
+            total_imported += c;
+        }
+    }
+
+    // Partidas Guardadas (Game Saves) P2P
+    if let Some(arr) = payload.get("gameSaves").and_then(|v| v.as_array()) {
+        if let Ok(c) = crate::leisure::sqlite_import_game_saves(arr.clone()) {
             total_imported += c;
         }
     }
@@ -797,6 +806,7 @@ mod tests {
         assert!(val.get("paymentMethods").is_some());
         assert!(val.get("msiPlans").is_some());
         assert!(val.get("recurringExpenses").is_some());
+        assert!(val.get("gameSaves").is_some());
         assert!(val.get("settings").is_none(), "Settings de entorno local no deben ser exportados en P2P");
     }
 }

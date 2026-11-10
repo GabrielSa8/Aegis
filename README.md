@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v2.13.4-10b981?style=for-the-badge&logo=shield)
+![Version](https://img.shields.io/badge/version-v2.19.0-10b981?style=for-the-badge&logo=shield)
 ![Tauri v2](https://img.shields.io/badge/Tauri-v2.0-24C8D8?style=for-the-badge&logo=tauri&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-1.80%2B-DEA584?style=for-the-badge&logo=rust&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
@@ -13,7 +13,7 @@
 ![License](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge)
 
 **A sovereign, hyper-efficient personal operating cockpit and command center engineered in Rust and React 19.**  
-*Unified Multi-Engine AI Agents, Obsidian Second Brain, Git Fleet DevOps, Sovereign SQLite Finances, Symmetric Tasks Kanban, Local P2P Sync, and Real-Time Hardware Telemetry in a 38px ultra-dense canvas.*
+*Unified Multi-Engine AI Agents, Adaptive Harness (L1⇄L3), Obsidian Second Brain with Granular Encryption, Git Fleet DevOps, Sovereign SQLite Finances, Symmetric Tasks Kanban, Local P2P Sync Mesh, and Real-Time Hardware Telemetry in an ultra-dense canvas.*
 
 <br/>
 
@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/GabrielSa8/Aegis/main/scripts/insta
 wget -qO- https://raw.githubusercontent.com/GabrielSa8/Aegis/main/scripts/install.sh | bash
 ```
 
-[One-Line Install](#-instant-installation-linux) • [Architecture](#-architecture) • [The 8 Pillars](#-the-8-pillars-of-sovereignty) • [User Guide](docs/USER_GUIDE.md) • [Benchmarks](#-benchmarks--performance) • [Themes](#-12-ergonomic-themes) • [Source Build](#-manual-compilation-from-source)
+[One-Line Install](#-instant-installation-linux) • [Architecture](#-architecture) • [The 8 Pillars](#-the-8-pillars-of-sovereignty) • [Adaptive Harness](#-aegis-adaptive-harness-6-pilars) • [Community Plugins](#-community-plugins-architecture) • [Benchmarks](#-benchmarks--performance) • [Themes](#-12-ergonomic-themes) • [Source Build](#-manual-compilation-from-source)
 
 </div>
 
@@ -42,39 +42,41 @@ Modern software engineers suffer from extreme cognitive fragmentation: bouncing 
 
 **Aegis** consolidates this entire workflow into a **single, unified, local-first desktop application**. Engineered with **Tauri v2** and **Rust**, it delivers native system performance with zero remote telemetry, zero third-party cloud lock-in, and an ultralight memory footprint of **~48–52 MB RAM** (less than an empty browser tab).
 
-Everything runs locally on your NVMe storage through human-readable Markdown or zero-overhead SQLite.
+Everything runs locally on your NVMe storage through human-readable Markdown, granular AES-256-GCM encryption, or zero-overhead SQLite.
 
 ---
 
 ## 🏗️ Architecture
 
-Aegis is built on a 3-dock spatial interface with native Rust background engines:
+Aegis is built on an ultra-dense spatial interface with native Rust background engines running asynchronously via Tokio:
 
 ```mermaid
 flowchart TD
     subgraph UI ["🖥️ Aegis Frontend (React 19 + Vite + ESNext)"]
-        Top["🧭 Unified Header Dock (38px Navigation, Git Fleet & Telemetry Pill)"]
+        Top["🧭 Unified Header Dock (Navigation, Git Fleet, Search & Telemetry)"]
         NavLeft["📑 Left Dock (8 Sovereign Pillars · Alt + 1..8)"]
-        ContextsRight["🎯 Right Contexts Dock (Dynamic Skill Isolation & Token Pruning)"]
+        HarnessUI["🛡️ Adaptive Harness UI (L1⇄L3 Effort Switch & Telemetry Badges)"]
         Canvas["🚀 Ultra-Dense Canvas (95% Active Viewport)"]
         Omnibar["⚡ Command Palette / Omnibar (Ctrl + K)"]
     end
 
     subgraph RustCore ["🦀 Aegis Native Core (Tauri v2 / Tokio Async)"]
         PTY["🤖 Multi-AI PTY Engine (Ollama, Claude, DeepSeek, Gemini, OpenAI)"]
-        VaultEngine["📚 Vault Engine (Obsidian Markdown, Frontmatter & Tasks I/O)"]
+        HarnessCore["🛡️ Adaptive Harness (AST Repo-Map, Context Pruning, Hot-Handoff)"]
+        VaultEngine["📚 Vault Engine (Obsidian Markdown, AES-256-GCM & Tasks I/O)"]
         SQLiteEngine["💾 Sovereign DB (Embedded SQLite via Rusqlite)"]
         DevOpsEngine["🚀 Git Fleet Radar (Direct libgit2 / CLI Telemetry)"]
         SentinelEngine["🛡️ Hardware Sentinel (/proc Differential Telemetry)"]
-        LeisureEngine["🎮 Gaming Engine (Steam ACF Parser & GameMode / FSR)"]
-        MeshEngine["🔄 Local P2P Sync (Encrypted LAN mDNS Mesh)"]
-        GateEngine["📱 Telegram Remote Gateway (Local Daemon Bridge)"]
+        LeisureEngine["🎮 Gaming Engine (Steam ACF Parser, GameMode / FSR)"]
+        MeshEngine["🔄 Local P2P Sync (Encrypted LAN mDNS Mesh · Isolated UI)"]
+        GateEngine["📱 Telegram Remote Gateway (Local Daemon Bridge & SQLite Ops)"]
     end
 
     subgraph Storage ["💾 Local Sovereign Storage"]
-        Vault[("Bóveda Obsidian\nMarkdown Files")]
+        Vault[("Bóveda Obsidian\nMarkdown Files + .md.enc")]
         DB[("Embedded SQLite\n~/.local/share/aegis/aegis_lifeos.db")]
         Cfg[("User Config\n~/.config/aegis/config.json")]
+        PluginsDir[("Community Plugins\n~/.config/aegis/plugins/")]
     end
 
     UI <-->|Tauri IPC & Events| RustCore
@@ -85,21 +87,22 @@ flowchart TD
 
 ## 🛡️ The 8 Pillars of Sovereignty
 
-### 1. 🤖 Omnichannel AI Agent (`Alt + 1`)
+### 1. 🤖 Omnichannel AI Agent & Adaptive Harness (`Alt + 1`)
 - **Multi-Provider & Local Support:** Seamlessly route between local models via **Ollama**, or cloud providers (**Anthropic Claude 3.5 Sonnet/Haiku**, **DeepSeek V3/R1**, **OpenAI GPT-4o/o3-mini**, **Google Gemini**, and **OpenRouter**).
-- **Execution Tiers:** Instant toggle between **Flash** (rapid single-turn edits), **Balanceado**, **Profundo** (deep planning), and **Razonamiento** (R1/o3 chain-of-thought).
+- **Execution Tiers & Hot-Handoff:** Dynamically scale between **L1 (Flash)** for surgical single-line fixes, **L2 (Balanceado)**, and **L3 (Profundo/Reasoning)** for architecture and complex debugging. Includes automated fallback escalation (`L1 ➔ L3`) on test failure.
 - **Dynamic Context Isolation:** Reduces token consumption by **~60%** (from ~25k to ~6.9k tokens) by automatically pruning and symlinking only context-relevant skills.
-- **Interactive Prompt Deck:** Multi-line elastic input, `/` slash commands palette (`/model`, `/usage`, `/skills`, `/compact`), dynamic macro variables (`{{clip}}`, `{{diff}}`, `@vault:`, `@file:`), multimodal drag-and-drop screenshots, and floating SQLite thread history.
+- **Interactive Prompt Deck:** Multi-line elastic input, `/` slash commands palette (`/model`, `/usage`, `/skills`, `/pack`, `/context`, `/compact`), dynamic macro variables (`{{clip}}`, `{{diff}}`, `@vault:`, `@file:`), multimodal image analysis, and background native desktop notifications upon task completion.
 
 ### 2. 💰 Sovereign Finances & LifeOS Timeline (`Alt + 2`)
-- **Embedded SQLite Core:** High-performance local database (`aegis_lifeos.db`) replacing browser IndexedDB with zero telemetry.
+- **Embedded SQLite Core:** High-performance local database (`aegis_lifeos.db`) replacing browser IndexedDB with zero telemetry and automatic schema migrations (`db_metadata`).
 - **Burn-Rate Cockpit:** Real-time monthly spending cap vs. actual gauge, runway calculation, and overrun alerts.
-- **Multi-Card & Cutoff Deadlines:** Credit card cutoffs (e.g. Day 8, Day 15) and installment plans (MSI) tracking.
+- **Multi-Card & Cutoff Deadlines:** Credit card cutoffs (e.g. Day 8, Day 15, Day 22) and installment plans (MSI) tracking with dedicated semantic categories (`Planes MSI`, `Gastos Fijos`).
 - **Cross-Domain Master Timeline:** Intertwines engineering sprints, operational deliverables, certifications, and personal milestones in an interactive calendar with category badges.
 
-### 3. 📚 Obsidian Second Brain (`Alt + 3`)
+### 3. 📚 Obsidian Second Brain & Granular Encryption (`Alt + 3`)
 - **Bidirectional Vault Sync:** Direct filesystem reading and writing on local Markdown vaults without cloud dependencies.
-- **Hierarchical Tree (`Ctrl + B`):** Collapsible sidebar with Drag-and-Drop file organization.
+- **Granular Encryption (Dual Scheme):** Notes can remain plain text or be selectively encrypted into `.md.enc` using **AES-256-GCM + Argon2id** (Master Key vs. Independent Note Passphrase) with in-memory preview and scoped auto-lock.
+- **Hierarchical Tree (`Ctrl + B`):** Collapsible sidebar with Drag-and-Drop file organization and tactical note creation.
 - **Live Markdown & Mermaid Renderer:** Real-time GitHub Flavored Markdown (GFM), table editing, callouts (`[!NOTE]`, `[!WARNING]`), and native **Mermaid diagrams** rendering.
 - **Network & Backlinks (`Ctrl + M`):** Interactive graph visualizing incoming and outgoing note links.
 
@@ -111,13 +114,13 @@ flowchart TD
 
 ### 5. 📋 Daily Workflow & Tasks Kanban (`Alt + 5`)
 - **Universal Vault Parser:** High-speed scanner extracting `- [ ]` and `- [x]` markdown tasks across the entire vault.
-- **Symmetric Project Swimlanes:** Predefined 220px swimlane containers showing up to 4 tasks cleanly with independent vertical scrolling—preventing card compression with 300+ items.
+- **Symmetric Project Swimlanes:** Predefined 220px swimlane containers showing tasks cleanly with independent vertical scrolling—preventing card compression with 300+ items.
 - **Interactive HUD Filters:** Clickable status chips (**Total**, **En Cola**, **En Foco**, **Completadas**) for instant filtering.
 - **Focus Zoom & Full-Width Expansion:** One-click project zoom (`Maximize2`) expanding the swimlane to full viewport height (`calc(100vh - 270px)`) and single-column 100% width mode.
 - **Atomic Disk Toggling:** Checking any checkbox in Aegis immediately mutates the physical markdown file on disk.
 
 ### 6. 🛡️ Hardware Sentinel (`Alt + 6`)
-- **Zero-Overhead ($O(1)$) Telemetry:** Reads directly from `/proc/stat`, `/proc/meminfo`, and `/sys/class/thermal` (< 0.1% CPU cost).
+- **Zero-Overhead ($O(1)$) Telemetry:** Reads directly from `/proc/stat`, `/proc/meminfo`, and `/sys/class/thermal` (< 0.1% CPU cost). Suspends polling automatically when minimized (`visibilitychange`).
 - **Thermal & Memory Gauges:** Per-core CPU load, CPU package temperature with throttling risk classification, physical DDR5 RAM, and compressed ZRAM swap monitoring.
 - **Process Killer:** Live inspection of top memory and CPU consuming processes with 1-click `SIGTERM`/`SIGKILL` termination.
 - **Tactical Memory Purge:** Instant OS disk cache sync and ZRAM compaction button.
@@ -126,13 +129,48 @@ flowchart TD
 - **Offline Steam Auto-Discovery:** Parses local `appmanifest_*.acf` files to catalog installed Steam titles with icons, AppIDs, and disk sizes without running the Steam client.
 - **1-Click GameMode Integration:** Toggles Linux `gamemoded` for CPU governor locking and real-time scheduler prioritization.
 - **Gamescope FSR Upscaling:** Launch preset scaling 720p 60fps renders to crisp 1080p using AMD FidelityFX Super Resolution.
-- **Local Emulators & Launchers:** Direct launchers for standalone native Wayland games, PokéRogue, and emulators.
+- **Companion Notes & Vault Sync:** Logs achievements, review ratings, hours played, and syncs tactical companion notes directly with the Obsidian Vault.
 
-### 8. ⚙️ Master Settings, Soberanía & Control (`Ctrl + ,`)
+### 8. ⚙️ Master Settings, P2P Sync & Community Hub (`Ctrl + ,`)
+- **Strict Local UI Isolation in P2P:** Local preferences (Theme, UI scale, active plugins, active modules) remain strictly isolated per machine during LAN P2P synchronizations.
 - **Master Profile & Token Limits:** Enforce daily token consumption ceilings, audit saved API keys, and configure identity preferences.
 - **Strict Draft State:** Settings changes remain in preview until clicking **Guardar Todo** (*Save All*); discard with 1-click rollback.
-- **Module Dock Toggles:** Enable or disable any of the 8 pillars dynamically to reclaim screen estate and memory.
 - **Interactive Tour Guides (`[?]`):** In-app walkthroughs for each module powered by `tourCatalog`.
+
+---
+
+## ⚡ Aegis Adaptive Harness (6 Pilares)
+
+The built-in **Aegis Adaptive Harness** brings state-of-the-art agent engineering (inspired by SWE-bench top performers, Aider Repo-Map, and RouteLLM) directly into your desktop workflow:
+
+1. **Pilar 1: Escalamiento Dinámico de Esfuerzo (Dynamic Effort Scaling L1⇄L2⇄L3):** Automatically categorizes prompts (surgical edits vs. architectural refactors) and switches models/temperatures to avoid burning high-tier reasoning tokens on trivial tasks.
+2. **Pilar 2: AST Repo-Map & Compresión Semántica:** Extracts structural symbol maps (classes, functions, signatures) using ctags/AST analysis, giving the agent full codebase awareness at ~15% of the token cost of raw file dumping.
+3. **Pilar 3: Monitoreo de Procesos en Vivo (`RuntimeProcessState`):** Tracks background commands, builds, and test runs with real-time log ingestion without blocking the user interface.
+4. **Pilar 4: Hot-Handoff `L1 ➔ L3`:** If a fast lightweight model (L1) fails a linting check or test suite, Aegis automatically escalates the context and failure diff to the heavy reasoning model (L3) to recover cleanly.
+5. **Pilar 5: Telemetría I/O & Indicadores de Contexto:** Live badges in the chat interface displaying exact prompt tokens, completion tokens, latency (ms), and cost estimations.
+6. **Pilar 6: Sandbox & Execution Safety:** Guardrails intercepting destructive Git operations (`git clean -fdx`, `git push --force`) or unintended file deletions before terminal execution.
+
+---
+
+## 🧩 Community Plugins Architecture
+
+Aegis features an open, sovereign extension architecture:
+
+- **Zero Lock-In Manifest (`plugin.json`):** Every plugin defines its capabilities, requested permissions, views, and settings via a declarative manifest.
+- **Isolated Execution & Sandbox:** Plugins run in isolated contexts with restricted Tauri IPC access, ensuring community extensions cannot tamper with private vault files or master credentials without explicit permission.
+- **1-Click Packaging & P2P Sharing:** Export plugins as `.aegis-plugin.tar.gz` and distribute them peer-to-peer across your local mesh network or contribute them via GitHub pull requests.
+- **Open Contribution Model:** Anyone in the community can build custom dashboards, specialized parsers, game launchers, or LLM providers and share them openly.
+
+---
+
+## 📱 Telegram Remote Gateway
+
+Aegis includes an asynchronous Telegram bridge ([`gateway.rs`](file:///home/zabrielsa/Proyects/projects/Aegis/src-tauri/src/gateway.rs)) that lets you monitor and interact with your workstation remotely:
+
+- **Dynamic Financial Operations:** Log expenses (`/gasto $45 cena bbva`), resolve credit card billing cycles (e.g. 22nd to 22nd), and query financial summaries (`/resumen`).
+- **Remote Station Control:** Check system hardware health (`/status` with CPU %, RAM, and temperatures) or trigger immediate emergency locking (`/lock`).
+- **Asynchronous AI Prompts:** Ask quick questions or trigger tasks (`/ai <prompt>`) using multi-model routing.
+- **TTL Stale Message Protection:** Ephemeral commands older than 300 seconds are automatically discarded upon system reboot or reconnecting to prevent accidental burst execution.
 
 ---
 
@@ -167,6 +205,7 @@ Battle-tested on resource-constrained hardware (**Intel Processor N150, 4 Gracem
 | **Startup Time (Cold Launch)** | **~180 ms** | 1,800 – 3,200 ms | **10x faster** |
 | **Binary Size (Standalone)** | **12 MB** | 140 – 210 MB | **~94% smaller** |
 | **Hardware Telemetry Cost** | **$O(1)$ ($<0.1\%$ CPU)** | 2 – 5% CPU polling | **Imperceptible overhead** |
+| **Context Pruning (Harness)** | **~6.9k tokens** | ~25.4k tokens (raw dump) | **~73% token savings** |
 | **Network Sockets (Offline)** | **0 open sockets** | Continuous telemetry pings | **100% Sovereign** |
 
 ---

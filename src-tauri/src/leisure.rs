@@ -6,9 +6,10 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 use crate::db::get_db_connection;
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -538,6 +539,9 @@ fn finish_and_record_auto_session(
         ended_at: ended_at_iso,
     };
     let _ = app.emit("aegis:game-session-auto-ended", payload);
+
+    // Auto-empaquetar partida guardada para sincronización P2P silenciosa
+    let _ = package_game_save(game_id.to_string());
 
     let mins = std::cmp::max(1, duration_seconds / 60);
     let _ = crate::notifications::send_desktop_notification(
@@ -2602,4 +2606,489 @@ pub fn sqlite_import_game_sessions(items: Vec<serde_json::Value>) -> Result<usiz
         }
     }
     Ok(imported)
+}
+
+// ---------------------------------------------------------
+// 🎮 FASE 7.6 / V2.19: GESTIÓN Y SINCRONIZACIÓN P2P DE SAVES
+// ---------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameSaveRecord {
+    pub game_id: String,
+    pub title: String,
+    pub app_id: Option<String>,
+    pub save_path: String,
+    pub sync_enabled: bool,
+    pub last_saved_at: i64,
+    pub backup_path: Option<String>,
+    pub checksum: Option<String>,
+    pub file_size_bytes: u64,
+    pub device_source: Option<String>,
+    pub updated_at: i64,
+}
+
+/// Directorio donde Aegis almacena los archivos empaquetados (.tar.gz) de saves
+pub fn get_game_saves_storage_dir() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let p = PathBuf::from(home).join(".local/share/aegis/game_saves");
+    let _ = fs::create_dir_all(&p);
+    p
+}
+
+/// Heurística para auto-detectar la ruta real del save de un juego en Linux (Steam / Proton)
+#[tauri::command]
+pub fn detect_game_save_path(game_id: String, app_id: Option<String>) -> Result<Option<String>, String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let clean_appid = app_id.unwrap_or_else(|| {
+        if game_id.starts_with("steam:") {
+            game_id[6..].to_string()
+        } else {
+            game_id.clone()
+        }
+    });
+
+    if clean_appid.is_empty() {
+        return Ok(None);
+    }
+
+    // 1. Revisar en Steam Userdata (remotecache.vdf o carpetas con archivos de save)
+    let userdata_roots = [
+        format!("{}/.steam/steam/userdata", home),
+        format!("{}/.local/share/Steam/userdata", home),
+    ];
+
+    for u_root in &userdata_roots {
+        let p_root = Path::new(u_root);
+        if let Ok(entries) = fs::read_dir(p_root) {
+            for entry in entries.flatten() {
+                let user_dir = entry.path();
+                if user_dir.is_dir() {
+                    let game_user_dir = user_dir.join(&clean_appid);
+                    if game_user_dir.exists() {
+                        let remote = game_user_dir.join("remote");
+                        if remote.exists() && remote.is_dir() {
+                            return Ok(Some(remote.to_string_lossy().to_string()));
+                        }
+
+                        // Inspeccionar remotecache.vdf para extraer la ruta raíz relativa
+                        let remotecache = game_user_dir.join("remotecache.vdf");
+                        if remotecache.exists() {
+                            if let Ok(content) = fs::read_to_string(&remotecache) {
+                                for line in content.lines() {
+                                    let trimmed = line.trim();
+                                    if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.contains('/') {
+                                        let rel_path = trimmed.trim_matches('"');
+                                        if let Some((folder, _)) = rel_path.rsplit_once('/') {
+                                            // Buscar en common apps si coincide
+                                            let common_cand = PathBuf::from(&format!("{}/.steam/steam/steamapps/common", home));
+                                            if let Ok(c_entries) = fs::read_dir(&common_cand) {
+                                                for c_entry in c_entries.flatten() {
+                                                    let target = c_entry.path().join(folder);
+                                                    if target.exists() && target.is_dir() {
+                                                        return Ok(Some(target.to_string_lossy().to_string()));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Revisar en compatdata de Proton (Saved Games, Local AppData, My Games)
+    let compat_roots = [
+        format!("{}/.steam/steam/steamapps/compatdata/{}/pfx/drive_c/users/steamuser", home, clean_appid),
+        format!("{}/.local/share/Steam/steamapps/compatdata/{}/pfx/drive_c/users/steamuser", home, clean_appid),
+    ];
+
+    for c_root in &compat_roots {
+        let p_root = Path::new(c_root);
+        if p_root.exists() {
+            let saved_games = p_root.join("Saved Games");
+            if saved_games.exists() {
+                if let Ok(entries) = fs::read_dir(&saved_games) {
+                    for entry in entries.flatten() {
+                        if entry.path().is_dir() {
+                            return Ok(Some(entry.path().to_string_lossy().to_string()));
+                        }
+                    }
+                }
+            }
+
+            let appdata_local = p_root.join("AppData/Local");
+            if appdata_local.exists() {
+                if let Ok(entries) = fs::read_dir(&appdata_local) {
+                    for entry in entries.flatten() {
+                        let saved = entry.path().join("Saved/SaveGames");
+                        if saved.exists() && saved.is_dir() {
+                            return Ok(Some(saved.to_string_lossy().to_string()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Revisar en ~/.local/share nativo
+    let local_share = PathBuf::from(format!("{}/.local/share", home));
+    if let Ok(entries) = fs::read_dir(&local_share) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                let name_lower = p.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+                if name_lower.contains("save") || name_lower.contains(&clean_appid) {
+                    return Ok(Some(p.to_string_lossy().to_string()));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+/// Obtener o registrar metadatos de un save en SQLite
+#[tauri::command]
+pub fn get_or_register_game_save(game_id: String, title: String, app_id: Option<String>) -> Result<GameSaveRecord, String> {
+    let conn = get_db_connection()?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    // Intentar leer existente
+    let existing = conn.query_row(
+        "SELECT game_id, title, app_id, save_path, sync_enabled, last_saved_at, backup_path, checksum, file_size_bytes, device_source, updated_at
+         FROM game_saves WHERE game_id = ?1",
+        params![game_id],
+        |row| {
+            let sync_int: i64 = row.get(4)?;
+            Ok(GameSaveRecord {
+                game_id: row.get(0)?,
+                title: row.get(1)?,
+                app_id: row.get(2)?,
+                save_path: row.get(3)?,
+                sync_enabled: sync_int == 1,
+                last_saved_at: row.get(5)?,
+                backup_path: row.get(6)?,
+                checksum: row.get(7)?,
+                file_size_bytes: row.get::<_, i64>(8)? as u64,
+                device_source: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        },
+    ).optional().map_err(|e| e.to_string())?;
+
+    if let Some(record) = existing {
+        return Ok(record);
+    }
+
+    // Si no existe, auto-detectar ruta
+    let detected_path = detect_game_save_path(game_id.clone(), app_id.clone())?
+        .unwrap_or_default();
+
+    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "Local".to_string());
+    let record = GameSaveRecord {
+        game_id: game_id.clone(),
+        title: title.clone(),
+        app_id: app_id.clone(),
+        save_path: detected_path.clone(),
+        sync_enabled: true,
+        last_saved_at: 0,
+        backup_path: None,
+        checksum: None,
+        file_size_bytes: 0,
+        device_source: Some(hostname.clone()),
+        updated_at: now,
+    };
+
+    conn.execute(
+        "INSERT INTO game_saves (game_id, title, app_id, save_path, sync_enabled, last_saved_at, backup_path, checksum, file_size_bytes, device_source, updated_at)
+         VALUES (?1, ?2, ?3, ?4, 1, 0, NULL, NULL, 0, ?5, ?6)",
+        params![game_id, title, app_id, detected_path, hostname, now],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(record)
+}
+
+/// Actualizar la ruta configurada o el toggle de sincronización del save
+#[tauri::command]
+pub fn update_game_save_config(game_id: String, save_path: String, sync_enabled: bool) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    conn.execute(
+        "UPDATE game_saves SET save_path = ?1, sync_enabled = ?2, updated_at = ?3 WHERE game_id = ?4",
+        params![save_path, if sync_enabled { 1 } else { 0 }, now, game_id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Empaquetar la partida guardada a un archivo tar.gz en disco
+#[tauri::command]
+pub fn package_game_save(game_id: String) -> Result<GameSaveRecord, String> {
+    let conn = get_db_connection()?;
+    let mut record = conn.query_row(
+        "SELECT game_id, title, app_id, save_path, sync_enabled, last_saved_at, backup_path, checksum, file_size_bytes, device_source, updated_at
+         FROM game_saves WHERE game_id = ?1",
+        params![game_id],
+        |row| {
+            let sync_int: i64 = row.get(4)?;
+            Ok(GameSaveRecord {
+                game_id: row.get(0)?,
+                title: row.get(1)?,
+                app_id: row.get(2)?,
+                save_path: row.get(3)?,
+                sync_enabled: sync_int == 1,
+                last_saved_at: row.get(5)?,
+                backup_path: row.get(6)?,
+                checksum: row.get(7)?,
+                file_size_bytes: row.get::<_, i64>(8)? as u64,
+                device_source: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        },
+    ).map_err(|_| format!("Partida no registrada para {}", game_id))?;
+
+    let p = Path::new(&record.save_path);
+    if !p.exists() {
+        return Err(format!("La ruta del save no existe en disco: {}", record.save_path));
+    }
+
+    let storage_dir = get_game_saves_storage_dir();
+    let sanitized_id = record.game_id.replace(':', "_").replace('/', "_");
+    let target_tar = storage_dir.join(format!("{}.tar.gz", sanitized_id));
+
+    // Empaquetar tar.gz
+    let tar_file = fs::File::create(&target_tar)
+        .map_err(|e| format!("Error creando archivo comprimido de save: {}", e))?;
+    let enc = flate2::write::GzEncoder::new(tar_file, flate2::Compression::default());
+    let mut builder = tar::Builder::new(enc);
+
+    if p.is_dir() {
+        builder.append_dir_all("save_data", p)
+            .map_err(|e| format!("Error comprimiendo directorio de save: {}", e))?;
+    } else if p.is_file() {
+        let mut f = fs::File::open(p).map_err(|e| e.to_string())?;
+        builder.append_file("save_data/file.sav", &mut f)
+            .map_err(|e| format!("Error comprimiendo archivo de save: {}", e))?;
+    }
+    builder.finish().map_err(|e| format!("Error finalizando tar: {}", e))?;
+
+    // Calcular tamaño y timestamp
+    let metadata = fs::metadata(&target_tar).map_err(|e| e.to_string())?;
+    let size = metadata.len();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+    let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "Local".to_string());
+
+    record.file_size_bytes = size;
+    record.last_saved_at = now;
+    record.updated_at = now;
+    record.device_source = Some(hostname.clone());
+
+    conn.execute(
+        "UPDATE game_saves SET file_size_bytes = ?1, last_saved_at = ?2, updated_at = ?3, device_source = ?4 WHERE game_id = ?5",
+        params![size as i64, now, now, hostname, game_id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(record)
+}
+
+/// Restaurar una partida empaquetada (tar.gz) en la ruta local correspondiente con backup previo
+pub fn restore_game_save_from_tar(game_id: &str, tar_bytes: &[u8]) -> Result<(), String> {
+    let conn = get_db_connection()?;
+    let record: GameSaveRecord = conn.query_row(
+        "SELECT game_id, title, app_id, save_path, sync_enabled, last_saved_at, backup_path, checksum, file_size_bytes, device_source, updated_at
+         FROM game_saves WHERE game_id = ?1",
+        params![game_id],
+        |row| {
+            let sync_int: i64 = row.get(4)?;
+            Ok(GameSaveRecord {
+                game_id: row.get(0)?,
+                title: row.get(1)?,
+                app_id: row.get(2)?,
+                save_path: row.get(3)?,
+                sync_enabled: sync_int == 1,
+                last_saved_at: row.get(5)?,
+                backup_path: row.get(6)?,
+                checksum: row.get(7)?,
+                file_size_bytes: row.get::<_, i64>(8)? as u64,
+                device_source: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        },
+    ).map_err(|_| format!("No hay registro local configurado para {}", game_id))?;
+
+    if record.save_path.trim().is_empty() {
+        return Err(format!("El juego {} no tiene configurada una ruta local para el save", record.title));
+    }
+
+    let dest_path = Path::new(&record.save_path);
+
+    // 1. Crear backup previo de seguridad (.bak) si ya existía algo
+    if dest_path.exists() {
+        let bak_path = dest_path.with_extension("bak_aegis");
+        if bak_path.exists() {
+            let _ = fs::remove_dir_all(&bak_path).or_else(|_| fs::remove_file(&bak_path));
+        }
+        let _ = if dest_path.is_dir() {
+            // Copiar directorio como backup
+            Command::new("cp").arg("-r").arg(dest_path).arg(&bak_path).output()
+        } else {
+            fs::copy(dest_path, &bak_path).map(|_| std::process::Output {
+                status: std::os::unix::process::ExitStatusExt::from_raw(0),
+                stdout: vec![],
+                stderr: vec![],
+            })
+        };
+    } else if let Some(parent) = dest_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    // 2. Descomprimir el tar.gz en una carpeta temporal y copiar
+    let decoder = flate2::read::GzDecoder::new(tar_bytes);
+    let mut archive = tar::Archive::new(decoder);
+    let temp_extract = get_game_saves_storage_dir().join(format!("tmp_{}", game_id.replace(':', "_")));
+    let _ = fs::remove_dir_all(&temp_extract);
+    let _ = fs::create_dir_all(&temp_extract);
+
+    archive.unpack(&temp_extract).map_err(|e| format!("Error descomprimiendo save: {}", e))?;
+
+    let extracted_data = temp_extract.join("save_data");
+    if extracted_data.exists() {
+        if dest_path.is_dir() {
+            let _ = fs::create_dir_all(dest_path);
+            let _ = Command::new("cp")
+                .arg("-r")
+                .arg(format!("{}/.", extracted_data.to_string_lossy()))
+                .arg(dest_path)
+                .output();
+        } else {
+            let single_file = extracted_data.join("file.sav");
+            if single_file.exists() {
+                let _ = fs::copy(&single_file, dest_path);
+            }
+        }
+    }
+
+    let _ = fs::remove_dir_all(&temp_extract);
+    Ok(())
+}
+
+/// Exportar catálogo de partidas guardadas para replicación P2P
+pub fn sqlite_export_game_saves() -> Result<Vec<serde_json::Value>, String> {
+    let conn = get_db_connection()?;
+    let mut stmt = conn.prepare(
+        "SELECT game_id, title, app_id, save_path, sync_enabled, last_saved_at, checksum, file_size_bytes, device_source, updated_at
+         FROM game_saves WHERE sync_enabled = 1 AND last_saved_at > 0"
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map([], |row| {
+        let sync_int: i64 = row.get(4)?;
+        let game_id: String = row.get(0)?;
+        let sanitized_id = game_id.replace(':', "_").replace('/', "_");
+        let tar_path = get_game_saves_storage_dir().join(format!("{}.tar.gz", sanitized_id));
+        
+        let tar_base64 = if tar_path.exists() {
+            fs::read(&tar_path).ok().map(|b| to_base64(&b))
+        } else {
+            None
+        };
+
+        Ok(serde_json::json!({
+            "gameId": game_id,
+            "title": row.get::<_, String>(1)?,
+            "appId": row.get::<_, Option<String>>(2)?,
+            "savePath": row.get::<_, String>(3)?,
+            "syncEnabled": sync_int == 1,
+            "lastSavedAt": row.get::<_, i64>(5)?,
+            "checksum": row.get::<_, Option<String>>(6)?,
+            "fileSizeBytes": row.get::<_, i64>(7)?,
+            "deviceSource": row.get::<_, Option<String>>(8)?,
+            "updatedAt": row.get::<_, i64>(9)?,
+            "tarBase64": tar_base64
+        }))
+    }).map_err(|e| e.to_string())?;
+
+    Ok(rows.flatten().collect())
+}
+
+/// Importar catálogo de partidas guardadas desde peer P2P
+pub fn sqlite_import_game_saves(items: Vec<serde_json::Value>) -> Result<usize, String> {
+    let conn = get_db_connection()?;
+    let mut imported = 0;
+
+    for val in items {
+        if let Some(game_id) = val.get("gameId").and_then(|v| v.as_str()) {
+            let title = val.get("title").and_then(|v| v.as_str()).unwrap_or("Juego");
+            let app_id = val.get("appId").and_then(|v| v.as_str());
+            let remote_last_saved = val.get("lastSavedAt").and_then(|v| v.as_i64()).unwrap_or(0);
+            let remote_dev = val.get("deviceSource").and_then(|v| v.as_str());
+            let remote_size = val.get("fileSizeBytes").and_then(|v| v.as_i64()).unwrap_or(0);
+            let tar_b64 = val.get("tarBase64").and_then(|v| v.as_str());
+
+            // Comparar con fecha local
+            let local_last_saved: i64 = conn.query_row(
+                "SELECT last_saved_at FROM game_saves WHERE game_id = ?1",
+                params![game_id],
+                |r| r.get(0),
+            ).unwrap_or(0);
+
+            // Si el remoto es más reciente, restaurar y actualizar
+            if remote_last_saved > local_last_saved {
+                if let Some(b64) = tar_b64 {
+                    // Decodificar base64 usando hex/vector nativo
+                    if let Ok(bytes) = base64_to_vec(b64) {
+                        let _ = restore_game_save_from_tar(game_id, &bytes);
+
+                        let sanitized_id = game_id.replace(':', "_").replace('/', "_");
+                        let tar_path = get_game_saves_storage_dir().join(format!("{}.tar.gz", sanitized_id));
+                        let _ = fs::write(&tar_path, &bytes);
+
+                        let _ = conn.execute(
+                            "INSERT INTO game_saves (game_id, title, app_id, save_path, sync_enabled, last_saved_at, file_size_bytes, device_source, updated_at)
+                             VALUES (?1, ?2, ?3, '', 1, ?4, ?5, ?6, ?4)
+                             ON CONFLICT(game_id) DO UPDATE SET
+                                last_saved_at = excluded.last_saved_at,
+                                file_size_bytes = excluded.file_size_bytes,
+                                device_source = excluded.device_source,
+                                updated_at = excluded.updated_at",
+                            params![game_id, title, app_id, remote_last_saved, remote_size, remote_dev],
+                        );
+
+                        imported += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(imported)
+}
+
+fn base64_to_vec(input: &str) -> Result<Vec<u8>, String> {
+    const STANDARD: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut buf = Vec::new();
+    let mut v = 0u32;
+    let mut bits = 0u32;
+
+    for &b in input.as_bytes() {
+        if b == b'=' {
+            break;
+        }
+        let val = match STANDARD.iter().position(|&x| x == b) {
+            Some(idx) => idx as u32,
+            None => continue,
+        };
+        v = (v << 6) | val;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            buf.push((v >> bits) as u8);
+        }
+    }
+    Ok(buf)
 }

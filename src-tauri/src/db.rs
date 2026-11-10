@@ -224,6 +224,21 @@ pub fn init_db_schema(conn: &Connection) -> Result<(), String> {
         );
         CREATE INDEX IF NOT EXISTS idx_game_catalog_updated ON game_catalog(updated_at DESC);
 
+        -- Tabla v2.19.0: Partidas Guardadas (Game Saves) y Sincronización Soberana P2P
+        CREATE TABLE IF NOT EXISTS game_saves (
+            game_id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            app_id TEXT,
+            save_path TEXT NOT NULL,
+            sync_enabled INTEGER NOT NULL DEFAULT 1,
+            last_saved_at INTEGER NOT NULL DEFAULT 0,
+            backup_path TEXT,
+            checksum TEXT,
+            file_size_bytes INTEGER NOT NULL DEFAULT 0,
+            device_source TEXT,
+            updated_at INTEGER NOT NULL DEFAULT 0
+        );
+
         -- Tablas v2.1.6: Hermes Cortex (Logger de Hábitos y Auto-Evolución)
         CREATE TABLE IF NOT EXISTS cortex_habits (
             topic TEXT PRIMARY KEY,
