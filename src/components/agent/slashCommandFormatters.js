@@ -393,6 +393,7 @@ export function parseProviderQuota(rawText, agentType = 'agy') {
     items.push({
       family: `Claude AI Plan ${subType}`,
       limitType: 'Métricas de Sesión CLI',
+      isText: true,
       percent: 100,
       reset: `In: ${inputTokens.toLocaleString()} | Out: ${outputTokens.toLocaleString()} · ${duration}`
     });
@@ -411,12 +412,12 @@ export function parseProviderQuota(rawText, agentType = 'agy') {
     return items;
   }
 
-  // C. Formato agy estándar (Quota tabular)
+  // C. Formato agy estándar (Quota tabular por tabs \t o espacios múltiples)
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.toLowerCase().startsWith('quota:')) continue;
+    const cleanLine = line.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').trim();
+    if (!cleanLine || cleanLine.toLowerCase().startsWith('quota:')) continue;
 
-    const match = trimmed.match(/^(.+?)\s{2,}(.+?)\s{2,}(\d+)%(?:\s{2,}(.+))?$/);
+    const match = cleanLine.match(/^(.+?)(?:\t+|\s{2,})(.+?)(?:\t+|\s{2,})(\d+)%(?:(?:\t+|\s{2,})(.+))?$/);
     if (match) {
       items.push({
         family: match[1].trim(),

@@ -58,6 +58,7 @@ pub const FACTORY_BRAIN_MARKDOWN: &str = r#"# 🛡️ Aegis Sovereign Brain — 
 - **Cero Conocimiento Volátil (`obsidian-vault-architect`):** Toda decisión arquitectónica, bug resuelto o avance de hito se documenta en la bóveda Markdown (bitácora y nota del proyecto).
 - **Prohibición de Respuestas Declarativas Vacías:** Ante verbos de acción ("ejecuta", "aplica", "escribe", "corrige", "modifica"), el agente DEBE invocar las herramientas de edición o terminal (`edit_file`, `write_file`, `run_command`) en ese mismo turno. Prohibido responder con mensajes pasivos ("Listo", "Contrato activo", "Esperando instrucciones") sin ejecutar la acción solicitada.
 - **Compuerta de Visto Bueno y Desarrollo Ágil:** Iterar siempre en caliente (HMR / dev server). **Prohibido ejecutar commits en Git, cerrar tareas o lanzar compilaciones release pesadas hasta recibir el visto bueno explícito del operador.**
+- **Reinicio No Bloqueante & Continuidad de Conversación:** Al actualizar, recompilar o reiniciar Aegis sobre sí mismo, la nueva instancia DEBE lanzarse desacoplada en segundo plano (`setsid ... </dev/null >/dev/null 2>&1 &`) y verificar su PID antes de concluir el turno. Prohibido terminar el turno o cortar el socket de conversación sin emitir el output de respuesta y estado final al operador.
 "#;
 
 const BASE_SKILLS_SEED: &[(&str, &str)] = &[
