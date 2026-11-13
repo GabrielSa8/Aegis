@@ -120,7 +120,7 @@ export function useAgent() {
   const sessionsManager = useAgentSessions({
     activeContext,
     effortMode,
-    setMessages: (msgs) => streamManager.setMessages(msgs)
+    setMessages: (msgs) => streamManagerRef.current?.setMessages(msgs)
   });
 
   // Sub-hook para streaming de terminal y deduplicación estricta
@@ -135,6 +135,9 @@ export function useAgent() {
     currentSessionId: sessionsManager.currentSessionId,
     setCurrentSessionId: sessionsManager.setCurrentSessionId
   });
+
+  const streamManagerRef = useRef(streamManager);
+  streamManagerRef.current = streamManager;
 
   // Portal Target para Dynamic Island HUD
   const [portalTarget, setPortalTarget] = useState(() =>

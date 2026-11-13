@@ -26,6 +26,7 @@ const MODEL_ICONS = {
 function ModelSelectorDropdown({
   activeModel,
   onSelectModel,
+  effortMode = 'auto',
   onSetEffortMode,
   agentType = 'agy',
   onInjectSystemMessage,
@@ -59,13 +60,13 @@ function ModelSelectorDropdown({
     availableModels[0];
 
   const CurrentIcon = MODEL_ICONS[currentModel.id] || Zap;
+  const intensity = getIntensityLevel(activeModel);
+  const displayName = (m) => modelDisplayName(m, activeModel);
 
   const handleSelect = (model) => {
-    const lvl = getIntensityLevel(activeModel);
-    onSelectModel?.(lvl ? withIntensity(model.id, lvl) : model.id);
-    if (model.effort && onSetEffortMode) {
-      onSetEffortMode(model.effort);
-    }
+    const currentIntensity = intensity || (effortMode === 'low' ? 'low' : 'high');
+    const targetModelId = withIntensity(model.id, currentIntensity);
+    onSelectModel?.(targetModelId);
     setIsOpen(false);
 
     onInjectSystemMessage?.({
@@ -74,17 +75,15 @@ function ModelSelectorDropdown({
       content:
         `> [!NOTE] Motor de IA Actualizado\n` +
         `> ### ⚡ Motor Activo: \`${model.name}\`\n` +
-        `> - **Identificador:** \`${model.id}\`\n` +
+        `> - **Identificador:** \`${targetModelId}\`\n` +
         `> - **Proveedor:** \`${model.provider}\`\n` +
+        `> - **Intensidad:** \`${currentIntensity.toUpperCase()}\`\n` +
         `> - **Especialidad:** ${model.desc}\n` +
         `> - **Estado:** \`[ LISTO PARA EJECUCIÓN ]\``,
       context: activeContext?.label || 'General',
       timestamp: 'Ahora'
     });
   };
-
-  const intensity = getIntensityLevel(activeModel);
-  const displayName = (m) => modelDisplayName(m, activeModel);
 
   const providerLabel =
     agentType === 'claude' || agentType === 'anthropic'
@@ -264,7 +263,13 @@ function ModelSelectorDropdown({
                     <button
                       key={i.level}
                       data-intensity={i.level}
-                      onClick={() => onSelectModel?.(withIntensity(activeModel, i.level))}
+                      onClick={() => {
+                        const target = withIntensity(activeModel, i.level);
+                        onSelectModel?.(target);
+                        if (onSetEffortMode) {
+                          onSetEffortMode(i.level === 'mid' ? 'medium' : i.level);
+                        }
+                      }}
                       style={{
                         padding: '3px 10px',
                         fontSize: '0.7rem',

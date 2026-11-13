@@ -46,6 +46,7 @@ pub fn run() {
             agent::execute_agent_prompt, agent::send_agent_input, agent::cancel_agent_stream,
             agent::sqlite_get_chat_sessions, agent::sqlite_save_chat_session, agent::sqlite_delete_chat_session,
             agent::sqlite_get_chat_messages, agent::sqlite_save_chat_message, agent::sqlite_get_token_usage_telemetry,
+            agent::check_dangling_cli_response,
             agent::execute_provider_command, agent::save_attachment, agent::import_attachment, agent::list_workspace_files,
             harness::analyze_prompt_harness,
             vault::get_vault_notes, vault::read_vault_note, vault::save_vault_note,

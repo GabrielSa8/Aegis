@@ -4,6 +4,7 @@ import { Brain, History, Trash2, Cpu, Coins } from 'lucide-react';
 import EffortLaserSwitch from './EffortLaserSwitch';
 import ModelSelectorDropdown from './ModelSelectorDropdown';
 import { isPayPerTokenProvider, calculateTokenCostUsd, formatUsdCost } from './pricingModels';
+import { withIntensity } from './slashCommandFormatters';
 
 export default function AgentHeaderPortal({
   portalTarget,
@@ -74,12 +75,22 @@ export default function AgentHeaderPortal({
   return createPortal(
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       {/* ⚡ Toggle de Modo de Trabajo (Efecto Oruga / Stretch-and-Contract) */}
-      <EffortLaserSwitch effortMode={effortMode} onSetEffortMode={onSetEffortMode} />
+      <EffortLaserSwitch
+        effortMode={effortMode}
+        onSetEffortMode={(mode) => {
+          onSetEffortMode?.(mode);
+          if (activeModel && mode !== 'auto') {
+            const level = mode === 'low' ? 'low' : 'high';
+            onSelectModel?.(withIntensity(activeModel, level));
+          }
+        }}
+      />
 
       {/* 🤖 Selector Táctico de Modelo del Motor según Proveedor */}
       <ModelSelectorDropdown
         activeModel={activeModel}
         onSelectModel={onSelectModel}
+        effortMode={effortMode}
         onSetEffortMode={onSetEffortMode}
         agentType={agentType}
         onInjectSystemMessage={onInjectSystemMessage}

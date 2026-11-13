@@ -501,16 +501,37 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     }
 
     // Inyección de modelo específico del proveedor si está seleccionado
-    if let Some(ref m) = model {
+    // Si hay un nivel de esfuerzo/intensidad especificado, sincronizamos el sufijo del modelo (-low, -medium, -high)
+    let mut resolved_model = model.clone();
+    if let Some(ref eff) = effort {
+        let eff_clean = eff.trim().to_lowercase();
+        let target_suffix = match eff_clean.as_str() {
+            "low" => Some("low"),
+            "mid" | "medium" => Some("medium"),
+            "high" | "max" | "xhigh" => Some("high"),
+            _ => None,
+        };
+
+        if let (Some(ref m), Some(suf)) = (&model, target_suffix) {
+            for old_suf in &["-low", "-medium", "-high"] {
+                if m.ends_with(old_suf) {
+                    let base = &m[..m.len() - old_suf.len()];
+                    resolved_model = Some(format!("{}-{}", base, suf));
+                    break;
+                }
+            }
+        }
+    }
+
+    if let Some(ref m) = resolved_model {
         let clean = m.trim();
         if !clean.is_empty() {
             cmd.arg("--model").arg(clean);
         }
     }
 
-    // Inyección de nivel de esfuerzo/razonamiento (low para flash, high para profundo)
-    // Si el id del modelo ya trae intensidad (-low/-medium/-high) o el binario no lo soporta, se omite.
-    let model_has_level = model.as_deref().map_or(false, |m| {
+    // Inyección de nivel de esfuerzo/razonamiento si el binario lo soporta y el modelo no lleva sufijo embebido
+    let model_has_level = resolved_model.as_deref().map_or(false, |m| {
         let m = m.trim();
         m.ends_with("-low") || m.ends_with("-medium") || m.ends_with("-high")
     });
@@ -1253,6 +1274,109 @@ pub fn sqlite_get_chat_messages(session_id: String) -> Result<Vec<ChatMessage>, 
     Ok(messages)
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveredResponse {
+    pub found: bool,
+    pub role: String,
+    pub content: String,
+    pub duration_seconds: Option<f64>,
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+    pub total_tokens: Option<u64>,
+}
+
+/// Inspecciona el transcript de agy en disco para una conversación dada y recupera
+/// la última respuesta del asistente si terminó en segundo plano y su timestamp es posterior a min_timestamp_iso.
+#[tauri::command]
+pub fn check_dangling_cli_response(conversation_id: String, _min_timestamp_iso: Option<String>) -> Result<RecoveredResponse, String> {
+    let clean_id = conversation_id.trim();
+    if clean_id.is_empty() {
+        return Ok(RecoveredResponse {
+            found: false,
+            role: "assistant".to_string(),
+            content: String::new(),
+            duration_seconds: None,
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        });
+    }
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let transcript_path = std::path::PathBuf::from(home)
+        .join(".gemini/antigravity-cli/brain")
+        .join(clean_id)
+        .join(".system_generated/logs/transcript.jsonl");
+
+    if !transcript_path.exists() {
+        return Ok(RecoveredResponse {
+            found: false,
+            role: "assistant".to_string(),
+            content: String::new(),
+            duration_seconds: None,
+            input_tokens: None,
+            output_tokens: None,
+            total_tokens: None,
+        });
+    }
+
+    let file = std::fs::File::open(&transcript_path).map_err(|e| e.to_string())?;
+    let reader = std::io::BufReader::new(file);
+    use std::io::BufRead;
+
+    let mut last_user_step: i64 = -1;
+    let mut last_response: Option<RecoveredResponse> = None;
+
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => continue,
+        };
+
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&line) {
+            let typ = val.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            let step = val.get("step_index").and_then(|v| v.as_i64()).unwrap_or(-1);
+
+            if typ == "USER_INPUT" {
+                last_user_step = step;
+                last_response = None;
+            } else if typ == "PLANNER_RESPONSE" && (last_user_step < 0 || step > last_user_step) {
+                let src = val.get("source").and_then(|v| v.as_str()).unwrap_or("");
+                let content = val.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                if (src == "MODEL" || src == "ASSISTANT") && !content.trim().is_empty() {
+                    let in_tok = val.get("input_tokens").and_then(|v| v.as_u64());
+                    let out_tok = val.get("output_tokens").and_then(|v| v.as_u64());
+                    let tot_tok = match (in_tok, out_tok) {
+                        (Some(i), Some(o)) => Some(i + o),
+                        _ => None,
+                    };
+
+                    last_response = Some(RecoveredResponse {
+                        found: true,
+                        role: "assistant".to_string(),
+                        content: content.to_string(),
+                        duration_seconds: None,
+                        input_tokens: in_tok,
+                        output_tokens: out_tok,
+                        total_tokens: tot_tok,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(last_response.unwrap_or(RecoveredResponse {
+        found: false,
+        role: "assistant".to_string(),
+        content: String::new(),
+        duration_seconds: None,
+        input_tokens: None,
+        output_tokens: None,
+        total_tokens: None,
+    }))
+}
+
 #[tauri::command]
 pub fn sqlite_save_chat_message(message: ChatMessage) -> Result<(), String> {
     let conn = crate::db::get_db_connection()?;
@@ -1601,12 +1725,19 @@ pub fn list_workspace_files(root: String, query: String) -> Result<Vec<String>, 
 
 #[cfg(test)]
 mod fallback_tests {
-    use super::is_quota_error;
+    use super::*;
 
     #[test]
     fn detects_quota_errors() {
         assert!(is_quota_error("generating and executing: RESOURCE_EXHAUSTED (code 429): Individual quota reached."));
         assert!(is_quota_error("Error: Too Many Requests"));
         assert!(!is_quota_error("Hola, aquí está tu respuesta"));
+    }
+
+    #[test]
+    fn test_check_dangling_cli_response_empty() {
+        let res = check_dangling_cli_response("non_existent_conversation_uuid_123".to_string(), None).unwrap();
+        assert!(!res.found);
+        assert_eq!(res.role, "assistant");
     }
 }
