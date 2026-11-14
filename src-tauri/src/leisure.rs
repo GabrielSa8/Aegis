@@ -94,11 +94,21 @@ pub struct CustomGame {
     pub launch_target: String,
     pub description: Option<String>,
     pub banner_url: Option<String>,
+    #[serde(default)]
     pub play_time_minutes: i64,
     pub last_played: Option<String>,
+    #[serde(default = "default_created_at")]
     pub created_at: String,
     pub achievements_unlocked: Option<usize>,
     pub achievements_total: Option<usize>,
+}
+
+fn default_created_at() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    format!("{}", now)
 }
 
 fn to_base64(bytes: &[u8]) -> String {

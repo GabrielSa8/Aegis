@@ -242,7 +242,9 @@ export function useGaming() {
     try {
       const gameToSave = {
         ...gameFormData,
-        id: gameFormData.id || `custom_${Date.now()}`
+        id: gameFormData.id || `custom_${Date.now()}`,
+        playTimeMinutes: gameFormData.playTimeMinutes ?? 0,
+        createdAt: gameFormData.createdAt || new Date().toISOString()
       };
       await invoke('sqlite_save_custom_game', { game: gameToSave });
       setShowGameModal(false);
