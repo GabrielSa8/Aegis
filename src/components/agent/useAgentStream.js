@@ -151,13 +151,6 @@ export function useAgentStream({
       delete currentAccumulatorRef.current[chunk.stream_id];
       delete lastProcessedSeqRef.current[chunk.stream_id];
     } else if (chunk.event_type === 'error') {
-      invoke('cortex_record_signal', {
-        prompt: chunk.content || 'error',
-        contextLabel: activeContextRef.current?.label || 'General',
-        isError: true,
-        activeSkills: activeContextRef.current?.skills || []
-      }).catch(() => {});
-
       // Notificación nativa de error en segundo plano
       if (typeof document !== 'undefined' && (document.hidden || !document.hasFocus())) {
         const ctxLabel = activeContextRef.current?.label || 'General';

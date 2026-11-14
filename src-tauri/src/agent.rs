@@ -280,15 +280,31 @@ pub async fn execute_agent_prompt(
             }
         }
 
-        // 2. Auto-montar skills `cortex-<tema>` si el prompt menciona `<tema>`
+        // 2. Auto-montar skills `cortex-<tema>` si el contexto activo o el prompt coinciden con `<tema>`
+        let ctx_id_norm = crate::cortex::extractor::normalize_word(&ctx_name);
+        let ctx_path_norm = context_path
+            .as_deref()
+            .and_then(|p| Path::new(p).file_name())
+            .and_then(|s| s.to_str())
+            .map(crate::cortex::extractor::normalize_word)
+            .unwrap_or_default();
+        let is_code_lang_rule = ["commit", "rama", "branch", "merge", "codigo", "backend"]
+            .iter()
+            .any(|m| prompt_norm.contains(m));
+
         if let Ok(entries) = std::fs::read_dir(&global_skills_dir) {
             for entry in entries.flatten() {
                 let fname = entry.file_name().to_string_lossy().to_string();
                 if let Some(topic) = fname.strip_prefix("cortex-") {
+                    if topic == "ingles" && is_code_lang_rule {
+                        continue;
+                    }
                     let topic_space = topic.replace('-', " ");
-                    if !topic.is_empty()
-                        && (prompt_norm.contains(topic) || prompt_norm.contains(&topic_space))
-                    {
+                    let matches_ctx = !topic.is_empty()
+                        && (ctx_id_norm.contains(topic) || ctx_path_norm == topic);
+                    let matches_prompt = !topic.is_empty()
+                        && (prompt_norm.contains(topic) || prompt_norm.contains(&topic_space));
+                    if matches_ctx || matches_prompt {
                         let dst = skills_dir.join(&fname);
                         if !dst.exists() {
                             #[cfg(unix)]

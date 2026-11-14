@@ -53,6 +53,7 @@ pub const FACTORY_BRAIN_MARKDOWN: &str = r#"# 🛡️ Aegis Sovereign Brain — 
 - **`MINOR` (`1.1.0`, `1.2.0`):** Hitos funcionales completos, nuevos módulos, pestañas o capacidades de producto retrocompatibles.
 - **`MAJOR` (`1.0.0`, `2.0.0`):** Hitos arquitectónicos fundacionales o cambios incompatibles con versiones previas (*breaking changes*).
 - **Sincronización de Manifiestos:** Mantener versión idéntica en todos los manifiestos del proyecto (`package.json`, `Cargo.toml`, `tauri.conf.json`, etc.) en cada cierre de hito para garantizar compatibilidad con auto-updaters.
+- **Protocolo Obligatorio de Release Oficial:** Todo release público en GitHub exige ejecutar `bash scripts/package-release.sh` para compilar el ELF stripped, empaquetar el tarball `.AppImage.tar.gz`, firmar con Minisign y generar `latest.json`. Subir obligatoriamente los 5 activos con `gh release upload v* <archivos> --clobber` para no romper el auto-updater de la aplicación.
 
 ## 7. Memoria Viva en Bóveda & Regla de Visto Bueno
 - **Cero Conocimiento Volátil (`obsidian-vault-architect`):** Toda decisión arquitectónica, bug resuelto o avance de hito se documenta en la bóveda Markdown (bitácora y nota del proyecto).

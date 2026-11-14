@@ -2,22 +2,21 @@ use rusqlite::{params, Connection};
 use std::fs;
 use std::path::Path;
 
-use super::extractor::normalize_word;
+use super::extractor::{is_directive_or_correction, normalize_word, strip_code_and_noise};
 use super::CortexProposal;
 
 pub const CORTEX_SECTION_HEADER: &str = "## 🧠 Directrices y Aprendizajes Locales (Hermes Cortex)";
 
-/// Extrae de `chat_messages` las consultas reales del usuario y conclusiones del asistente sobre `topic` sin contaminar con otros temas.
+/// Extrae de `chat_messages` las directivas del operador, consultas limpias y acuerdos técnicos reales sobre `topic`.
 pub fn synthesize_from_history(
     conn: &Connection,
     topic: &str,
     fallback_sample: &str,
-) -> (Vec<String>, Vec<String>) {
+) -> (Vec<String>, Vec<String>, Vec<String>) {
     let raw_key = topic
         .trim_start_matches("ext:.")
         .trim_start_matches("skill:");
 
-    // Evitar tokens genéricos en la búsqueda histórica
     const GENERIC_NEEDLES: &[&str] = &[
         "skill", "skills", "find", "create", "update", "code", "clean", "design", "input",
         "filter", "optimization", "project", "router",
@@ -29,86 +28,109 @@ pub fn synthesize_from_history(
         .collect();
     let primary_needle = normalize_word(raw_key);
 
+    let mut directives: Vec<String> = Vec::new();
     let mut user_queries: Vec<String> = Vec::new();
     let mut assistant_points: Vec<String> = Vec::new();
 
     let Ok(mut stmt) = conn.prepare(
-        "SELECT role, content FROM chat_messages ORDER BY created_at ASC LIMIT 300",
+        "SELECT role, content, COALESCE(context, '') FROM chat_messages ORDER BY created_at ASC LIMIT 350",
     ) else {
         if !fallback_sample.is_empty() {
             user_queries.push(fallback_sample.to_string());
         }
-        return (user_queries, assistant_points);
+        return (directives, user_queries, assistant_points);
     };
 
-    let rows: Vec<(String, String)> = stmt
-        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+    let rows: Vec<(String, String, String)> = stmt
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })
         .ok()
         .into_iter()
         .flatten()
         .flatten()
         .collect();
 
-    let matches_topic = |norm_text: &str| -> bool {
-        if !primary_needle.is_empty() && norm_text.contains(&primary_needle) {
+    let matches_topic = |norm_text: &str, norm_ctx: &str| -> bool {
+        if !primary_needle.is_empty()
+            && (norm_text.contains(&primary_needle) || norm_ctx == primary_needle)
+        {
             return true;
         }
         !needles.is_empty() && needles.iter().any(|n| norm_text.contains(n))
     };
 
     let mut expect_assistant = false;
-    for (role, content) in rows {
-        let norm_content = normalize_word(&content);
+    for (role, content, msg_ctx) in rows {
+        let stripped = strip_code_and_noise(&content);
+        let norm_content = normalize_word(&stripped);
+        let norm_ctx = normalize_word(msg_ctx.trim());
+
         if role == "user" {
-            if matches_topic(&norm_content) && !content.trim_start().starts_with('/') {
-                let clean_q: String = content
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .chars()
-                    .take(160)
-                    .collect();
-                if !clean_q.is_empty() && !user_queries.contains(&clean_q) {
-                    user_queries.push(clean_q);
+            if matches_topic(&norm_content, &norm_ctx) && !content.trim_start().starts_with('/') {
+                let mut captured_directive = false;
+                for raw_line in stripped.lines() {
+                    let clean_line: String = raw_line.trim().chars().take(180).collect();
+                    if clean_line.len() >= 10 && is_directive_or_correction(&clean_line) {
+                        if !directives.contains(&clean_line) {
+                            directives.push(clean_line);
+                        }
+                        captured_directive = true;
+                    }
+                }
+                if !captured_directive {
+                    let first_line: String = stripped
+                        .lines()
+                        .find(|l| !l.trim().is_empty())
+                        .unwrap_or("")
+                        .trim()
+                        .chars()
+                        .take(180)
+                        .collect();
+                    if first_line.len() >= 10 && !user_queries.contains(&first_line) {
+                        user_queries.push(first_line);
+                    }
                 }
                 expect_assistant = true;
             } else {
                 expect_assistant = false;
             }
         } else if role == "assistant" && expect_assistant {
-            // Solo sintetizar respuestas del asistente inmediatamente asociadas al turno donde el usuario preguntó por `topic`
             expect_assistant = false;
             let mut body = content.as_str();
             while let Some(end_idx) = body.find("</thought>") {
                 body = &body[end_idx + 10..];
             }
-            for line in body.lines() {
+            let clean_body = strip_code_and_noise(body);
+            let norm_body = normalize_word(&clean_body);
+            // Exigir que la respuesta del asistente también tenga relación con el tópico o su contexto
+            if !matches_topic(&norm_body, &norm_ctx) {
+                continue;
+            }
+            for line in clean_body.lines() {
                 let t = line.trim();
-                // Ignorar metadatos efímeros de commits/tags/rutas sueltas
-                if t.starts_with("- **Commit**:")
-                    || t.starts_with("- **Tag**:")
+                // Descartar metadatos efímeros, rutas de archivos, hashes o conversación volátil
+                if t.starts_with("- **Commit")
+                    || t.starts_with("- **Tag")
                     || t.starts_with("- [`")
+                    || t.starts_with("- [")
                     || t.starts_with("- **PID")
+                    || t.starts_with("- **Estado")
+                    || t.starts_with("- **Rama")
+                    || t.contains("file:///")
+                    || t.contains("memoria volátil")
+                    || t.starts_with('|')
                 {
                     continue;
                 }
-                let is_bullet = t.starts_with("- ")
-                    || t.starts_with("* ")
-                    || (t.len() > 3
-                        && t.chars().next().unwrap_or(' ').is_ascii_digit()
-                        && t.contains(". "));
-                let is_important = t.contains("**") || t.starts_with("### ");
-                if (is_bullet || is_important) && t.len() >= 22 && t.len() <= 200 {
-                    // Verificar que el punto realmente mencione o tenga relación semántica o sea regla arquitectónica
-                    let formatted = if t.starts_with("### ") {
-                        format!("- **Sección clave:** {}", t.trim_start_matches('#').trim())
-                    } else if t.starts_with("- ") || t.starts_with("* ") {
-                        format!("- {}", &t[2..].trim())
-                    } else {
-                        format!("- {}", t)
-                    };
-                    if !assistant_points.contains(&formatted) && assistant_points.len() < 8 {
+                let is_bullet = t.starts_with("- **") || t.starts_with("* **");
+                if is_bullet && t.len() >= 28 && t.len() <= 200 {
+                    let formatted = format!("- {}", &t[2..].trim());
+                    if !assistant_points.contains(&formatted) && assistant_points.len() < 6 {
                         assistant_points.push(formatted);
                     }
                 }
@@ -116,11 +138,17 @@ pub fn synthesize_from_history(
         }
     }
 
-    if user_queries.is_empty() && !fallback_sample.is_empty() {
-        user_queries.push(fallback_sample.chars().take(160).collect());
+    if user_queries.is_empty() && directives.is_empty() && !fallback_sample.is_empty() {
+        let clean_fb: String = strip_code_and_noise(fallback_sample)
+            .chars()
+            .take(160)
+            .collect();
+        if !clean_fb.trim().is_empty() {
+            user_queries.push(clean_fb.trim().to_string());
+        }
     }
 
-    (user_queries, assistant_points)
+    (directives, user_queries, assistant_points)
 }
 
 pub fn build_skill_draft(
@@ -150,75 +178,91 @@ pub fn build_skill_draft(
         .collect();
     let trimmed_slug = clean_slug.trim_matches('-');
 
-    let existing_skill_path = skills_root.join(trimmed_slug).join("SKILL.md");
-    let is_existing_non_cortex =
-        !trimmed_slug.starts_with("cortex-") && existing_skill_path.exists();
+    let non_cortex_path = skills_root.join(trimmed_slug).join("SKILL.md");
+    let is_existing_non_cortex = !trimmed_slug.starts_with("cortex-") && non_cortex_path.exists();
 
     let slug = if is_existing_non_cortex || trimmed_slug.starts_with("cortex-") {
         trimmed_slug.to_string()
     } else {
         format!("cortex-{}", trimmed_slug)
     };
+    let target_skill_path = skills_root.join(&slug).join("SKILL.md");
 
-    let (queries, takeaways) = synthesize_from_history(conn, topic, sample);
+    let (directives, queries, takeaways) = synthesize_from_history(conn, topic, sample);
+
+    let directives_md = if directives.is_empty() {
+        "- Sin restricciones explícitas dictadas aún; respetar convenciones del repositorio y BRAIN.md."
+            .to_string()
+    } else {
+        directives
+            .iter()
+            .rev()
+            .take(6)
+            .map(|d| format!("- **Regla del Operador:** \"{}\"", d))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
     let queries_md = if queries.is_empty() {
-        format!("- `{}`", sample.chars().take(160).collect::<String>())
+        "- Sin consultas adicionales registradas.".to_string()
     } else {
         queries
             .iter()
             .rev()
-            .take(5)
+            .take(4)
             .map(|q| format!("- \"{}\"", q))
             .collect::<Vec<_>>()
             .join("\n")
     };
 
     let takeaways_md = if takeaways.is_empty() {
-        "- Sin acuerdos previos sintetizados aún; registrar conclusiones clave en próximas sesiones."
-            .to_string()
+        "- Sin acuerdos técnicos adicionales sintetizados aún.".to_string()
     } else {
         takeaways.join("\n")
     };
 
-    let (title, reason, skill_md) = if is_existing_non_cortex {
-        let base_md = fs::read_to_string(&existing_skill_path).unwrap_or_default();
+    // Si el archivo SKILL.md ya existe en disco y tiene reglas curadas (no generadas por plantilla básica), preservarlas intactas
+    let has_curated_file = target_skill_path.exists()
+        && fs::read_to_string(&target_skill_path)
+            .map(|c| {
+                !c.contains("## 1. Intención y Consultas Recurrentes del Usuario")
+                    || c.contains("## 2. Directrices Obligatorias")
+                    || c.contains("## 2. Directrices Operativas Capturadas")
+            })
+            .unwrap_or(false);
+
+    let (title, reason, skill_md) = if is_existing_non_cortex || has_curated_file {
+        let base_md = fs::read_to_string(&target_skill_path).unwrap_or_default();
         let clean_base = base_md
             .split(CORTEX_SECTION_HEADER)
             .next()
             .unwrap_or(&base_md)
             .trim_end();
         let appended = format!(
-            "{clean_base}\n\n{CORTEX_SECTION_HEADER}\n> Reglas locales y correcciones extraídas de tus sesiones en Aegis ({hits} señales, {errors} correcciones/fricciones):\n\n### Directrices y Consultas del Operador\n{queries_md}\n\n### Acuerdos Técnicos Aplicados\n{takeaways_md}\n"
+            "{clean_base}\n\n{CORTEX_SECTION_HEADER}\n> Reglas operativas y acuerdos extraídos de tus sesiones en Aegis ({hits} señales, {errors} correcciones):\n\n### Directrices Imperativas del Operador\n{directives_md}\n\n### Acuerdos Técnicos Sintetizados\n{takeaways_md}\n"
         );
         (
-            format!("Evolución de Skill Instalada: {}", slug),
+            format!("Evolución de Skill: {}", slug),
             format!(
-                "Hermes Cortex detectó {} interacciones ({} correcciones/directrices) vinculadas a tu skill `{}` y anexó las reglas al final de su SKILL.md sin alterar el manual original.",
+                "Hermes Cortex detectó {} señales ({} directrices/correcciones) en `{}` y actualizó la sección incremental preservando tus reglas curadas.",
                 hits, errors, slug
             ),
             appended,
         )
     } else {
         let t = format!("Especialización Autónoma: {}", topic);
-        let r = if errors > 0 {
-            format!(
-                "Hermes Cortex detectó {} consultas y {} fricciones/errores en `{}` ({}).",
-                hits, errors, topic, category
-            )
-        } else {
-            format!(
-                "Hermes Cortex detectó {} consultas recurrentes sobre `{}` ({}).",
-                hits, topic, category
-            )
-        };
+        let r = format!(
+            "Hermes Cortex detectó {} interacciones ({} directrices/correcciones) sobre `{}` ({}).",
+            hits, errors, topic, category
+        );
         let md = format!(
-            "---\nname: {slug}\ndescription: Contexto acumulado y directrices de Hermes Cortex para {topic} ({category}). Activar siempre que el usuario consulte o trabaje sobre {topic}.\n---\n\n# {t}\n\n## 1. Intención y Consultas Recurrentes del Usuario\n- **Dominio:** {category} ({hits} interacciones registradas, {errors} fricciones)\n{queries_md}\n\n## 2. Base de Conocimiento y Acuerdos Previos (Síntesis SQLite)\n{takeaways_md}\n\n## 3. Reglas de Ejecución al Activar esta Skill\n1. **Continuidad sin repetir lo básico:** Tomar como base los acuerdos de la sección 2 sin volver a explicar desde cero lo ya acordado.\n2. **Acción directa al dominio (`{topic}`):** Entregar implementaciones limpias, directrices técnicas, esquemas o soluciones ejecutables alineadas al objetivo del usuario.\n3. **Memoria en Bóveda:** Si se definen nuevos planes, recursos o avances sobre `{topic}`, documentarlos en la nota correspondiente de Obsidian.\n"
+            "---\nname: {slug}\ndescription: Contexto acumulado y directrices operativas de Hermes Cortex para {topic} ({category}). Activar siempre que el usuario consulte o trabaje sobre {topic}.\n---\n\n# {t}\n\n## 1. Directrices y Restricciones del Operador\n- **Dominio:** {category} ({hits} señales registradas, {errors} directrices/correcciones)\n{directives_md}\n\n## 2. Acuerdos Técnicos y Base de Conocimiento\n{takeaways_md}\n\n## 3. Foco de Consultas Recientes\n{queries_md}\n\n## 4. Reglas de Ejecución al Activar esta Skill\n1. **Aplicación estricta de directrices:** Cumplir las reglas de la sección 1 y 2 sin repetir preguntas ya resueltas.\n2. **Acción directa al dominio (`{topic}`):** Entregar código, esquemas o soluciones ejecutables alineadas al stack del proyecto.\n3. **Memoria en Bóveda:** Documentar decisiones arquitectónicas nuevas en la nota correspondiente de Obsidian.\n"
         );
         (t, r, md)
     };
 
     let profile_note = format!(
-        "- **Patrón Hermes Cortex (`{topic}` — {category}):** Frecuencia alta ({hits} consultas). Skill especializada `{slug}` activa."
+        "- **Patrón Hermes Cortex (`{topic}` — {category}):** {hits} señales ({errors} directrices). Skill `{slug}` activa."
     );
 
     (
@@ -264,7 +308,7 @@ pub fn upsert_or_evolve_proposal(
             let delta = hits - prev_hits;
             title = format!("Evolución Autónoma: {} (+{} nuevas)", topic, delta);
             reason = format!(
-                "Hermes Cortex detectó +{} nuevas consultas en `{}` ({} → {} total). Skill `{}` re-sintetizada con los acuerdos más recientes.",
+                "Hermes Cortex detectó +{} nuevas señales en `{}` ({} → {} total). Skill `{}` re-sintetizada preservando reglas base.",
                 delta, topic, prev_hits, hits, slug
             );
         }

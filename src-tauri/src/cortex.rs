@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use extractor::{extract_topics, is_directive_or_correction, match_installed_skills};
+use extractor::{
+    extract_topics_with_context, is_directive_or_correction, match_installed_skills,
+    strip_code_and_noise,
+};
 use synthesizer::upsert_or_evolve_proposal;
 
 const PROPOSAL_THRESHOLD: i64 = 5;
@@ -60,7 +63,12 @@ pub fn cortex_record_signal(
         return Ok(None);
     }
 
-    let mut topics = extract_topics(trimmed);
+    // No registrar errores crudos de transporte/CLI como si fueran prompts del operador
+    if is_error && !is_directive_or_correction(trimmed) {
+        return Ok(None);
+    }
+
+    let mut topics = extract_topics_with_context(trimmed, context_label.as_deref());
     let ctx_skills = active_skills.unwrap_or_default();
     let matched_skills = match_installed_skills(trimmed, &ctx_skills);
     for sk in matched_skills {
@@ -77,7 +85,14 @@ pub fn cortex_record_signal(
     let conn = crate::db::get_db_connection()?;
     let now = chrono_iso_now();
     let ctx = context_label.unwrap_or_else(|| "General".to_string());
-    let sample: String = trimmed.chars().take(200).collect();
+    let clean_sample: String = strip_code_and_noise(trimmed)
+        .lines()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or(trimmed)
+        .trim()
+        .chars()
+        .take(200)
+        .collect();
     let is_directive = is_directive_or_correction(trimmed);
     let hit_inc: i64 = if is_directive { 2 } else { 1 };
     let err_inc: i64 = if is_error || is_directive { 1 } else { 0 };
@@ -94,7 +109,7 @@ pub fn cortex_record_signal(
                 sample_prompt = ?5,
                 last_context = ?6,
                 updated_at = ?7",
-            params![topic, category, hit_inc, err_inc, sample, ctx, now],
+            params![topic, category, hit_inc, err_inc, clean_sample, ctx, now],
         )
         .map_err(|e| e.to_string())?;
 
@@ -114,7 +129,7 @@ pub fn cortex_record_signal(
                 category,
                 hits,
                 errors,
-                &sample,
+                &clean_sample,
                 &now,
                 PROPOSAL_THRESHOLD,
             );
@@ -124,7 +139,7 @@ pub fn cortex_record_signal(
     Ok(triggered_proposal)
 }
 
-/// Obtiene el estado completo de Hermes Cortex y sintetiza/evoluciona propuestas maduras.
+/// Obtiene el estado completo de Hermes Cortex y sintetiza/evoluciona propuestas que cumplan umbral real.
 #[tauri::command]
 pub fn cortex_get_telemetry() -> Result<CortexTelemetry, String> {
     let conn = crate::db::get_db_connection()?;
@@ -163,7 +178,10 @@ pub fn cortex_get_telemetry() -> Result<CortexTelemetry, String> {
         .flatten()
         .collect();
 
-    for h in habits.iter().filter(|h| h.hit_count >= 2) {
+    for h in habits
+        .iter()
+        .filter(|h| h.hit_count >= PROPOSAL_THRESHOLD || (h.hit_count >= 3 && h.error_count >= 2))
+    {
         let sample = h.sample_prompt.clone().unwrap_or_default();
         let _ = upsert_or_evolve_proposal(
             &conn,
@@ -173,7 +191,7 @@ pub fn cortex_get_telemetry() -> Result<CortexTelemetry, String> {
             h.error_count,
             &sample,
             &now,
-            2,
+            PROPOSAL_THRESHOLD,
         );
     }
 
@@ -327,7 +345,21 @@ fn chrono_iso_now() -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::extractor::extract_topics;
+    use super::extractor::{extract_topics, extract_topics_with_context};
+    use super::synthesizer::{upsert_or_evolve_proposal, CORTEX_SECTION_HEADER};
+    use rusqlite::{params, Connection};
+
+    fn setup_memory_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_db_schema(&conn).unwrap();
+        conn.execute(
+            "INSERT INTO chat_sessions (id, title, context_id, effort, created_at, updated_at)
+             VALUES ('s1', 'Test Session', 'ctx1', 'medium', '2026-11-14T10:00:00Z', '2026-11-14T10:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn
+    }
 
     #[test]
     fn extracts_universal_topics_across_any_domain() {
@@ -343,8 +375,145 @@ mod tests {
         assert_eq!(study[0].0, "ingles");
         assert!(!study.iter().any(|(t, _)| t == "estudiar"));
 
-        // Verificar que verbos conjugados y palabras basura de prueba quedan bloqueados
         let noise = extract_topics("ejecuta una tarea que te pida reiniciarte para ver si eres capaz de lanzar el output tras reinicio");
         assert!(!noise.iter().any(|(t, _)| matches!(t.as_str(), "ejecuta" | "eres" | "capaz" | "tarea" | "output" | "reinicio" | "reiniciarte" | "lanzar")));
+    }
+
+    #[test]
+    fn blocks_pasted_code_and_attributes_coding_rules_to_active_context() {
+        let pasted = extract_topics(
+            "Este es el código original, modificalo con el arreglo\n```js\nconst REGEX_DIACRITICS = /a/;\nconst MONITOREO_TOC = 1;\n```",
+        );
+        assert!(!pasted
+            .iter()
+            .any(|(t, _)| t.contains("regex") || t.contains("monitoreo")));
+
+        let git_rule = extract_topics_with_context(
+            "Recuerda, solo commits en ingles, trabajamos en ramas",
+            Some("Kaboom"),
+        );
+        assert_eq!(git_rule[0].0, "kaboom");
+        assert!(!git_rule
+            .iter()
+            .any(|(t, _)| matches!(t.as_str(), "ingles" | "commits" | "ramas")));
+    }
+
+    #[test]
+    fn synthesizes_high_signal_new_skill_without_noise() {
+        let conn = setup_memory_db();
+
+        // Turno 1: Directriz multilínea + bloque de código pegado (ruido que debe ignorarse)
+        conn.execute(
+            "INSERT INTO chat_messages (id, session_id, role, content, context, created_at)
+             VALUES ('m1', 's1', 'user', ?1, 'BillingEngine', '2026-11-14T10:01:00Z')",
+            params![
+                "Vamos a estructurar el módulo de facturación.\nProhibido usar flotantes IEEE 754 para dinero, siempre usa centavos enteros en i64.\n```rust\nlet BAD_FLOAT_VAR = 19.99;\n```"
+            ],
+        )
+        .unwrap();
+
+        // Respuesta del asistente con acuerdo técnico real + ruido de commits/links que debe filtrarse
+        conn.execute(
+            "INSERT INTO chat_messages (id, session_id, role, content, context, created_at)
+             VALUES ('m2', 's1', 'assistant', ?1, 'BillingEngine', '2026-11-14T10:01:10Z')",
+            params![
+                "<thought>Pensando...</thought>\nListo:\n- **Aritmética Monetaria Exacta:** Todos los montos en BillingEngine se almacenan en centavos (`i64`) con redondeo bancario explícito.\n- **Commit**: `34ed1ed` — fix\n- [`src/main.rs`](file:///home/user/src/main.rs)"
+            ],
+        )
+        .unwrap();
+
+        // Turno 2: Segunda directriz en el mismo contexto
+        conn.execute(
+            "INSERT INTO chat_messages (id, session_id, role, content, context, created_at)
+             VALUES ('m3', 's1', 'user', 'Recuerda que toda factura cancelada debe conservar su folio fiscal por auditoría (soft-delete obligatorio).', 'BillingEngine', '2026-11-14T10:02:00Z')",
+            [],
+        )
+        .unwrap();
+
+        let prop = upsert_or_evolve_proposal(
+            &conn,
+            "billingengine",
+            "Concepto / Dominio",
+            5,
+            2,
+            "Prohibido usar flotantes IEEE 754",
+            "1700000000",
+            5,
+        )
+        .expect("Debe generar propuesta al cruzar umbral");
+
+        println!("\n=== SKILL NUEVA GENERADA ===\n{}\n============================", prop.skill_markdown);
+
+        assert_eq!(prop.skill_slug, "cortex-billingengine");
+        assert!(prop.skill_markdown.contains("Prohibido usar flotantes IEEE 754 para dinero"));
+        assert!(prop.skill_markdown.contains("soft-delete obligatorio"));
+        assert!(prop.skill_markdown.contains("**Aritmética Monetaria Exacta:**"));
+        // Verificar que NO incluyó variables de código pegado, ni hashes de commit, ni links file:///
+        assert!(!prop.skill_markdown.contains("BAD_FLOAT_VAR"));
+        assert!(!prop.skill_markdown.contains("34ed1ed"));
+        assert!(!prop.skill_markdown.contains("file:///"));
+    }
+
+    #[test]
+    fn evolves_curated_skill_non_destructively() {
+        let conn = setup_memory_db();
+
+        // 1. Registrar que cortex-kaboom ya fue aprobada previamente con 5 hits
+        conn.execute(
+            "INSERT INTO cortex_proposals (id, topic, title, reason, skill_slug, skill_markdown, profile_note, hit_count, status, created_at)
+             VALUES ('prop_cortex-kaboom', 'kaboom', 'Especialización Autónoma: kaboom', 'Base', 'cortex-kaboom', 'Base', 'Note', 5, 'approved', '1700000000')",
+            [],
+        )
+        .unwrap();
+
+        // 2. Con +2 hits (total 7 < 5 + 5), NO debe disparar spam de re-evolución
+        let too_early = upsert_or_evolve_proposal(
+            &conn,
+            "kaboom",
+            "Concepto / Dominio",
+            7,
+            2,
+            "Muestra el tablero",
+            "1700000100",
+            5,
+        );
+        assert!(too_early.is_none(), "No debe re-evolucionar antes de cumplir el delta mínimo de +5 señales");
+
+        // 3. Simular nuevas directrices del operador sobre Kaboom y cruzar a 10 hits (+5 nuevas)
+        conn.execute(
+            "INSERT INTO chat_messages (id, session_id, role, content, context, created_at)
+             VALUES ('mk1', 's1', 'user', 'Recuerda: en Kaboom solo commits en ingles y siempre trabajamos en ramas antes de hacer merge.', 'Kaboom', '2026-11-14T11:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO chat_messages (id, session_id, role, content, context, created_at)
+             VALUES ('mk2', 's1', 'assistant', '- **Validación de Concurrencia:** Bloqueo optimista mediante campo `version INT` en cada movimiento de tarjeta.', 'Kaboom', '2026-11-14T11:00:05Z')",
+            [],
+        )
+        .unwrap();
+
+        let evolved = upsert_or_evolve_proposal(
+            &conn,
+            "kaboom",
+            "Concepto / Dominio",
+            10,
+            3,
+            "Recuerda: en Kaboom solo commits en ingles",
+            "1700000200",
+            5,
+        )
+        .expect("Debe disparar evolución al acumular +5 nuevas señales");
+
+        println!("\n=== SKILL EVOLUCIONADA (NO-DESTRUCTIVA) ===\n{}\n===========================================", evolved.skill_markdown);
+
+        assert!(evolved.title.starts_with("Evolución Autónoma: kaboom (+5 nuevas)"));
+        // Verificar que conserva intactas las secciones curadas de cortex-kaboom/SKILL.md en disco
+        assert!(evolved.skill_markdown.contains("## 2. Directrices Obligatorias de Ingeniería"));
+        assert!(evolved.skill_markdown.contains("HTTP 409 Conflict"));
+        // Y que anexó limpiamente la nueva sección incremental de Cortex con la regla recién capturada
+        assert!(evolved.skill_markdown.contains(CORTEX_SECTION_HEADER));
+        assert!(evolved.skill_markdown.contains("en Kaboom solo commits en ingles"));
+        assert!(evolved.skill_markdown.contains("**Validación de Concurrencia:**"));
     }
 }
