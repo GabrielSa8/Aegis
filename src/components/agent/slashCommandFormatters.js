@@ -23,7 +23,20 @@ export const PROVIDER_MODELS = {
       family: 'Gemini',
       badge: '🧠 Profundo',
       desc: 'Razonamiento complejo, arquitectura técnica y análisis exhaustivo.',
-      effort: 'high'
+      effort: 'high',
+      supportsXHigh: true
+    },
+    {
+      id: 'gemini-4-hydrogen-high',
+      alias: 'hydrogen',
+      shortLabel: 'Hydrogen 4',
+      name: 'Gemini 4 Hydrogen (High)',
+      provider: 'Google Gemini',
+      family: 'Gemini',
+      badge: '⚡ Ultra Veloz',
+      desc: 'Máxima velocidad de inferencia, 2M tokens y razonamiento dinámico.',
+      effort: 'high',
+      supportsXHigh: true
     },
     {
       id: 'claude-sonnet-5-5-high',
@@ -274,10 +287,11 @@ export function getModelsForProvider(agentType = 'agy') {
 export const INTENSITIES = [
   { level: 'low', suffix: 'low', alias: ['low', 'bajo', 'baja'], label: 'Low' },
   { level: 'mid', suffix: 'medium', alias: ['mid', 'medium', 'medio', 'media'], label: 'Mid' },
-  { level: 'high', suffix: 'high', alias: ['high', 'alto', 'alta'], label: 'High' }
+  { level: 'high', suffix: 'high', alias: ['high', 'alto', 'alta'], label: 'High' },
+  { level: 'xhigh', suffix: 'xhigh', alias: ['xhigh', 'max', 'ultra'], label: 'XHigh' }
 ];
 
-const INTENSITY_RE = /^((?:gemini|claude)-.+)-(low|medium|high)$/;
+const INTENSITY_RE = /^((?:gemini|claude)-.+)-(low|medium|high|xhigh)$/;
 
 /** Separa id en base + intensidad; null si el modelo no admite niveles */
 export function splitIntensity(id = '') {
@@ -290,16 +304,27 @@ export function getIntensityLevel(id) {
   return sp ? INTENSITIES.find((i) => i.suffix === sp.suffix)?.level : null;
 }
 
+export function supportsIntensity(modelOrId, level, agentType = 'agy') {
+  const id = typeof modelOrId === 'string' ? modelOrId : modelOrId?.id;
+  if (!id || !splitIntensity(id)) return false;
+  if (level !== 'xhigh') return true;
+  if (typeof modelOrId === 'object' && modelOrId !== null) return Boolean(modelOrId.supportsXHigh);
+  const base = splitIntensity(id)?.base;
+  const catalog = getModelsForProvider(agentType);
+  return Boolean(catalog.find((m) => splitIntensity(m.id)?.base === base)?.supportsXHigh);
+}
+
 export function withIntensity(id, level) {
   const sp = splitIntensity(id);
-  const it = INTENSITIES.find((i) => i.level === level);
+  const safeLevel = level === 'xhigh' && !(sp?.base?.includes('hydrogen') || sp?.base?.includes('argon')) ? 'high' : level;
+  const it = INTENSITIES.find((i) => i.level === safeLevel);
   return sp && it ? `${sp.base}-${it.suffix}` : id;
 }
 
 /** Nombre del modelo con la intensidad de activeId (el catálogo trae "(High)" fijo) */
 export function modelDisplayName(m, activeId) {
   const label = INTENSITIES.find((i) => i.level === getIntensityLevel(activeId))?.label;
-  return label && splitIntensity(m.id) ? m.name.replace(/\((Low|Medium|High)\)/, `(${label})`) : m.name;
+  return label && splitIntensity(m.id) ? m.name.replace(/\((Low|Medium|High|XHigh)\)/, `(${label})`) : m.name;
 }
 
 export function resolveIntensity(query = '') {

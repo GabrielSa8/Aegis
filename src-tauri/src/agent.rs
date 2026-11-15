@@ -524,15 +524,21 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
         let target_suffix = match eff_clean.as_str() {
             "low" => Some("low"),
             "mid" | "medium" => Some("medium"),
-            "high" | "max" | "xhigh" => Some("high"),
+            "high" | "max" => Some("high"),
+            "xhigh" => Some("xhigh"),
             _ => None,
         };
 
         if let (Some(ref m), Some(suf)) = (&model, target_suffix) {
-            for old_suf in &["-low", "-medium", "-high"] {
+            for old_suf in &["-low", "-medium", "-high", "-xhigh"] {
                 if m.ends_with(old_suf) {
                     let base = &m[..m.len() - old_suf.len()];
-                    resolved_model = Some(format!("{}-{}", base, suf));
+                    let effective_suf = if suf == "xhigh" && !(base.contains("hydrogen") || base.contains("argon")) {
+                        "high"
+                    } else {
+                        suf
+                    };
+                    resolved_model = Some(format!("{}-{}", base, effective_suf));
                     break;
                 }
             }
@@ -549,7 +555,7 @@ fn spawn_attempt(ctx: AttemptCtx, model: Option<String>, remaining: Vec<String>)
     // Inyección de nivel de esfuerzo/razonamiento si el binario lo soporta y el modelo no lleva sufijo embebido
     let model_has_level = resolved_model.as_deref().map_or(false, |m| {
         let m = m.trim();
-        m.ends_with("-low") || m.ends_with("-medium") || m.ends_with("-high")
+        m.ends_with("-low") || m.ends_with("-medium") || m.ends_with("-high") || m.ends_with("-xhigh")
     });
     if let Some(ref eff) = effort {
         if !eff.trim().is_empty()

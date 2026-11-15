@@ -5,6 +5,7 @@ import { getModelsForProvider, modelDisplayName, splitIntensity } from '../slash
 const MODEL_ICONS = {
   'gemini-3.8-flash-high': Zap,
   'gemini-4-argon-high': Brain,
+  'gemini-4-hydrogen-high': Sparkles,
   'claude-sonnet-5-5-high': Code,
   'claude-opus-5-5-high': Sparkles,
   'gpt-oss-120b-medium': Cpu,

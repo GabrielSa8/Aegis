@@ -141,6 +141,14 @@ export const PROVIDER_COMMANDS = {
       category: 'Motor'
     },
     {
+      id: 'intensity-xhigh',
+      command: '/intensity xhigh',
+      label: 'Intensidad: XHigh',
+      desc: 'Máximo razonamiento (solo modelos compatibles como Hydrogen)',
+      icon: 'Flame',
+      category: 'Motor'
+    },
+    {
       id: 'model-claude',
       command: '/model claude',
       label: 'Modelo: Claude Sonnet 5.5',
@@ -162,6 +170,14 @@ export const PROVIDER_COMMANDS = {
       label: 'Modelo: Gemini 4 Argon',
       desc: 'Conmutar a Gemini 4 Argon High (razonamiento profundo)',
       icon: 'Brain',
+      category: 'Motor'
+    },
+    {
+      id: 'model-hydrogen',
+      command: '/model hydrogen',
+      label: 'Modelo: Gemini 4 Hydrogen',
+      desc: 'Conmutar a Gemini 4 Hydrogen High (ultra veloz + 2M tokens)',
+      icon: 'Flame',
       category: 'Motor'
     },
     {

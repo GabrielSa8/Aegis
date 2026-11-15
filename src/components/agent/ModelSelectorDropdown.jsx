@@ -5,6 +5,7 @@ import {
   INTENSITIES,
   splitIntensity,
   getIntensityLevel,
+  supportsIntensity,
   withIntensity,
   modelDisplayName
 } from './slashCommandFormatters';
@@ -12,6 +13,7 @@ import {
 const MODEL_ICONS = {
   'gemini-3.8-flash-high': Zap,
   'gemini-4-argon-high': Brain,
+  'gemini-4-hydrogen-high': Sparkles,
   'claude-sonnet-5-5-high': Code,
   'claude-opus-5-5-high': Sparkles,
   'gpt-oss-120b-medium': Cpu,
@@ -173,12 +175,14 @@ function ModelSelectorDropdown({
 
           {availableModels.map((m) => {
             const isSelected = m.id === currentModel.id;
+            const isCompatible = intensity !== 'xhigh' || supportsIntensity(m, 'xhigh', agentType);
             const Icon = MODEL_ICONS[m.id] || Zap;
 
             return (
               <div
                 key={m.id}
-                onClick={() => handleSelect(m)}
+                onClick={() => isCompatible && handleSelect(m)}
+                title={!isCompatible ? 'Este modelo no soporta intensidad XHigh' : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -188,17 +192,18 @@ function ModelSelectorDropdown({
                   background: isSelected
                     ? 'color-mix(in srgb, var(--primary) 12%, transparent)'
                     : 'transparent',
-                  cursor: 'pointer',
+                  cursor: isCompatible ? 'pointer' : 'not-allowed',
+                  opacity: isCompatible ? 1 : 0.38,
                   border: isSelected
                     ? '1px solid color-mix(in srgb, var(--primary) 30%, transparent)'
                     : '1px solid transparent',
-                  transition: 'background 0.12s ease'
+                  transition: 'background 0.12s ease, opacity 0.12s ease'
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = 'color-mix(in srgb, var(--bg-card) 50%, transparent)';
+                  if (!isSelected && isCompatible) e.currentTarget.style.background = 'color-mix(in srgb, var(--bg-card) 50%, transparent)';
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = 'transparent';
+                  if (!isSelected && isCompatible) e.currentTarget.style.background = 'transparent';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -259,23 +264,31 @@ function ModelSelectorDropdown({
               <div style={{ display: 'flex', gap: '3px' }}>
                 {INTENSITIES.map((i) => {
                   const on = i.level === intensity;
+                  const currentSupports = supportsIntensity(currentModel, i.level, agentType);
+                  const fallbackModel = i.level === 'xhigh' ? availableModels.find((m) => m.supportsXHigh) : null;
+                  const canActivate = currentSupports || Boolean(fallbackModel);
                   return (
                     <button
                       key={i.level}
                       data-intensity={i.level}
+                      disabled={!canActivate}
+                      title={!canActivate ? 'Ningún modelo disponible soporta este nivel' : !currentSupports ? `Cambiará a ${fallbackModel.shortLabel} (${i.label})` : undefined}
                       onClick={() => {
-                        const target = withIntensity(activeModel, i.level);
+                        if (!canActivate) return;
+                        const baseId = currentSupports ? activeModel : fallbackModel.id;
+                        const target = withIntensity(baseId, i.level);
                         onSelectModel?.(target);
                         if (onSetEffortMode) {
                           onSetEffortMode(i.level === 'mid' ? 'medium' : i.level);
                         }
                       }}
                       style={{
-                        padding: '3px 10px',
+                        padding: '3px 8px',
                         fontSize: '0.7rem',
                         fontWeight: on ? 700 : 500,
                         borderRadius: 'var(--radius-sm, 6px)',
-                        cursor: 'pointer',
+                        cursor: canActivate ? 'pointer' : 'not-allowed',
+                        opacity: canActivate ? 1 : 0.35,
                         color: on ? '#000' : 'var(--text-high)',
                         background: on ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
                         border: '1px solid var(--border-color)'

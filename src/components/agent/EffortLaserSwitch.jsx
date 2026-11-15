@@ -48,7 +48,7 @@ export default function EffortLaserSwitch({ effortMode = 'auto', onSetEffortMode
       <button
         type="button"
         onClick={() => onSetEffortMode && onSetEffortMode('high')}
-        className={`effort-switch-tab ${effortMode === 'high' ? 'is-active' : ''}`}
+        className={`effort-switch-tab ${effortMode === 'high' || effortMode === 'xhigh' ? 'is-active' : ''}`}
         title="Modo Manual L3 (Profundo): Razonamiento exhaustivo fijo para toda la consulta"
       >
         <Brain size={13} color="currentColor" />

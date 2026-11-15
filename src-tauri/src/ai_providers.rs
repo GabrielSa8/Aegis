@@ -52,6 +52,18 @@ pub fn get_all_providers_catalog() -> Vec<ProviderCatalog> {
             billing_url: Some("https://aistudio.google.com/app/plan_information".to_string()),
             models: vec![
                 ProviderModelInfo {
+                    id: "gemini-4-hydrogen-high".to_string(),
+                    alias: "hydrogen".to_string(),
+                    short_label: "Hydrogen 4".to_string(),
+                    name: "Gemini 4 Hydrogen (High)".to_string(),
+                    provider: "Google Gemini".to_string(),
+                    family: "Gemini".to_string(),
+                    tier: "flash".to_string(),
+                    badge: "⚡ Ultra Veloz".to_string(),
+                    desc: "Máxima velocidad de inferencia, 2M tokens y razonamiento dinámico.".to_string(),
+                    effort: Some("high".to_string()),
+                },
+                ProviderModelInfo {
                     id: "gemini-3.8-flash-high".to_string(),
                     alias: "flash".to_string(),
                     short_label: "Flash 3.8".to_string(),

@@ -6,6 +6,7 @@ import {
   getIntensityLevel,
   resolveIntensity,
   splitIntensity,
+  supportsIntensity,
   formatUsageResponse,
   formatModelInspectionResponse,
   formatModelSwitchSuccessResponse,
@@ -80,18 +81,26 @@ export function useSlashCommands({
           ? resolveModelByQuery(cmdText || cmdId.replace('model-', ''), agentType)
           : null;
 
-      // A0. Intensidad (/intensity low|mid|high)
+      // A0. Intensidad (/intensity low|mid|high|xhigh)
       if (cmdId.startsWith('intensity-') || cmdText.startsWith('/intensity')) {
         const level = resolveIntensity(cmdText.replace('/intensity', '') || cmdId.replace('intensity-', ''));
-        const next = level ? withIntensity(activeModel, level) : null;
-        const ok = !!level && !!splitIntensity(activeModel);
-        if (ok) onSelectModel?.(next);
+        const supported = level ? supportsIntensity(activeModel, level, agentType) : false;
+        const next = level && supported ? withIntensity(activeModel, level) : null;
+        const ok = !!level && supported && !!splitIntensity(activeModel);
+        if (ok) {
+          onSelectModel?.(next);
+          if (onSetEffortMode) {
+            onSetEffortMode(level === 'mid' ? 'medium' : level);
+          }
+        }
         onInjectSystemMessage?.({
           id: 'sys_intensity_' + Date.now(),
           role: 'assistant',
           content: ok
             ? `> [!NOTE] Intensidad Actualizada\n> ### 🎚️ \`${next}\``
-            : `> [!WARNING] Intensidad no disponible\n> Modelo activo sin niveles, o argumento inválido (usa low, mid, high).`,
+            : level === 'xhigh' && splitIntensity(activeModel)
+              ? `> [!WARNING] XHigh no disponible\n> El modelo activo (\`${activeModel}\`) no soporta XHigh. Cambia primero a \`/model hydrogen\`.`
+              : `> [!WARNING] Intensidad no disponible\n> Modelo activo sin niveles, o argumento inválido (usa low, mid, high, xhigh).`,
           context: activeContext?.label || 'General',
           timestamp: 'Ahora'
         });
@@ -99,10 +108,13 @@ export function useSlashCommands({
       }
 
       if (matchedModel) {
-        // Conserva la intensidad vigente al cambiar de modelo
+        // Conserva la intensidad vigente al cambiar de modelo (si el destino no soporta xhigh, cae a high)
         const lvl = getIntensityLevel(activeModel);
-        onSelectModel?.(lvl ? withIntensity(matchedModel.id, lvl) : matchedModel.id);
-        if (matchedModel.effort && onSetEffortMode) {
+        const nextLvl = lvl && supportsIntensity(matchedModel, lvl, agentType) ? lvl : lvl === 'xhigh' ? 'high' : lvl;
+        onSelectModel?.(nextLvl ? withIntensity(matchedModel.id, nextLvl) : matchedModel.id);
+        if (nextLvl === 'xhigh' && onSetEffortMode) {
+          onSetEffortMode('xhigh');
+        } else if (matchedModel.effort && onSetEffortMode) {
           onSetEffortMode(matchedModel.effort);
         }
 
