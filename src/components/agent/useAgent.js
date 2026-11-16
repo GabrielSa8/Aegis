@@ -65,12 +65,41 @@ export function useAgent() {
           } else {
             setEffortMode('auto');
           }
+          if (Array.isArray(cfg?.userContexts) && cfg.userContexts.length > 0) {
+            setContexts((prev) => {
+              const existingIds = new Set(prev.map((c) => c.id));
+              const incoming = cfg.userContexts.filter((c) => c?.id && !existingIds.has(c.id));
+              if (incoming.length === 0) return prev;
+              const merged = [...prev, ...incoming];
+              try {
+                localStorage.setItem('aegis_agent_contexts', JSON.stringify(merged));
+              } catch (_) {}
+              return merged;
+            });
+          }
+          if (Array.isArray(cfg?.userModpacks) && cfg.userModpacks.length > 0) {
+            try {
+              const raw = localStorage.getItem('aegis_skills_modpacks_v1');
+              const current = raw ? JSON.parse(raw) : [];
+              const existingIds = new Set((Array.isArray(current) ? current : []).map((m) => m.id));
+              const incoming = cfg.userModpacks.filter((m) => m?.id && !existingIds.has(m.id));
+              if (incoming.length > 0) {
+                const merged = [...(Array.isArray(current) ? current : []), ...incoming];
+                localStorage.setItem('aegis_skills_modpacks_v1', JSON.stringify(merged));
+                window.dispatchEvent(new CustomEvent('aegis:modpacks-updated', { detail: { modpacks: merged } }));
+              }
+            } catch (_) {}
+          }
         })
         .catch((e) => console.error('Error cargando perfil en AgentView:', e));
     };
     syncFromConfig();
     window.addEventListener('aegis:config-reloaded', syncFromConfig);
-    return () => window.removeEventListener('aegis:config-reloaded', syncFromConfig);
+    window.addEventListener('aegis:sync-workspace', syncFromConfig);
+    return () => {
+      window.removeEventListener('aegis:config-reloaded', syncFromConfig);
+      window.removeEventListener('aegis:sync-workspace', syncFromConfig);
+    };
   }, []);
 
   // Quick Macros
