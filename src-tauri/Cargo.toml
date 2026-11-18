@@ -1,6 +1,6 @@
 [package]
 name = "aegis"
-version = "2.19.15"
+version = "2.19.16"
 description = "Aegis - Personal Executive Cockpit & Master Command Center"
 authors = ["Gabriel"]
 license = "MIT"
@@ -35,6 +35,8 @@ argon2 = "0.5"
 rand = "0.8"
 hex = "0.4"
 tauri-plugin-single-instance = "2"
+arboard = "3"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [profile.release]
 opt-level = "s"

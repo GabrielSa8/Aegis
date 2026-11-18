@@ -1642,6 +1642,23 @@ pub fn execute_provider_command(command: String) -> Result<String, String> {
 }
 
 
+/// Lee una imagen del portapapeles del sistema y la codifica como PNG.
+#[tauri::command]
+pub fn read_clipboard_image() -> Result<Option<Vec<u8>>, String> {
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
+    let img = match clipboard.get_image() {
+        Ok(i) => i,
+        Err(_) => return Ok(None),
+    };
+    let rgba = image::RgbaImage::from_raw(img.width as u32, img.height as u32, img.bytes.into_owned())
+        .ok_or_else(|| "Buffer de imagen inválido".to_string())?;
+    let mut out = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut out);
+    rgba.write_to(&mut cursor, image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+    Ok(Some(out))
+}
+
 /// Guarda un adjunto (imagen/archivo) en el workspace del contexto y devuelve su ruta absoluta.
 #[tauri::command]
 pub fn save_attachment(

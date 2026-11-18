@@ -83,8 +83,27 @@ export function useAttachments(contextId) {
 
   const handlePaste = useCallback(
     (e) => {
-      const files = Array.from(e.clipboardData?.files || []);
-      if (!files.length) return false;
+      const dt = e.clipboardData;
+      let files = Array.from(dt?.files || []);
+      if (!files.length && dt?.items) {
+        files = Array.from(dt.items)
+          .filter((item) => item.kind === 'file')
+          .map((item) => item.getAsFile())
+          .filter(Boolean);
+      }
+      if (!files.length) {
+        if (!dt?.getData('text/plain')) {
+          invoke('read_clipboard_image')
+            .then((bytes) => {
+              if (Array.isArray(bytes) && bytes.length > 0) {
+                const file = new File([new Uint8Array(bytes)], 'captura.png', { type: 'image/png' });
+                addFiles([file]);
+              }
+            })
+            .catch(() => {});
+        }
+        return false;
+      }
       e.preventDefault();
       addFiles(files);
       return true;
