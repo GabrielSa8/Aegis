@@ -487,9 +487,15 @@ pub fn build_harness_plan(
             .map(|s| format!("Paso {} [{}]", s.step_number, s.badge))
             .collect::<Vec<_>>()
             .join(" -> ");
+        let plan_then_act = if dominant_effort != "low" {
+            "- Disciplina Plan-Then-Act (In-Context): Antes de editar archivos o aplicar cambios, analiza el objetivo, investiga en solo lectura los archivos/docs necesarios y traza un plan breve [L1..L3] en tu razonamiento; luego ejecuta.\n- Verify-Before-Done: Si editaste código y el entorno permite herramientas, ejecuta el test/check mínimo afectado (`cargo test`, `vitest`, `npm run build`) antes de responder; si falla, corrige en este mismo turno.\n"
+        } else {
+            ""
+        };
         format!(
-            "[Escalado Dinámico por Paso: {}]\n- En pasos [L1]: respuesta directa inmediata (0 explicación).\n- En pasos [L2]: código/solución limpia y concisa.\n- En pasos [L3]: análisis de causa raíz + fix quirúrgico exacto.\n- Escalado de Proceso en Vivo: Si el prompt es ambiguo [L1] pero durante la inspección requiere editar código, implementar lógica o corregir un fallo, escala automáticamente tu ejecución en vivo a [L2] (implementación quirúrgica) o [L3] (causa raíz + fix).\n",
-            route_str
+            "[Escalado Dinámico por Paso: {}]\n{}- En pasos [L1]: respuesta directa inmediata (0 explicación).\n- En pasos [L2]: código/solución limpia y concisa.\n- En pasos [L3]: análisis de causa raíz + fix quirúrgico exacto.\n- Escalado de Proceso en Vivo: Si el prompt es ambiguo [L1] pero durante la inspección requiere editar código, implementar lógica o corregir un fallo, escala automáticamente tu ejecución en vivo a [L2] (implementación quirúrgica) o [L3] (causa raíz + fix).\n",
+            route_str,
+            plan_then_act
         )
     } else {
         String::new()

@@ -149,9 +149,9 @@ fn benchmark_ab_aegis_harness_vs_raw() {
     println!("\n⏳ Ejecutando RUN A (SIN Harness — Prompt Crudo + Nivel Fijo High)...");
     let run_a = execute_agy_run(&raw_multi_level_prompt, "high");
 
-    // 3. Ejecutar Run B (CON HARNESS AEGIS — Prompt Podado ACI + Escalado Dinámico por Paso)
-    println!("⏳ Ejecutando RUN B (CON Aegis Harness — Poda ACI + Ruta L1⇄L2⇄L3)...");
-    let run_b = execute_agy_run(&plan.transformed_prompt, &plan.initial_effort);
+    // 3. Ejecutar Run B (CON HARNESS AEGIS — Prompt Podado ACI + Plan-Then-Act + Nivel Dominante)
+    println!("⏳ Ejecutando RUN B (CON Aegis Harness — Poda ACI + Plan-Then-Act + {})...", plan.dominant_effort.to_uppercase());
+    let run_b = execute_agy_run(&plan.transformed_prompt, &plan.dominant_effort);
 
     println!("\n=======================================================");
     println!("📊 RESULTADOS COMPARATIVOS A/B (REAL EXECUTION)");
@@ -207,4 +207,237 @@ fn benchmark_ab_aegis_harness_vs_raw() {
 
     println!("\n--- [OUTPUT RUN A: SIN HARNESS] ---\n{}\n", run_a.response_text);
     println!("\n--- [OUTPUT RUN B: CON AEGIS HARNESS] ---\n{}\n", run_b.response_text);
+}
+
+fn setup_complex_bench_crate(dir: &std::path::Path) {
+    let _ = std::fs::remove_dir_all(dir);
+    std::fs::create_dir_all(dir.join("src")).unwrap();
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[package]\nname = \"complex_bench\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("src/lib.rs"),
+        r#"use std::collections::BinaryHeap;
+use std::cmp::Ordering;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Job {
+    pub id: u64,
+    pub priority: u8,
+    pub seq: u64,
+}
+
+impl Ord for Job {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // BUG 1: ordena seq DESC en vez de FIFO (seq ASC) a igual prioridad
+        self.priority.cmp(&other.priority).then_with(|| self.seq.cmp(&other.seq))
+    }
+}
+impl PartialOrd for Job {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+pub struct Scheduler {
+    queue: BinaryHeap<Job>,
+    max_concurrent: usize,
+    in_flight: Vec<u64>,
+    tokens: u64,
+    capacity: u64,
+    refill_per_sec: u64,
+    last_ts_ms: u64,
+    next_seq: u64,
+}
+
+impl Scheduler {
+    pub fn new(max_concurrent: usize, capacity: u64, refill_per_sec: u64, now_ms: u64) -> Self {
+        Self {
+            queue: BinaryHeap::new(),
+            max_concurrent,
+            in_flight: Vec::new(),
+            tokens: capacity,
+            capacity,
+            refill_per_sec,
+            last_ts_ms: now_ms,
+            next_seq: 0,
+        }
+    }
+
+    pub fn refill(&mut self, now_ms: u64) {
+        // BUG 2: underflow en release / saturación incorrecta si now_ms < last_ts_ms (clock skew)
+        // y truncado entero si elapsed < 1000ms pero acumulado debería avanzar
+        let elapsed_ms = now_ms - self.last_ts_ms;
+        let added = (elapsed_ms / 1000) * self.refill_per_sec;
+        self.tokens = (self.tokens + added).min(self.capacity);
+        self.last_ts_ms = now_ms;
+    }
+
+    pub fn enqueue(&mut self, id: u64, priority: u8) {
+        let seq = self.next_seq;
+        self.next_seq += 1;
+        self.queue.push(Job { id, priority, seq });
+    }
+
+    pub fn dispatch(&mut self, now_ms: u64) -> Option<Job> {
+        self.refill(now_ms);
+        if self.in_flight.len() >= self.max_concurrent || self.tokens == 0 {
+            return None;
+        }
+        let job = self.queue.pop()?;
+        self.tokens -= 1;
+        self.in_flight.push(job.id);
+        Some(job)
+    }
+
+    pub fn cancel_or_finish(&mut self, job_id: u64) -> bool {
+        // BUG 3: si estaba in_flight no libera el slot correctamente cuando hay duplicados o solo busca en queue
+        let before = self.queue.len();
+        let kept: Vec<Job> = self.queue.drain().filter(|j| j.id != job_id).collect();
+        for j in kept {
+            self.queue.push(j);
+        }
+        self.queue.len() < before
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fifo_tiebreak_on_equal_priority() {
+        let mut s = Scheduler::new(4, 10, 1, 1000);
+        s.enqueue(10, 5);
+        s.enqueue(20, 5);
+        s.enqueue(30, 9);
+        assert_eq!(s.dispatch(1000).unwrap().id, 30);
+        assert_eq!(s.dispatch(1000).unwrap().id, 10);
+        assert_eq!(s.dispatch(1000).unwrap().id, 20);
+    }
+
+    #[test]
+    fn cancel_in_flight_frees_concurrency_slot() {
+        let mut s = Scheduler::new(1, 10, 1, 1000);
+        s.enqueue(1, 5);
+        s.enqueue(2, 5);
+        assert_eq!(s.dispatch(1000).unwrap().id, 1);
+        assert!(s.dispatch(1000).is_none());
+        assert!(s.cancel_or_finish(1));
+        assert_eq!(s.dispatch(1000).unwrap().id, 2);
+    }
+
+    #[test]
+    fn clock_skew_does_not_panic_or_lose_tokens() {
+        let mut s = Scheduler::new(2, 5, 2, 5000);
+        s.tokens = 1;
+        s.refill(3000);
+        assert_eq!(s.tokens, 1);
+    }
+}
+"#,
+    )
+    .unwrap();
+}
+
+fn execute_agy_in_dir(dir: &std::path::Path, prompt: &str, effort: &str) -> (RunMetrics, usize) {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let agy_bin = format!("{}/.local/bin/agy", home);
+
+    let start = Instant::now();
+    let output = Command::new(&agy_bin)
+        .arg("-p")
+        .arg(prompt)
+        .arg("--output-format")
+        .arg("stream-json")
+        .arg("--effort")
+        .arg(effort)
+        .current_dir(dir)
+        .output()
+        .expect("Failed to execute agy binary");
+    let wall_time_secs = start.elapsed().as_secs_f64();
+
+    let stdout_str = String::from_utf8_lossy(&output.stdout);
+    let mut response_text = String::new();
+    let mut input_tokens = 0u64;
+    let mut output_tokens = 0u64;
+    let mut total_tokens = 0u64;
+    let mut tool_calls = 0usize;
+
+    for line in stdout_str.lines() {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(line) {
+            if let Some(ev) = val.get("event").and_then(|e| e.as_str()) {
+                if ev == "step_update" {
+                    if let Some(su) = val.get("step_update") {
+                        if su.get("step_type").and_then(|s| s.as_str()) == Some("tool")
+                            && su.get("state").and_then(|s| s.as_str()) == Some("DONE")
+                        {
+                            tool_calls += 1;
+                        }
+                        if let Some(delta) = su.get("text_delta").and_then(|d| d.as_str()) {
+                            response_text.push_str(delta);
+                        }
+                    }
+                } else if ev == "result" {
+                    if let Some(res) = val.get("result") {
+                        if let Some(u) = res.get("usage") {
+                            input_tokens = u.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                            output_tokens = u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                            total_tokens = u.get("total_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    (
+        RunMetrics {
+            wall_time_secs,
+            prompt_chars: prompt.len(),
+            input_tokens,
+            output_tokens,
+            total_tokens,
+            response_text,
+        },
+        tool_calls,
+    )
+}
+
+#[test]
+#[ignore]
+fn benchmark_complex_repo_raw_vs_harness() {
+    let raw_dir = std::env::temp_dir().join("aegis_bench_complex_raw");
+    let harness_dir = std::env::temp_dir().join("aegis_bench_complex_harness");
+    setup_complex_bench_crate(&raw_dir);
+    setup_complex_bench_crate(&harness_dir);
+
+    let prompt = "Analiza el crate Rust en este directorio, identifica y corrige todos los bugs de ordenamiento de prioridad, clock skew/overflow y liberación de slots en `src/lib.rs`, agrega además un test para saturación de `capacity` y `enqueue` duplicado si aplica, y asegúrate de que compile sin warnings y pasen todos los tests.";
+
+    let cfg = HarnessConfig::default();
+    let plan = build_harness_plan(prompt, harness_dir.to_str(), "caveman", &cfg);
+
+    let (run_a, tools_a) = execute_agy_in_dir(&raw_dir, prompt, "high");
+    let (run_b, tools_b) = execute_agy_in_dir(&harness_dir, &plan.transformed_prompt, &plan.dominant_effort);
+
+    let test_a = Command::new("cargo").arg("test").current_dir(&raw_dir).output().unwrap();
+    let test_b = Command::new("cargo").arg("test").current_dir(&harness_dir).output().unwrap();
+
+    let warn_a = String::from_utf8_lossy(&test_a.stderr).matches("warning:").count();
+    let warn_b = String::from_utf8_lossy(&test_b.stderr).matches("warning:").count();
+
+    println!("\n=======================================================");
+    println!("📊 BENCHMARK COMPLEJO EN REPO REAL (1 ITERACIÓN)");
+    println!("=======================================================");
+    println!("Métrica                | SIN Harness (Raw) | CON Aegis Harness ({})", plan.dominant_effort.to_uppercase());
+    println!("-----------------------|-------------------|-------------------------");
+    println!("cargo test OK?         | {:>17} | {:>23}", test_a.status.success(), test_b.status.success());
+    println!("Warnings               | {:>17} | {:>23}", warn_a, warn_b);
+    println!("Tool Calls             | {:>17} | {:>23}", tools_a, tools_b);
+    println!("Tiempo Total (s)       | {:>16.2}s | {:>22.2}s", run_a.wall_time_secs, run_b.wall_time_secs);
+    println!("Input Tokens           | {:>17} | {:>23}", run_a.input_tokens, run_b.input_tokens);
+    println!("Output Tokens          | {:>17} | {:>23}", run_a.output_tokens, run_b.output_tokens);
+    println!("Total Tokens           | {:>17} | {:>23}", run_a.total_tokens, run_b.total_tokens);
 }

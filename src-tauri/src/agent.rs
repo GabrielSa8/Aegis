@@ -353,7 +353,7 @@ pub async fn execute_agent_prompt(
     let resolved_effort = if harness_plan.active {
         effective_prompt = harness_plan.transformed_prompt.clone();
         if is_auto_effort && harness_cfg.dynamic_step_scaling {
-            Some(harness_plan.initial_effort.clone())
+            Some(harness_plan.dominant_effort.clone())
         } else if is_auto_effort {
             Some("low".to_string())
         } else {
