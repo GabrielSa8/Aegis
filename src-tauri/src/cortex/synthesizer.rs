@@ -158,7 +158,7 @@ pub fn build_skill_draft(
     hits: i64,
     errors: i64,
     sample: &str,
-) -> (String, String, String, String) {
+) -> Option<(String, String, String, String)> {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
     let skills_root = Path::new(&home).join(".agents/skills");
 
@@ -189,6 +189,11 @@ pub fn build_skill_draft(
     let target_skill_path = skills_root.join(&slug).join("SKILL.md");
 
     let (directives, queries, takeaways) = synthesize_from_history(conn, topic, sample);
+
+    // Gate de calidad: no proponer ni evolucionar una skill si no hay al menos 1 directriz o acuerdo técnico real
+    if directives.is_empty() && takeaways.is_empty() {
+        return None;
+    }
 
     let directives_md = if directives.is_empty() {
         "- Sin restricciones explícitas dictadas aún; respetar convenciones del repositorio y BRAIN.md."
@@ -265,12 +270,12 @@ pub fn build_skill_draft(
         "- **Patrón Hermes Cortex (`{topic}` — {category}):** {hits} señales ({errors} directrices). Skill `{slug}` activa."
     );
 
-    (
+    Some((
         slug,
         title,
         reason,
         skill_md + "\n<!-- PROFILE_NOTE: " + &profile_note + " -->",
-    )
+    ))
 }
 
 pub fn upsert_or_evolve_proposal(
@@ -301,7 +306,7 @@ pub fn upsert_or_evolve_proposal(
     }
 
     let (slug, mut title, mut reason, combined_md) =
-        build_skill_draft(conn, topic, category, hits, errors, sample);
+        build_skill_draft(conn, topic, category, hits, errors, sample)?;
 
     if let Some((ref status, prev_hits)) = existing {
         if status == "approved" {

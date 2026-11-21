@@ -516,4 +516,39 @@ mod tests {
         assert!(evolved.skill_markdown.contains("en Kaboom solo commits en ingles"));
         assert!(evolved.skill_markdown.contains("**Validación de Concurrencia:**"));
     }
+
+    #[test]
+    fn blocks_noise_tokens_and_empty_proposals() {
+        let garbage = extract_topics(
+            "Quizá en `tacticalgrid.gd` y `texture_origin` el menú inferior-izquierda está bajo y no me convence la nitidez del mapa ni los tiles",
+        );
+        assert!(
+            garbage.is_empty(),
+            "No debe extraer palabras genéricas, direcciones ni nombres de archivo: {:?}",
+            garbage
+        );
+
+        let anchored = extract_topics_with_context(
+            "Siempre revisa el menú de vida y ataque antes de cambiar los tiles",
+            Some("Aegis Core"),
+        );
+        assert_eq!(anchored.len(), 1);
+        assert_eq!(anchored[0].0, "aegis");
+
+        let conn = setup_memory_db();
+        let empty_prop = upsert_or_evolve_proposal(
+            &conn,
+            "quiza",
+            "Concepto / Dominio",
+            6,
+            2,
+            "Quizá deberíamos ver esto",
+            "1700000300",
+            5,
+        );
+        assert!(
+            empty_prop.is_none(),
+            "No debe emitir propuestas vacías sin directrices ni acuerdos técnicos"
+        );
+    }
 }

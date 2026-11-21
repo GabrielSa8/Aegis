@@ -55,6 +55,27 @@ pub const STOPWORDS: &[&str] = &[
     "inicio", "lista", "listo", "claro", "seguro", "cierto", "igual", "diferente", "posible",
     "imposible", "util", "útil", "inutil", "rara", "raro", "normal", "fijo", "fija", "regla",
     "reglas", "directriz", "directrices", "evoluciona", "funcional", "inteligente", "queremos",
+    // Adverbios, adjetivos, direcciones y sustantivos genéricos de UI/juego que nunca son un dominio:
+    "quiza", "quizas", "quizás", "acaso", "apenas", "casi", "demasiado", "bastante", "todavia",
+    "todavía", "aun", "aún", "jamas", "jamás", "tampoco", "ademas", "incluso", "aunque",
+    "mientras", "durante", "hacia", "segun", "según", "contra", "mediante", "bajo", "alto",
+    "alta", "baja", "medio", "media", "inferior", "superior", "izquierda", "izquierdo",
+    "derecha", "derecho", "centro", "central", "esquina", "borde", "bordes", "escala",
+    "tamano", "tamaño", "ancho", "largo", "altura", "anchura", "profundidad", "nitidez",
+    "opacidad", "transparencia", "brillo", "contraste", "sombra", "sombras", "color", "colores",
+    "convence", "gusta", "agrada", "importa", "falta", "sobra", "queda", "cuesta", "vale",
+    "menu", "menú", "menus", "boton", "botones", "tarjeta", "tarjetas", "panel", "paneles",
+    "pestana", "pestaña", "pestanas", "pestañas", "barra", "barras", "titulo", "título",
+    "subtitulo", "texto", "label", "etiqueta", "icono", "iconos", "badge", "chip", "chips",
+    "vida", "vidas", "dano", "daño", "ataque", "ataques", "defensa", "turno", "turnos",
+    "mapa", "mapas", "nivel", "niveles", "zona", "zonas", "area", "área", "casilla", "casillas",
+    "celda", "celdas", "grilla", "cuadricula", "cuadrícula", "sprite", "sprites", "tile",
+    "tiles", "tileset", "tilesets", "referencia", "referencias", "ejemplo", "ejemplos",
+    "dato", "datos", "valor", "valores", "campo", "campos", "tipo", "tipos", "modo", "modos",
+    "vista", "vistas", "estilo", "estilos", "clase", "clases", "metodo", "método", "metodos",
+    "nombre", "nombres", "ruta", "rutas", "path", "paths", "linea", "línea", "lineas", "líneas",
+    "bloque", "bloques", "grupo", "grupos", "pieza", "piezas", "nodo", "nodos", "objeto",
+    "objetos", "evento", "eventos", "senal", "señal", "senales", "señales", "efecto", "efectos",
 ];
 
 const ACTION_VERBS: &[&str] = &[
@@ -189,6 +210,38 @@ pub fn extract_topics(text: &str) -> Vec<(String, &'static str)> {
     extract_topics_with_context(text, None)
 }
 
+/// Resuelve un contexto de proyecto a un dominio conocido si es un alias o sub-contexto (ej. "aegis core" -> "aegis").
+fn canonicalize_context(raw_ctx: &str, known_domains: &HashSet<String>) -> String {
+    let norm = normalize_word(raw_ctx.trim());
+    let slug: String = norm
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+    if known_domains.contains(&slug) {
+        return slug;
+    }
+    if let Some(first) = slug.split('-').next() {
+        if first.len() >= 4 && known_domains.contains(first) {
+            return first.to_string();
+        }
+    }
+    slug
+}
+
+/// Detecta nombres de archivo con extensión (ej. `tacticalgrid.gd`, `main.rs`) para no tratarlos como conceptos.
+fn looks_like_filename(token: &str) -> bool {
+    if let Some(dot_idx) = token.rfind('.') {
+        let name = &token[..dot_idx];
+        let ext = &token[dot_idx + 1..];
+        return !name.is_empty()
+            && !ext.is_empty()
+            && ext.len() <= 6
+            && ext.chars().all(|c| c.is_ascii_alphanumeric());
+    }
+    false
+}
+
 /// Clasificador de 0 tokens con consciencia de contexto activo y bloqueo de código pegado.
 pub fn extract_topics_with_context(
     text: &str,
@@ -201,26 +254,30 @@ pub fn extract_topics_with_context(
     let stop: HashSet<&str> = STOPWORDS.iter().copied().collect();
     let known_domains = discover_known_domains();
 
-    // 0. Si es una directriz/corrección dentro de un contexto de proyecto específico, asociarla al proyecto activo
+    // 0. Si es una directriz/corrección dentro de un contexto de proyecto específico, anclarla al proyecto activo
+    let mut anchored_to_project = false;
     if let Some(ctx) = context_label {
-        let norm_ctx = normalize_word(ctx.trim());
+        let norm_ctx = canonicalize_context(ctx, &known_domains);
         if norm_ctx.len() >= 3
             && !matches!(norm_ctx.as_str(), "general" | "global" | "boveda" | "default")
             && (is_directive_or_correction(&clean_text) || norm_full.contains(&norm_ctx))
         {
             if seen.insert(norm_ctx.clone()) {
                 found.push((norm_ctx, "Concepto / Dominio"));
+                anchored_to_project = true;
             }
         }
     }
 
-    // 1. Términos técnicos explícitos entre `backticks` (excluyendo constantes UPPER_SNAKE_CASE de código)
+    // 1. Términos técnicos explícitos entre `backticks` (excluyendo constantes UPPER_SNAKE_CASE, snake_case y nombres de archivo)
     for chunk in clean_text.split('`').skip(1).step_by(2) {
         let raw_chunk = chunk.trim();
         let is_screaming_const =
             raw_chunk.contains('_') && raw_chunk.chars().all(|c| !c.is_ascii_lowercase());
         let clean = normalize_word(raw_chunk);
         if !is_screaming_const
+            && !raw_chunk.contains('_')
+            && !looks_like_filename(&clean)
             && clean.len() >= 3
             && clean.len() <= 28
             && !clean.contains(char::is_whitespace)
@@ -252,41 +309,53 @@ pub fn extract_topics_with_context(
         }
     }
 
-    // 3. Sustantivos de dominio (descartando constantes pegadas, verbos, stopwords y falsos positivos)
+    // 3. Sustantivos de dominio (si ya está anclado a un proyecto activo, no extraer palabras sueltas genéricas)
+    if anchored_to_project {
+        return found;
+    }
+
     let mut candidates: Vec<String> = Vec::new();
-    for raw in clean_text.split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_') {
-        let trimmed = raw.trim_matches(|c: char| c == '-' || c == '_');
-        if trimmed.contains('_') {
-            continue; // Ignorar identificadores snake_case de código pegado (ej. regex_diacritics)
+    for word_tok in clean_text.split(|c: char| c.is_whitespace() || ",;()[]{}<>\"'`".contains(c)) {
+        let stripped_tok =
+            word_tok.trim_matches(|c: char| !c.is_alphanumeric() && c != '.' && c != '-' && c != '_');
+        if looks_like_filename(stripped_tok) {
+            continue; // Ignorar nombres de archivo completos (ej. tacticalgrid.gd, main.rs)
         }
-        let norm = normalize_word(trimmed);
-        if norm.len() >= 4
-            && norm.len() <= 24
-            && !stop.contains(norm.as_str())
-            && !is_generic_verb(&norm)
-            && !is_coding_language_mention(&norm_full, &norm)
-            && norm.chars().any(|c| c.is_alphabetic())
-            && !norm.chars().all(|c| c.is_numeric())
-            && !norm.ends_with("mente")
-        {
-            if !candidates.contains(&norm) {
-                candidates.push(norm);
+        for raw in stripped_tok.split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_') {
+            let trimmed = raw.trim_matches(|c: char| c == '-' || c == '_');
+            if trimmed.contains('_') {
+                continue; // Ignorar identificadores snake_case de código pegado (ej. regex_diacritics)
+            }
+            let norm = normalize_word(trimmed);
+            // Descartar compuestos con guion cuyas partes sean todas stopwords/genéricas (ej. "inferior-izquierda")
+            if norm.contains('-')
+                && !known_domains.contains(&norm)
+                && norm
+                    .split('-')
+                    .all(|p| p.len() < 4 || stop.contains(p) || is_generic_verb(p))
+            {
+                continue;
+            }
+            if norm.len() >= 4
+                && norm.len() <= 24
+                && !stop.contains(norm.as_str())
+                && !is_generic_verb(&norm)
+                && !is_coding_language_mention(&norm_full, &norm)
+                && norm.chars().any(|c| c.is_alphabetic())
+                && !norm.chars().all(|c| c.is_numeric())
+                && !norm.ends_with("mente")
+            {
+                if !candidates.contains(&norm) {
+                    candidates.push(norm);
+                }
             }
         }
     }
 
-    // Priorizar dominios conocidos del usuario y términos compuestos con guión
-    candidates.sort_by_key(|w| {
-        if known_domains.contains(w) {
-            0
-        } else if w.contains('-') {
-            1
-        } else {
-            2
-        }
-    });
+    // Priorizar únicamente dominios conocidos del usuario
+    candidates.sort_by_key(|w| if known_domains.contains(w) { 0 } else { 1 });
 
-    for concept in candidates.into_iter().take(3) {
+    for concept in candidates.into_iter().take(2) {
         if seen.insert(concept.clone()) {
             found.push((concept, "Concepto / Dominio"));
         }
