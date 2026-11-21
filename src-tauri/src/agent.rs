@@ -177,6 +177,7 @@ pub async fn execute_agent_prompt(
     context_id: Option<String>,
     context_path: Option<String>,
     skills: Option<Vec<String>>,
+    mcps: Option<Vec<String>>,
     stream_id: String,
     effort: Option<String>,
     model: Option<String>,
@@ -348,6 +349,17 @@ pub async fn execute_agent_prompt(
             "\n\n[Skills Aplicables Detectadas (OBLIGATORIO leer antes de responder/editar): {}]",
             paths
         ));
+    }
+
+    // Sincronizar servidores MCP vinculados al contexto activo (si el contexto define una lista)
+    if let Some(ref ctx_mcps) = mcps {
+        if !ctx_mcps.is_empty() {
+            crate::mcp::sync_context_mcps(ctx_mcps);
+            effective_prompt.push_str(&format!(
+                "\n\n[Servidores MCP Activos en Contexto: {}]",
+                ctx_mcps.join(", ")
+            ));
+        }
     }
 
     // Evaluar Aegis Adaptive Harness (6 Pilares: ACI Pruning, KV-Cache Alignment, Dynamic Step L1-L3, Surgical Contract, Verifier, Auto-Heal)

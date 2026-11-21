@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Zap, Brain, AlertCircle, Folder, Shield } from 'lucide-react';
 import { AVAILABLE_SKILLS } from './contextConstants';
 import { ContextSkillsSection } from './ContextSkillsSection';
+import { ContextMcpSection } from './ContextMcpSection';
 
 export function ContextEditorPane({
   activeCtx,
@@ -206,6 +207,18 @@ export function ContextEditorPane({
         activeSkills={activeCtx.skills || []}
         onToggleSkill={onToggleSkill}
         onUpdateActive={onUpdateActive}
+      />
+
+      {/* Administrador de Servidores MCP */}
+      <ContextMcpSection
+        activeMcps={activeCtx.mcps || []}
+        onToggleMcp={(mcpName) => {
+          const current = activeCtx.mcps || [];
+          const next = current.includes(mcpName)
+            ? current.filter((m) => m !== mcpName)
+            : [...current, mcpName];
+          onUpdateActive('mcps', next);
+        }}
       />
     </div>
   );

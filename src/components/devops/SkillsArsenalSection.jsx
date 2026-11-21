@@ -4,6 +4,7 @@ import { SkillCard } from './SkillCard';
 import { SkillListView } from './SkillListView';
 import { ModpackCard } from './ModpackCard';
 import { TacticalButton } from '../ui';
+import { ContextMcpSection } from '../agent/context/ContextMcpSection';
 import { SKILL_CATEGORIES, getSkillCategory } from './devopsHelpers';
 
 /**
@@ -72,6 +73,14 @@ export function SkillsArsenalSection({
           >
             <span>📦 Modpacks</span>
             <span style={{ fontSize: '0.58rem', opacity: 0.85 }}>({modpacks.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSectionTab('mcps')}
+            className={`devops-arsenal-tab-btn ${sectionTab === 'mcps' ? 'is-active' : ''}`}
+          >
+            <span>🔌 Servidores MCP</span>
           </button>
         </div>
 
@@ -199,6 +208,10 @@ export function SkillsArsenalSection({
               ))}
             </div>
           )}
+        </div>
+      ) : sectionTab === 'mcps' ? (
+        <div style={{ ...(fillHeight ? { flex: 1, overflowY: 'auto', minHeight: 0 } : {}) }}>
+          <ContextMcpSection />
         </div>
       ) : (
         /* Pestaña: Modpacks / Meta-Skills */

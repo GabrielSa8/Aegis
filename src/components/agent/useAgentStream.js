@@ -340,6 +340,7 @@ export function useAgentStream({
         contextId: activeContext.id,
         contextPath: activeContext.path,
         skills: activeContext.skills || [],
+        mcps: activeContext.mcps || [],
         streamId,
         effort: sendEffort,
         model: activeModel || null,

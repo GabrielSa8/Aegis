@@ -1,5 +1,6 @@
-import React from 'react';
-import { Sparkles, ArrowRight, Package } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { Sparkles, ArrowRight, Plug } from 'lucide-react';
 import { TacticalButton } from '../../ui';
 
 /**
@@ -12,6 +13,28 @@ export function CockpitSkillsPanel({
   onToggleModpackMaster,
   onOpenInstallSkillModal
 }) {
+  const [mcps, setMcps] = useState([]);
+
+  const loadMcps = useCallback(async () => {
+    try {
+      const list = await invoke('mcp_list_servers');
+      setMcps(Array.isArray(list) ? list : []);
+    } catch {
+      setMcps([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMcps();
+  }, [loadMcps]);
+
+  const handleToggleMcp = async (srv) => {
+    try {
+      await invoke('mcp_toggle_server', { name: srv.name, enabled: !srv.enabled });
+      await loadMcps();
+    } catch {}
+  };
+
   return (
     <div style={{
       background: 'var(--bg-card)',
@@ -48,8 +71,57 @@ export function CockpitSkillsPanel({
         </button>
       </div>
 
-      {/* Scroll Interno de Modpacks y Skills */}
+      {/* Scroll Interno de MCPs, Modpacks y Skills */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        {/* Servidores MCP (Visible arriba sin scroll) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '6px', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Plug size={11} /> Servidores MCP ({mcps.length})
+            </span>
+            <button
+              type="button"
+              onClick={() => onNavigateTab('skills')}
+              style={{ fontSize: '0.6rem', color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              Gestionar
+            </button>
+          </div>
+          {mcps.length === 0 ? (
+            <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', padding: '4px 6px' }}>
+              Sin MCPs configurados aún.
+            </div>
+          ) : (
+            mcps.map((srv) => (
+              <div
+                key={srv.name}
+                style={{
+                  background: 'color-mix(in srgb, var(--border-color) 8%, transparent)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '0.4rem 0.65rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-high)' }}>{srv.name}</div>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>{srv.transport}</div>
+                </div>
+                <TacticalButton
+                  variant={srv.enabled ? 'primary' : 'secondary'}
+                  size="xs"
+                  onClick={() => handleToggleMcp(srv)}
+                  style={{ fontSize: '0.58rem', padding: '2px 6px' }}
+                >
+                  {srv.enabled ? 'Activo' : 'Off'}
+                </TacticalButton>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Modpacks Activos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <span style={{ fontSize: '0.64rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>

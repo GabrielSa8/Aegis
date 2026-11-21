@@ -19,6 +19,7 @@ pub mod security;
 pub mod environment;
 pub mod discovery;
 pub mod harness;
+pub mod mcp;
 pub mod seed;
 
 #[tauri::command]
@@ -105,7 +106,8 @@ pub fn run() {
             environment::get_installed_environment_tools, environment::test_environment_tool, environment::pick_directory,
             ai_providers::get_ai_providers, ai_providers::get_api_credentials, ai_providers::save_provider_api_key,
             discovery::inspect_system_environment, discovery::auto_create_default_vault, discovery::complete_system_onboarding,
-            discovery::switch_cli_account, discovery::trigger_cli_account_login, discovery::remove_saved_cli_account
+            discovery::switch_cli_account, discovery::trigger_cli_account_login, discovery::remove_saved_cli_account,
+            mcp::mcp_list_servers, mcp::mcp_add_server, mcp::mcp_toggle_server, mcp::mcp_remove_server
         ])
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
