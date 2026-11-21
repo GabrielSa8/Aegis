@@ -421,6 +421,106 @@ pub fn extract_and_route_steps(prompt: &str) -> Vec<HarnessStep> {
         .collect()
 }
 
+/// Enruta determinísticamente (0 tokens) las skills montadas cuyo `SKILL.md` (frontmatter) coincide con el prompt.
+/// Incluye puente bilingüe ES/EN para que prompts en español activen skills con `description` en inglés.
+pub fn match_mounted_skills_for_prompt(
+    prompt: &str,
+    mounted_skills: &[String],
+    skills_dir: &std::path::Path,
+) -> Vec<String> {
+    if mounted_skills.is_empty() {
+        return Vec::new();
+    }
+    let norm_prompt = crate::cortex::extractor::normalize_word(prompt);
+
+    // Puente de intención bilingüe (ES -> tokens técnicos presentes en frontmatter)
+    let mut expanded_prompt = norm_prompt.clone();
+    const BILINGUAL_MAP: &[(&str, &str)] = &[
+        ("prueba", "test tdd unit"),
+        ("pruebas", "test tdd unit"),
+        ("guiado por pruebas", "tdd test-driven"),
+        ("disena", "design ui frontend"),
+        ("diseña", "design ui frontend"),
+        ("tarjeta", "ui component card"),
+        ("tipografia", "typography design"),
+        ("jerarquia visual", "visual hierarchy design"),
+        ("seguridad", "security owasp"),
+        ("vulnerabil", "security owasp"),
+        ("inyeccion", "security injection owasp"),
+        ("secretos", "security secret"),
+        ("arquitectura", "architecture module"),
+        ("refactor", "refactor clean"),
+        // grill-me (entrevista socrática / estrés de diseño)
+        ("cuestiona", "interview stress-testing design"),
+        ("entrevista", "interview socratic"),
+        ("dudas", "ambiguity requirements"),
+        ("ambiguedad", "ambiguity requirements"),
+        ("decision", "decision plan"),
+        ("requisitos", "requirements ambiguity"),
+        ("requerimientos", "requirements ambiguity"),
+        ("supuestos", "assumptions interview"),
+        ("estres", "stress-testing"),
+        // find-skills (búsqueda/instalación de capacidades)
+        ("busca", "discovers capabilities tooling"),
+        ("buscar", "discovers capabilities tooling"),
+        ("instala", "installs evaluates"),
+        ("instalar", "installs evaluates"),
+        ("descubr", "discovers evaluates"),
+        ("capacidad", "capabilities knowledge"),
+        ("herramienta", "tooling capabilities"),
+        ("catalogo", "catalogue ecosystem"),
+        // ponytail / diagram-design / obsidian
+        ("sencill", "simplest yagni"),
+        ("sobreingenieria", "over-engineering bloat"),
+        ("diagrama", "diagram flowchart sequence"),
+        ("boveda", "obsidian vault markdown"),
+    ];
+    for (es, en) in BILINGUAL_MAP {
+        if norm_prompt.contains(es) {
+            expanded_prompt.push(' ');
+            expanded_prompt.push_str(en);
+        }
+    }
+
+    const SKILL_STOPWORDS: &[&str] = &[
+        "when", "user", "using", "with", "from", "that", "this", "have", "your", "will", "into",
+        "skill", "skills", "playbook", "guide", "building", "build", "create", "creating",
+        "writing", "write", "code", "work", "tasks", "task", "used", "also", "only", "para",
+        "como", "cuando", "sobre", "usar", "este", "esta",
+    ];
+
+    let mut scored: Vec<(usize, String)> = Vec::new();
+    for slug in mounted_skills {
+        let md_path = skills_dir.join(slug).join("SKILL.md");
+        let Ok(content) = std::fs::read_to_string(&md_path) else {
+            continue;
+        };
+        let header: String = content.lines().take(15).collect::<Vec<_>>().join(" ");
+        let norm_header = crate::cortex::extractor::normalize_word(&header);
+
+        let mut score = 0usize;
+        if expanded_prompt.contains(&crate::cortex::extractor::normalize_word(slug)) {
+            score += 5;
+        }
+        let mut matched_tokens: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for raw in norm_header.split(|c: char| !c.is_alphanumeric() && c != '-') {
+            let tok = raw.trim_matches('-');
+            if tok.len() < 3 || SKILL_STOPWORDS.contains(&tok) {
+                continue;
+            }
+            if expanded_prompt.contains(tok) && matched_tokens.insert(tok.to_string()) {
+                score += if tok.len() >= 6 { 2 } else { 1 };
+            }
+        }
+        if score >= 3 {
+            scored.push((score, slug.clone()));
+        }
+    }
+
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    scored.into_iter().take(2).map(|(_, s)| s).collect()
+}
+
 /// Construye el plan completo del Harness aplicando los 6 pilares.
 pub fn build_harness_plan(
     prompt: &str,
@@ -878,5 +978,94 @@ mod tests {
         assert_eq!(steps[0].badge, "L1");
         assert_eq!(steps[1].badge, "L2");
         assert_eq!(steps[2].badge, "L3");
+    }
+
+    #[test]
+    fn test_match_mounted_skills_for_prompt() {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let skills_dir = std::path::Path::new(&home).join(".agents/skills");
+        if !skills_dir.join("tdd-practitioner/SKILL.md").exists() {
+            return;
+        }
+        let mounted = vec![
+            "tdd-practitioner".to_string(),
+            "frontend-design".to_string(),
+            "clean-code-security".to_string(),
+            "grill-me".to_string(),
+            "find-skills".to_string(),
+        ];
+
+        let tdd = match_mounted_skills_for_prompt(
+            "Escribe una función siguiendo desarrollo guiado por pruebas unitarias primero",
+            &mounted,
+            &skills_dir,
+        );
+        assert!(tdd.contains(&"tdd-practitioner".to_string()), "tdd={:?}", tdd);
+
+        let ui = match_mounted_skills_for_prompt(
+            "Diseña una tarjeta React cuidando tipografía y jerarquía visual",
+            &mounted,
+            &skills_dir,
+        );
+        assert!(ui.contains(&"frontend-design".to_string()), "ui={:?}", ui);
+
+        let sec = match_mounted_skills_for_prompt(
+            "Audita vulnerabilidades OWASP e inyección SQL en este endpoint",
+            &mounted,
+            &skills_dir,
+        );
+        assert!(sec.contains(&"clean-code-security".to_string()), "sec={:?}", sec);
+
+        let grill = match_mounted_skills_for_prompt(
+            "Cuestióname esta idea y aclaremos dudas de requerimientos antes de decidir",
+            &mounted,
+            &skills_dir,
+        );
+        assert!(grill.contains(&"grill-me".to_string()), "grill={:?}", grill);
+
+        let finder = match_mounted_skills_for_prompt(
+            "Busca e instala una nueva herramienta o capacidad para manejar Kubernetes",
+            &mounted,
+            &skills_dir,
+        );
+        assert!(finder.contains(&"find-skills".to_string()), "finder={:?}", finder);
+    }
+
+    #[test]
+    fn test_varied_domain_skill_routing() {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let skills_dir = std::path::Path::new(&home).join(".agents/skills");
+        if !skills_dir.join("godot-gdscript-patterns/SKILL.md").exists() {
+            return;
+        }
+        let mounted = vec![
+            "frontend-design".to_string(),
+            "react-ts-performance".to_string(),
+            "clean-code-security".to_string(),
+            "tdd-practitioner".to_string(),
+            "obsidian-vault-architect".to_string(),
+            "caveman".to_string(),
+            "caveman-commit".to_string(),
+            "grill-me".to_string(),
+            "find-skills".to_string(),
+            "godot-gdscript-patterns".to_string(),
+            "godot-shaders".to_string(),
+        ];
+
+        let cases: &[(&str, &str)] = &[
+            ("front", "Diseña un dashboard con mejor tipografía, espaciado y jerarquía visual en React"),
+            ("back", "Audita este endpoint contra inyección SQL y secretos expuestos (OWASP)"),
+            ("obsidian", "Crea una nota en la bóveda de Obsidian con enlaces y diagrama Mermaid"),
+            ("caveman", "Responde breve con menos tokens, modo ultra comprimido sin relleno"),
+            ("grill", "Cuestióname esta arquitectura y aclaremos dudas de requerimientos antes de decidir"),
+            ("skill-find", "Busca e instala una herramienta o capacidad nueva del catálogo para Kubernetes"),
+            ("godot", "Implementa una máquina de estados con señales en GDScript para Godot 4"),
+        ];
+
+        for (label, prompt) in cases {
+            let hits = match_mounted_skills_for_prompt(prompt, &mounted, &skills_dir);
+            println!("[{}] -> {:?}", label, hits);
+            assert!(!hits.is_empty(), "Fallo routing para {}: {:?}", label, hits);
+        }
     }
 }

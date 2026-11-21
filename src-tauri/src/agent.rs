@@ -332,6 +332,24 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    // Router determinista (0 tokens) para skills normales montadas en `.agents/skills/`
+    let matched_mounted = crate::harness::match_mounted_skills_for_prompt(
+        &prompt,
+        &mounted_skills,
+        &skills_dir,
+    );
+    if !matched_mounted.is_empty() {
+        let paths = matched_mounted
+            .iter()
+            .map(|s| format!(".agents/skills/{}/SKILL.md", s))
+            .collect::<Vec<_>>()
+            .join(", ");
+        effective_prompt.push_str(&format!(
+            "\n\n[Skills Aplicables Detectadas (OBLIGATORIO leer antes de responder/editar): {}]",
+            paths
+        ));
+    }
+
     // Evaluar Aegis Adaptive Harness (6 Pilares: ACI Pruning, KV-Cache Alignment, Dynamic Step L1-L3, Surgical Contract, Verifier, Auto-Heal)
     let harness_cfg = cfg.as_ref().map(|c| c.harness.clone()).unwrap_or_default();
     let response_style = cfg
