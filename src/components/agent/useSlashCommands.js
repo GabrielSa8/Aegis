@@ -190,9 +190,7 @@ export function useSlashCommands({
 
       // D. Compactar memoria del agente (/compact)
       if (cmdId === 'compact' || cmdText === '/compact') {
-        onSubmitPrompt?.(
-          '/compact Por favor resume y compacta de forma concisa todo el contexto acumulado en esta conversación para liberar memoria en la ventana de contexto y optimizar la cuota de tokens.'
-        );
+        onSubmitPrompt?.('/compact');
         return;
       }
 

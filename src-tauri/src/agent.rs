@@ -320,45 +320,56 @@ pub async fn execute_agent_prompt(
         }
     }
 
+    // Comandos slash nativos (/compact) deben enviarse puros sin envoltura de harness/skills
+    let trimmed_prompt = prompt.trim();
+    let is_native_slash_passthrough =
+        trimmed_prompt == "/compact" || trimmed_prompt.starts_with("/compact ");
+
     // Si se auto-activó alguna skill de Hermes Cortex para este tema, inyectar su síntesis
-    let mut effective_prompt = prompt.clone();
-    for c_skill in &auto_cortex_skills {
-        let md_path = global_skills_dir.join(c_skill).join("SKILL.md");
-        if let Ok(md_content) = std::fs::read_to_string(&md_path) {
+    let mut effective_prompt = if is_native_slash_passthrough {
+        trimmed_prompt.to_string()
+    } else {
+        prompt.clone()
+    };
+    if !is_native_slash_passthrough {
+        for c_skill in &auto_cortex_skills {
+            let md_path = global_skills_dir.join(c_skill).join("SKILL.md");
+            if let Ok(md_content) = std::fs::read_to_string(&md_path) {
+                effective_prompt.push_str(&format!(
+                    "\n\n[Contexto de Skill Activa `{}`]:\n{}",
+                    c_skill,
+                    md_content.trim()
+                ));
+            }
+        }
+
+        // Router determinista (0 tokens) para skills normales montadas en `.agents/skills/`
+        let matched_mounted = crate::harness::match_mounted_skills_for_prompt(
+            &prompt,
+            &mounted_skills,
+            &skills_dir,
+        );
+        if !matched_mounted.is_empty() {
+            let paths = matched_mounted
+                .iter()
+                .map(|s| format!(".agents/skills/{}/SKILL.md", s))
+                .collect::<Vec<_>>()
+                .join(", ");
             effective_prompt.push_str(&format!(
-                "\n\n[Contexto de Skill Activa `{}`]:\n{}",
-                c_skill,
-                md_content.trim()
+                "\n\n[Skills Aplicables Detectadas (OBLIGATORIO leer antes de responder/editar): {}]",
+                paths
             ));
         }
-    }
 
-    // Router determinista (0 tokens) para skills normales montadas en `.agents/skills/`
-    let matched_mounted = crate::harness::match_mounted_skills_for_prompt(
-        &prompt,
-        &mounted_skills,
-        &skills_dir,
-    );
-    if !matched_mounted.is_empty() {
-        let paths = matched_mounted
-            .iter()
-            .map(|s| format!(".agents/skills/{}/SKILL.md", s))
-            .collect::<Vec<_>>()
-            .join(", ");
-        effective_prompt.push_str(&format!(
-            "\n\n[Skills Aplicables Detectadas (OBLIGATORIO leer antes de responder/editar): {}]",
-            paths
-        ));
-    }
-
-    // Sincronizar servidores MCP vinculados al contexto activo (si el contexto define una lista)
-    if let Some(ref ctx_mcps) = mcps {
-        if !ctx_mcps.is_empty() {
-            crate::mcp::sync_context_mcps(ctx_mcps);
-            effective_prompt.push_str(&format!(
-                "\n\n[Servidores MCP Activos en Contexto: {}]",
-                ctx_mcps.join(", ")
-            ));
+        // Sincronizar servidores MCP vinculados al contexto activo (si el contexto define una lista)
+        if let Some(ref ctx_mcps) = mcps {
+            if !ctx_mcps.is_empty() {
+                crate::mcp::sync_context_mcps(ctx_mcps);
+                effective_prompt.push_str(&format!(
+                    "\n\n[Servidores MCP Activos en Contexto: {}]",
+                    ctx_mcps.join(", ")
+                ));
+            }
         }
     }
 
@@ -368,12 +379,24 @@ pub async fn execute_agent_prompt(
         .as_ref()
         .map(|c| c.profile.response_style.as_str())
         .unwrap_or("caveman");
-    let harness_plan = crate::harness::build_harness_plan(
-        &effective_prompt,
-        context_path.as_deref(),
-        response_style,
-        &harness_cfg,
-    );
+    let harness_plan = if is_native_slash_passthrough {
+        crate::harness::build_harness_plan(
+            &effective_prompt,
+            context_path.as_deref(),
+            response_style,
+            &crate::harness::HarnessConfig {
+                enabled: false,
+                ..harness_cfg.clone()
+            },
+        )
+    } else {
+        crate::harness::build_harness_plan(
+            &effective_prompt,
+            context_path.as_deref(),
+            response_style,
+            &harness_cfg,
+        )
+    };
 
     let is_auto_effort = effort
         .as_deref()
